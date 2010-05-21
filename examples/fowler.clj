@@ -9,3 +9,5 @@
 
 (deftask test [] compile data-load
   (println "run the tests"))
+
+(dotask test)
