@@ -1,13 +1,17 @@
 (deftask code-gen []
-  (println "do the code generation"))
+  "This task generates code. It has no dependencies."
+  (println "generating code..."))
 
 (deftask compile [] code-gen
-  (println "do the compilation"))
+  "This task does the compilation. It depends on code-gen."
+  (println "compiling..."))
 
 (deftask data-load [] code-gen
-  (println "load the test data"))
+  "This task loads the test data. It depends on code-gen."
+  (println "loading test data..."))
 
 (deftask test [] compile data-load
-  (println "run the tests"))
+  "This task runs the tests. It depends on compile and data-load."
+  (println "running tests..."))
 
 (dotask test)
