@@ -6,9 +6,7 @@
   (assoc m k (apply f (get m k) args)))
 
 (defn cat [s1 s2]
-  (if s1
-    (str s1 " " s2)
-    s2))
+  (if s1 (str s1 " " s2) s2))
 
 (defn add-form [task form]
   (let [task (or task {:actions [] :deps []})]
