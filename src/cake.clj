@@ -5,11 +5,16 @@
 (defn update [m k f & args]
   (assoc m k (apply f (get m k) args)))
 
+(defn cat [s1 s2]
+  (if s1
+    (str s1 " " s2)
+    s2))
+
 (defn add-form [task form]
   (let [task (or task {:actions [] :deps []})]
     (cond
      (symbol? form) (update task :deps    conj form)
-     (string? form) (update task :doc     str  form)
+     (string? form) (update task :doc     cat  form)
      (list?   form) (update task :actions conj form)
      :else (throw (IllegalArgumentException.
                    "deftask requires forms to be a symbol, string or list")))))
@@ -34,3 +39,7 @@
 
 (defmacro dotask [name]
   `(get-in (run-task '~name) ['~name :results]))
+
+(defmacro task-doc [task]
+  (println "-------------------------")
+  (println "cake" (name task) " ;" (:doc (@tasks task))))
