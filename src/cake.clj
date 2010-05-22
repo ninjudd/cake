@@ -1,10 +1,12 @@
 (ns cake
-  (:require cake.project))
+  (:require cake.project)
+  (:use clojure.useful))
 
 (def tasks (atom {}))
 
-(defn update [m k f & args]
-  (assoc m k (apply f (get m k) args)))
+(let [m (parse-args (next *command-line-args*))]
+  (def args (or (m nil) []))
+  (def opts (dissoc m nil)))
 
 (defn cat [s1 s2]
   (if s1 (str s1 " " s2) s2))
@@ -16,11 +18,6 @@
         (update :deps    into deps)
         (update :doc     cat  doc)
         (update :actions into actions))))
-
-(defmacro abort-if [pred message]
-  `(when ~pred
-     (println ~message)
-     (System/exit 0)))
 
 (defmacro defproject [name version & args]
   "nothing to see here")
@@ -46,7 +43,7 @@
   ([name] (swap! tasks run-task name) nil)
   ([tasks name]
      (let [task (tasks name)]
-       (abort-if (nil? task) (str "Unknown task: " name))
+       (when (nil? task) (abort "Unknown task:" name))
        (if (:results task)
          tasks
          (let [tasks (reduce run-task tasks (task :deps))]
@@ -60,5 +57,5 @@
 
 (defn -main []
   (cake.project/init)
-  (let [[task & args] *command-line-args*]
+  (let [task (first *command-line-args*)]
     (run-task (symbol (or task 'default)))))
