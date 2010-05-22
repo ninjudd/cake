@@ -13,5 +13,3 @@
 (deftask test [] compile data-load
   "This task runs the tests." "It depends on compile and data-load."
   (println "running tests..."))
-
-(dotask test)

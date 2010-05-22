@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
+# Save your fork, there's cake!"
 
-echo "Save your fork, there's cake!"
+CAKE="$(dirname "$(dirname "$(readlink $0)")")"
+CLASSPATH="$CAKE/src/:$CAKE/lib/*"
+
+java -cp "$CLASSPATH" clojure.main -e "(use 'cake)(-main)" /dev/null $@

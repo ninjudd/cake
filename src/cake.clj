@@ -1,4 +1,5 @@
-(ns cake)
+(ns cake
+  (:require cake.project))
 
 (def tasks (atom {}))
 
@@ -17,6 +18,11 @@
      :else (throw (IllegalArgumentException.
                    "deftask requires forms to be a symbol, string or list")))))
 
+(defmacro abort-if [pred message]
+  `(when ~pred
+     (println ~message)
+     (System/exit 0)))
+
 (defmacro deftask
   "Define a cake task. Forms can be any of the following:
    string - documentation to append to the task definition
@@ -29,15 +35,19 @@
   ([name] (swap! tasks run-task name))
   ([tasks name]
      (let [task (tasks name)]
+       (abort-if (nil? task) (str "Unknown task: " name))
        (if (:results task)
          tasks
          (let [tasks (reduce run-task tasks (task :deps))]
            (assoc-in tasks [name :results]
              (doall (map eval (task :actions)))))))))
 
-(defmacro dotask [name]
-  `(get-in (run-task '~name) ['~name :results]))
-
 (defmacro task-doc [task]
   (println "-------------------------")
   (println "cake" (name task) " ;" (:doc (@tasks task))))
+
+(defn -main []
+  (cake.project/init)
+  (let [[task & args] *command-line-args*]
+    (run-task (symbol (or task 'default))))
+  nil)
