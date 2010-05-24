@@ -4,9 +4,9 @@
 
 (def tasks (atom {}))
 
-(let [m (parse-args (next *command-line-args*))]
-  (def args (or (m nil) []))
-  (def opts (dissoc m nil)))
+(def opts
+  (parse-args (keyword (first *command-line-args*))
+              (next *command-line-args*)))
 
 (defn cat [s1 s2]
   (if s1 (str s1 " " s2) s2))
