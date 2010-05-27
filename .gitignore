@@ -1,4 +1,5 @@
 pom.xml
+.deps
 *.jar
 *~
 lib/

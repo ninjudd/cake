@@ -1,7 +1,37 @@
 #!/usr/bin/env bash
 # Save your fork, there's cake!"
 
-CAKE="$(dirname "$(dirname "$(readlink $0)")")"
+function bake {
+  java -cp "$CLASSPATH" clojure.main -e "(use 'cake)(-main)" /dev/null $@
+}
+
+FILE="$(readlink $0)"
+FILE=${FILE:-$0}
+CAKE="$(dirname "$(dirname "$FILE")")"
 CLASSPATH="$CAKE/src/:$CAKE/lib/*"
 
-java -cp "$CLASSPATH" clojure.main -e "(use 'cake)(-main)" /dev/null $@
+LEIN="http://github.com/downloads/technomancy/leiningen/leiningen-1.1.0-standalone.jar"
+USEFUL="http://clojars.org/repo/clojure-useful/clojure-useful/0.1.1-SNAPSHOT/clojure-useful-0.1.1-20100502.112537-1.jar"
+
+if [ "$(which curl)" == "" ]; then
+  GET="wget -qO"
+else
+  GET="curl -Lso"
+fi
+
+# Bootstap cake deps
+if [ ! -e "$CAKE/.deps" ]; then
+  echo "fetching cake dependencies..."
+  rm -rf $CAKE/lib
+  mkdir -p $CAKE/lib
+  $GET $CAKE/lib/$(basename $LEIN)   $LEIN   || exit
+  $GET $CAKE/lib/$(basename $USEFUL) $USEFUL || exit
+  touch "$CAKE/.deps"
+fi
+
+if [ "project.clj" -nt "pom.xml" ]; then
+  echo "fetching dependencies..."
+  bake deps
+fi
+
+bake $@
