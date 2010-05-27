@@ -1,5 +1,5 @@
 (ns cake
-  (:require cake.project)
+  (:require cake.project cake.ant)
   (:use clojure.useful))
 
 (def tasks (atom {}))
@@ -20,16 +20,20 @@
         (update :doc     cat  doc)
         (update :actions into actions))))
 
+(defn group [project-name]
+  (or (namespace project-name)
+      (name project-name)))
+
 (def project (atom nil))
 
 (defmacro defproject [project-name version & args]
   (let [root (.getParent (java.io.File. *file*))]
-    `(do (require 'cake.tasks.dependencies)
+    `(do (cake.ant/init-project ~root)
+         (require 'cake.tasks.dependencies)
          (compare-and-set! project nil
            (-> (apply hash-map '~args)
                (assoc :name ~(name project-name)
-                      :group ~(or (namespace project-name)
-                                  (name project-name))
+                      :group ~(group project-name)
                       :root ~root
                       :version ~version)
                (assoc-or :library-path (str ~root "/lib")
