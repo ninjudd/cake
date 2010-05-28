@@ -71,14 +71,13 @@
   ([tasks name]
      (let [task (tasks name)]
        (when (nil? task) (abort "Unknown task:" name))
-       (if (:results task)
+       (if (:run? task)
          tasks
          (let [tasks (reduce run-task tasks (task :deps))]
-           (assoc-in tasks [name :results]
-             (doall
-              (for [action (task :actions)]
-                (binding [project @project]
-                  (action))))))))))
+           (doseq [action (task :actions)]
+             (binding [project @project]
+               (action)))
+           (assoc-in tasks [name :run?] true))))))
 
 (defmacro task-doc [task]
   "Print documentation for a task."
