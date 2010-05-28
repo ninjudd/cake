@@ -1,6 +1,7 @@
 (ns cake.ant
   (:use [clojure.useful :only [conj-vec]])
-  (:import [org.apache.tools.ant Project NoBannerLogger]))
+  (:import [org.apache.tools.ant Project NoBannerLogger]
+           [org.apache.tools.ant.types Path]))
 
 (defn- setter [key]
   (symbol
@@ -36,6 +37,9 @@
        (.setProject @ant-project)
        (set-attributes! ~attrs)
        ~@forms)))
+
+(defn ant-path [& paths]
+  (Path. @ant-project (apply str (interpose ":" paths))))
 
 (defn init-project [root]
   (compare-and-set! ant-project nil
