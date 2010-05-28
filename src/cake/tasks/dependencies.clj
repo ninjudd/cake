@@ -47,5 +47,5 @@
 
 (deftask deps "Fetch dependencies and create pom.xml"
   (println "Fetching dependencies...")
-  (pom project)
-  (deps project))
+  (deps project)
+  (pom project))

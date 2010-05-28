@@ -20,9 +20,11 @@
         (update :doc     cat  doc)
         (update :actions into actions))))
 
-(defn group [project-name]
-  (or (namespace project-name)
-      (name project-name)))
+(defn group [project]
+  (if (or (= project 'clojure) (= project 'clojure-contrib))
+    "org.clojure"
+    (or (namespace project)
+        (name project))))
 
 (def project (atom nil))
 
@@ -60,6 +62,9 @@
         actions (vec (map #(list 'fn [] %) actions))]
     `(swap! tasks update '~name update-task '~deps '~doc ~actions)))
 
+(defn remove-task! [name]
+  (swap! tasks dissoc name))
+
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
   ([name] (swap! tasks run-task name) nil)
@@ -70,9 +75,10 @@
          tasks
          (let [tasks (reduce run-task tasks (task :deps))]
            (assoc-in tasks [name :results]
-             (doseq [action (task :actions)]
-               (binding [project @project]
-                 (action)))))))))
+             (doall
+              (for [action (task :actions)]
+                (binding [project @project]
+                  (action))))))))))
 
 (defmacro task-doc [task]
   "Print documentation for a task."
