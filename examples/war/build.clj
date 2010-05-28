@@ -3,12 +3,11 @@
   (println "compiling...")
   (println (ns-name *ns*))
   (let [root       (:root project)
-        classpath  (for [dir ["/src" "/lib*"]] (str root dir))
-        cp-fileset (ant FileSet)]
+        classpath  (for [dir ["/src" "/lib*"]] (str root dir))]
     (println classpath)
-    (ant Javac {:destdir (java.io.File. root "classes")
+    (cake.ant/ant org.apache.tools.ant.taskdefs.Javac {:destdir (java.io.File. root "classes")
                 :fork true
-                :classpath (ant Path {:path (apply str (interpose ":" classpath))})
-                :srcdir (ant Path {:path (java.io.File. root "src")})
+                :classpath (cake.ant/ant org.apache.tools.ant.types.Path {:path (apply str (interpose ":" classpath))})
+                :srcdir (cake.ant/ant org.apache.tools.ant.types.Path {:path (java.io.File. root "src")})
                 :includes "*.clj"})))
 
