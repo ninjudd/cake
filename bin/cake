@@ -29,8 +29,7 @@ if [ ! -e "$CAKE/.deps" ]; then
   touch "$CAKE/.deps"
 fi
 
-if [ "project.clj" -nt "pom.xml" ]; then
-  echo "fetching dependencies..."
+if [ "project.clj" -nt "pom.xml" ] && [ "$1" != "deps" ]; then
   bake deps
 fi
 

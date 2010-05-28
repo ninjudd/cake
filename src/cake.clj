@@ -27,16 +27,18 @@
 (def project (atom nil))
 
 (defmacro defproject [project-name version & args]
-  (let [root (.getParent (java.io.File. *file*))]
+  (let [root (.getParent (java.io.File. *file*))
+        artifact (name project-name)]
     `(do (cake.ant/init-project ~root)
          (require 'cake.tasks.dependencies)
          (compare-and-set! project nil
            (-> (apply hash-map '~args)
-               (assoc :name ~(name project-name)
-                      :group ~(group project-name)
-                      :root ~root
-                      :version ~version)
-               (assoc-or :library-path (str ~root "/lib")
+               (assoc :artifact-id ~artifact
+                      :group-id    ~(group project-name)
+                      :root        ~root
+                      :version     ~version)
+               (assoc-or :name         ~artifact
+                         :library-path (str ~root "/lib")
                          :compile-path (str ~root "/classes")
                          :source-path  (str ~root "/src")
                          :test-path    (str ~root "/test")))))))
@@ -80,4 +82,6 @@
 (defn -main []
   (cake.project/init)
   (let [task (first *command-line-args*)]
-    (run-task (symbol (or task 'default)))))
+    (try
+     (run-task (symbol (or task 'default)))
+     (finally (System/exit 0)))))

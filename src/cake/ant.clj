@@ -1,31 +1,48 @@
-(ns cake.ant)
+(ns cake.ant
+  (:use [clojure.useful :only [conj-vec]])
+  (:import [org.apache.tools.ant Project NoBannerLogger]))
 
-(defn- setter [[key value]]
-  (let [method (symbol
-                (apply str ".set"
-                  (for [w (.split (name key) "-")]
-                    (str (.toUpperCase (.substring w 0 1))
-                         (.toLowerCase (.substring w 1))))))]
-    (list method value)))
+(defn- setter [key]
+  (symbol
+    (apply str "set"
+      (for [w (.split (name key) "-")]
+        (str (.toUpperCase (.substring w 0 1))
+             (.toLowerCase (.substring w 1)))))))
 
-(defmacro make [class attrs]
+(defn set-attribute! [instance [key value]]
+  (when-not (nil? value)
+    (let [method (eval `(memfn ~(setter key) v#))]
+      (method instance value))
+    instance))
+
+(defn set-attributes! [instance attrs]
+  (reduce set-attribute! instance attrs))
+
+(defmacro make [class attrs & forms]
   `(doto (new ~class)
-     ~@(map setter attrs)))
+     (set-attributes! ~attrs)
+     ~@forms))
 
 (def ant-project (atom nil))
 
+(defn get-reference [ref-id]
+  (.getReference @ant-project ref-id))
+
 (defmacro ant [task attrs & forms]
-  `(doto (make ~task ~attrs)
-     (.setProject @ant-project)
-     ~@forms
-     (.execute)))
+  (let [forms (if (= false (first forms))
+                (rest forms)
+                (conj-vec forms '(.execute)))]
+    `(doto (new ~task)
+       (.setProject @ant-project)
+       (set-attributes! ~attrs)
+       ~@forms)))
 
 (defn init-project [root]
   (compare-and-set! ant-project nil
-    (doto (org.apache.tools.ant.Project.)
+    (make Project {:basedir root}
       (.init)
-      (.setBasedir root)
-      (.addBuildListener (doto (org.apache.tools.ant.NoBannerLogger.)
-                           (.setMessageOutputLevel org.apache.tools.ant.Project/MSG_INFO)
-                           (.setOutputPrintStream System/out)
-                           (.setErrorPrintStream System/err))))))
+      (.addBuildListener
+       (make NoBannerLogger
+         {:message-output-level Project/MSG_INFO
+          :output-print-stream  System/out
+          :error-print-stream   System/err})))))
