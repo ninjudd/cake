@@ -1,7 +1,8 @@
 (ns cake.ant
   (:use [clojure.useful :only [conj-vec]])
   (:import [org.apache.tools.ant Project NoBannerLogger]
-           [org.apache.tools.ant.types Path]))
+           [org.apache.tools.ant.types Path FileSet]
+           ))
 
 (defn- setter [key]
   (symbol
@@ -38,8 +39,19 @@
        (set-attributes! ~attrs)
        ~@forms)))
 
+;; (defn ant-path [& paths] (Path. @ant-project (apply str (interpose ":" paths))))
+
 (defn ant-path [& paths]
-  (Path. @ant-project (apply str (interpose ":" paths))))
+  (let [path (Path. @ant-project)]
+    (doseq [p paths]
+      (if (.endsWith p "*")
+        (.addFileset path
+                     (doto (new FileSet)
+                       (.setDir (java.io.File. (.getBaseDir @ant-project) p))
+                       (.setIncludes "*.jar")))
+        (.add path (Path. @ant-project p)))
+      paths)))
+
 
 (defn init-project [root]
   (compare-and-set! ant-project nil

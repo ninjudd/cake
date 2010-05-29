@@ -87,6 +87,9 @@
 (defn -main []
   (cake.project/init)
   (let [task (first *command-line-args*)]
-    (try
-     (run-task (symbol (or task 'default)))
-     (finally (System/exit 0)))))
+    ;; (try
+    ;; (run-task (symbol (or task 'default)))
+    ;; (finally (System/exit 0)))))
+    
+    (run-task (symbol (or task 'default)))))
+

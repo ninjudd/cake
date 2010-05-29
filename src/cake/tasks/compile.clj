@@ -1,24 +1,35 @@
 (ns cake.tasks.compile
   (:use cake cake.ant)
-  (:import [org.apache.tools.ant.taskdefs Javac]
-           [org.apache.tools.ant.types Path]
+  (:import [org.apache.tools.ant.taskdefs Javac Java]
+           [org.apache.tools.ant.types Path Environment$Variable]
            [java.io File]))
 
 (defn compile-java [project]
-  (let [root       (:root project)
-        classpath  (for [dir ["/src" "/lib*"]] (str root dir))]
-    (ant Javac {:destdir (File. root "classes")
-                :classpath (ant-path "src" "lib")
-                :srcdir (ant-path "src")
-                :fork true
-                :debug true
-                :verbose true
-                :failonerror true})
-    (println "javac complete.")))
+  (ant Javac {:destdir     (File. (:root project) "classes")
+              :classpath   (ant-path "src" "lib")
+              :srcdir      (ant-path "src")
+              :fork        true
+              :debug       true
+              :verbose     true
+              :failonerror true})
+  (println "compile-java complete."))
 
+(defn compile-clj [project]
+  (println (ant-path "src" "lib/*"))
+  (ant Java {:classname   "clojure.lang.Compile"
+             :classpath   (ant-path "src" "lib/*")
+             :fork        true
+             :failonerror true}
+       ;; (doto Environment$Variable.
+       ;; (.setKey "clojure.compile.path")
+       ;; (.setValue "classes")))
+       (.addSysproperty (make Environment$Variable {:key "clojure.compile.path" :value "classes"}))
+  
+       ;; (.addSysproperty (ant-var Environment$Variable {:key "clojure.compile.path" :value "classes"}))
+       (println "compile-clj complete.")))
+  
 (deftask compile
-  ;; (println (seq (.getURLs (java.lang.ClassLoader/getSystemClassLoader))))
   (println "compiling...")
-  (compile-java project)
-  ;; (println (ns-name *ns*))
-  )
+  ;; (compile-java project)
+  (compile-clj project))
+
