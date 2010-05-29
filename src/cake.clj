@@ -32,7 +32,7 @@
   (let [root (.getParent (java.io.File. *file*))
         artifact (name project-name)]
     `(do (cake.ant/init-project ~root)
-         (require 'cake.tasks.dependencies)
+         (require 'cake.tasks.defaults)
          (compare-and-set! project nil
            (-> (apply hash-map '~args)
                (assoc :artifact-id ~artifact
@@ -87,9 +87,5 @@
 (defn -main []
   (cake.project/init)
   (let [task (first *command-line-args*)]
-    ;; (try
-    ;; (run-task (symbol (or task 'default)))
-    ;; (finally (System/exit 0)))))
-    
-    (run-task (symbol (or task 'default)))))
-
+    (run-task (symbol (or task 'default)))
+    (System/exit 0)))

@@ -34,7 +34,7 @@
   (let [dest (java.io.File. (:library-path project))]
     (.mkdirs dest)
     (ant Copy {:todir dest :flatten true}
-      (.addFileset (get-reference"cake.dep.fileset")))))
+      (.addFileset (get-reference "cake.dep.fileset")))))
 
 (defn pom [project]
   (let [refid "cake.pom"

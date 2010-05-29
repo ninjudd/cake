@@ -1,1 +1,2 @@
-(ns cake.tasks.defaults)
+(ns cake.tasks.defaults
+  (:require cake.tasks.jar cake.tasks.dependencies))
