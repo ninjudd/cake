@@ -61,16 +61,30 @@
 (defn get-reference [ref-id]
   (.getReference @ant-project ref-id))
 
+
+(defmacro ant [task attrs & forms]
+  (let [forms (if (= false (first forms))
+                (rest forms)
+                (conj-vec forms '(.execute)))]
+    `(doto (new ~task)
+       (.setProject @ant-project)
+       (set-attributes! ~attrs)
+       ~@forms)))
+
 (defn ant-path [& paths]
-  (let [path (Path. @ant-project)]
+  (let [project-path (Path. @ant-project)]
     (doseq [p paths]
       (if (.endsWith p "*")
-        (.addFileset path
+        (.addFileset project-path
                      (doto (new FileSet)
-                       (.setDir (java.io.File. (.getBaseDir @ant-project) p))
+                       (.setDir (java.io.File. (.getBaseDir @ant-project) (.substring p 0 (dec (.length p)))))
                        (.setIncludes "*.jar")))
-        (.add path (Path. @ant-project p)))
-      paths)))
+        (.add project-path (Path. @ant-project p))))
+    project-path))
+
+(defn args [task args]
+  (doseq [a args]
+    (.. task createArg (setValue a))))
 
 (defn init-project [root]
   (compare-and-set! ant-project nil
