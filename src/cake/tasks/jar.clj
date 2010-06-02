@@ -8,10 +8,18 @@
 (defn jarfile [project]
   (format "%s-%s.jar" (:artifact-id project) (:version project)))
 
+(defn manifest [project]
+  (merge (:manifest project)
+         {"Created-By" "cake"
+          "Built-By"   (System/getProperty "user.name")
+          "Build-Jdk"  (System/getProperty "java.version")
+          "Main-Class" (.replaceAll (or (:main project) "") "-" "_")}))
+
 (defn jar [project]
   (let [maven (format "META-INF/maven/%s/%s" (:group-id project) (:artifact-id project))
         cake  (format "META-INF/cake/%s/%s"  (:group-id project) (:artifact-id project))]
     (ant Jar {:dest-file (jarfile project)}
+      (add-manifest (manifest project))
       (add-zipfileset {:dir (:root project) :prefix maven :includes "pom.xml"})
       (add-zipfileset {:dir (:root project) :prefix cake  :includes "*.clj"})
       (add-fileset {:dir (:compile-path project)})
@@ -30,6 +38,7 @@
 
 (defn uberjar [project]
   (ant Jar {:dest-file (uberjarfile project)}
+    (add-manifest (manifest project))
     (add-zipfileset {:src (jarfile project)})
     (add-jars (:library-path project))))
 

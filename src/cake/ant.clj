@@ -2,19 +2,13 @@
   "Lancet-inspired ant helpers."
   (:use [clojure.useful :only [conj-vec]])
   (:import [org.apache.tools.ant Project NoBannerLogger]
-           [org.apache.tools.ant.types Path FileSet ZipFileSet Environment$Variable]
+           [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]
+           [org.apache.tools.ant.taskdefs Manifest Manifest$Attribute]
            [java.beans Introspector]))
 
 (def ant-project (atom nil))
 
-(defmulti  coerce (fn [type val] [type (class val)]))
-(defmethod coerce [java.io.File String] [_ str] (java.io.File. str))
-(defmethod coerce :default [type val]
-  (if (= String type)
-    (str val)
-    (try (cast type val)
-         (catch ClassCastException e
-           val))))
+(defmulti coerce (fn [type val] [type (class val)]))
 
 (defn- property-key [property]
   (keyword (.. (re-matcher #"\B([A-Z])" (.getName property))
@@ -65,6 +59,12 @@
   `(.addFileset ~task
      (make ZipFileSet ~attrs ~@forms)))
 
+(defn add-manifest [task attrs]
+  (let [manifest (Manifest.)]
+    (doseq [[key val] attrs :when (seq val)]
+      (.addConfiguredAttribute manifest (Manifest$Attribute. key val)))
+    (.addConfiguredManifest task manifest)))
+
 (defn path [& paths]
   (let [path (Path. @ant-project)]
     (doseq [p paths]
@@ -91,3 +91,13 @@
          {:message-output-level Project/MSG_INFO
           :output-print-stream  System/out
           :error-print-stream   System/err})))))
+
+(defmethod coerce [java.io.File String] [_ str] (java.io.File. str))
+(defmethod coerce :default [type val]
+  (if (= String type)
+    (str val)
+    (if (= EnumeratedAttribute (.getSuperclass type))
+      (make type {:value val})
+      (try (cast type val)
+           (catch ClassCastException e
+             val)))))
