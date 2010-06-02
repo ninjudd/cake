@@ -2,7 +2,7 @@
   "Lancet-inspired ant helpers."
   (:use [clojure.useful :only [conj-vec]])
   (:import [org.apache.tools.ant Project NoBannerLogger]
-           [org.apache.tools.ant.types Path FileSet]
+           [org.apache.tools.ant.types Path FileSet Environment$Variable]
            [java.beans Introspector]))
 
 (def ant-project (atom nil))
@@ -54,37 +54,32 @@
      ~@forms
      (.execute)))
 
+(defn get-reference [ref-id]
+  (.getReference @ant-project ref-id))
+
 (defmacro add-fileset [task type attrs & forms]
   `(.addFileset ~task
      (make ~type ~attrs ~@forms)))
 
-(defn get-reference [ref-id]
-  (.getReference @ant-project ref-id))
-
-
-(defmacro ant [task attrs & forms]
-  (let [forms (if (= false (first forms))
-                (rest forms)
-                (conj-vec forms '(.execute)))]
-    `(doto (new ~task)
-       (.setProject @ant-project)
-       (set-attributes! ~attrs)
-       ~@forms)))
-
-(defn ant-path [& paths]
-  (let [project-path (Path. @ant-project)]
+(defn path [& paths]
+  (let [path (Path. @ant-project)]
     (doseq [p paths]
       (if (.endsWith p "*")
-        (.addFileset project-path
-                     (doto (new FileSet)
-                       (.setDir (java.io.File. (.getBaseDir @ant-project) (.substring p 0 (dec (.length p)))))
-                       (.setIncludes "*.jar")))
-        (.add project-path (Path. @ant-project p))))
-    project-path))
+        (add-fileset path FileSet {:includes "*.jar" :dir (subs p 0 (dec (count p)))})
+        (.. path createPathElement (setPath p))))
+    path))
+
+(defn classpath [project]
+  (path (:source-path project) (str (:library-path project) "/*")))
 
 (defn args [task args]
   (doseq [a args]
     (.. task createArg (setValue a))))
+
+(defn env [task map]
+  (doseq [[key val] map]
+    (.addSysproperty task
+     (make Environment$Variable {:key (name key) :value val}))))
 
 (defn init-project [root]
   (compare-and-set! ant-project nil
