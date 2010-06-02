@@ -1,5 +1,6 @@
 (ns cake.tasks.jar
-  (:use cake cake.ant)
+  (:use cake cake.ant
+        [clojure.useful :only [absorb]])
   (:import [org.apache.tools.ant.taskdefs Jar]
            [org.apache.tools.ant.taskdefs.optional.ssh Scp]
            [org.apache.tools.ant.types FileSet ZipFileSet]
@@ -13,7 +14,7 @@
          {"Created-By" "cake"
           "Built-By"   (System/getProperty "user.name")
           "Build-Jdk"  (System/getProperty "java.version")
-          "Main-Class" (.replaceAll (or (:main project) "") "-" "_")}))
+          "Main-Class" (absorb (:main project) (.replaceAll "-" "_"))}))
 
 (defn jar [project]
   (let [maven (format "META-INF/maven/%s/%s" (:group-id project) (:artifact-id project))

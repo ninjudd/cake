@@ -7,11 +7,12 @@
 (defn compile-java [project]
   (let [dest (File. (:compile-path project))]
     (.mkdirs dest)
-    (ant Javac {:destdir     dest
-                :classpath   (classpath project)
-                :srcdir      (path (:source-path project))
-                :fork        true
-                :failonerror true})))
+    (ant Javac {:destdir           dest
+                :classpath         (classpath project)
+                :srcdir            (path (:source-path project))
+                :fork              true
+                :failonerror       true
+                :includeantruntime false})))
 
 (defn to-compile [project]
   (let [aot (or (:aot project) (:namespaces project))

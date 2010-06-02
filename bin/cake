@@ -10,8 +10,7 @@ FILE=${FILE:-$0}
 CAKE="$(dirname "$(dirname "$FILE")")"
 CLASSPATH="$CAKE/src/:$CAKE/lib/*"
 
-LEIN="http://github.com/downloads/technomancy/leiningen/leiningen-1.1.0-standalone.jar"
-USEFUL="http://clojars.org/repo/clojure-useful/clojure-useful/0.1.1-SNAPSHOT/clojure-useful-0.1.1-20100502.112537-1.jar"
+JAR="http://github.com/downloads/ninjudd/cake-standalone/cake-standalone.jar"
 
 if [ "$(which curl)" == "" ]; then
   GET="wget -qO"
@@ -24,8 +23,7 @@ if [ ! -e "$CAKE/.deps" ]; then
   echo "fetching cake dependencies..."
   rm -rf $CAKE/lib
   mkdir -p $CAKE/lib
-  $GET $CAKE/lib/$(basename $LEIN)   $LEIN   || exit
-  $GET $CAKE/lib/$(basename $USEFUL) $USEFUL || exit
+  $GET $CAKE/lib/$(basename $JAR) $JAR || exit
   touch "$CAKE/.deps"
 fi
 
