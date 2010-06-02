@@ -1,5 +1,5 @@
-(ns test-example
-  (:use [clojure.test]))
+(ns test-servlet
+  (:use clojure.test))
 
 (deftest test-example
   (println "running test-example...")

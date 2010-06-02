@@ -1,6 +1,7 @@
 (ns cake
-  (:require cake.project cake.ant)
-  (:use clojure.useful))
+  (:use clojure.useful
+        [cake.project :only [init]]
+        [cake.ant :only [ant path args]]))
 
 (def tasks (atom {}))
 
@@ -79,15 +80,25 @@
            (doseq [action (task :actions)]
              (binding [project @project]
                (action)))
-           (assoc-in tasks [name :run?] true))))))
+           (assoc-in tasks [name :run?] true)))
+       (println "cake:" name "complete."))))
 
 (defmacro task-doc [task]
   "Print documentation for a task."
   (println "-------------------------")
   (println "cake" (name task) " ;" (:doc (@tasks task))))
 
+(defn bake [form]
+  "execute a form in a fork of the jvm with the classpath of your project"
+  (ant org.apache.tools.ant.taskdefs.Java
+       {:classname   "clojure.main"
+        :classpath   (path "src" "lib/*" "test")
+        :fork        true
+        :failonerror true}
+       (args ["-e" (prn-str form)])))
+
 (defn -main []
-  (cake.project/init)
+  (init)
   (let [task (first *command-line-args*)]
     (run-task (symbol (or task 'default)))
     (System/exit 0)))
