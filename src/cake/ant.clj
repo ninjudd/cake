@@ -2,7 +2,7 @@
   "Lancet-inspired ant helpers."
   (:use [clojure.useful :only [conj-vec]])
   (:import [org.apache.tools.ant Project NoBannerLogger]
-           [org.apache.tools.ant.types Path FileSet Environment$Variable]
+           [org.apache.tools.ant.types Path FileSet ZipFileSet Environment$Variable]
            [java.beans Introspector]))
 
 (def ant-project (atom nil))
@@ -57,15 +57,19 @@
 (defn get-reference [ref-id]
   (.getReference @ant-project ref-id))
 
-(defmacro add-fileset [task type attrs & forms]
+(defmacro add-fileset [task attrs & forms]
   `(.addFileset ~task
-     (make ~type ~attrs ~@forms)))
+     (make FileSet ~attrs ~@forms)))
+
+(defmacro add-zipfileset [task attrs & forms]
+  `(.addFileset ~task
+     (make ZipFileSet ~attrs ~@forms)))
 
 (defn path [& paths]
   (let [path (Path. @ant-project)]
     (doseq [p paths]
       (if (.endsWith p "*")
-        (add-fileset path FileSet {:includes "*.jar" :dir (subs p 0 (dec (count p)))})
+        (add-fileset path {:includes "*.jar" :dir (subs p 0 (dec (count p)))})
         (.. path createPathElement (setPath p))))
     path))
 
