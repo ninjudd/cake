@@ -1,10 +1,15 @@
 (ns cake.tasks.jar
   (:use cake cake.ant)
   (:import [org.apache.tools.ant.taskdefs Jar]
-           [org.apache.tools.ant.types FileSet ZipFileSet]))
+           [org.apache.tools.ant.taskdefs.optional.ssh Scp]
+           [org.apache.tools.ant.types FileSet ZipFileSet]
+           [java.io File]))
+
+(defn jarfile [project]
+  (format "%s-%s.jar" (:artifact-id project) (:version project)))
 
 (defn jar [project]
-  (let [jarfile (format "%s-%s.jar" (:artifact-id project) (:version project))
+  (let [jarfile (jarfile project)
         maven   (format "META-INF/maven/%s/%s" (:group-id project) (:artifact-id project))
         cake    (format "META-INF/cake/%s/%s"  (:group-id project) (:artifact-id project))]
     (println "building" jarfile)
@@ -14,5 +19,16 @@
       (add-fileset FileSet {:dir (:compile-path project)})
       (add-fileset FileSet {:dir (:source-path project)}))))
 
-(deftask jar
+(deftask jar => compile
   (jar project))
+
+(defn keyfile [files]
+  (let [sshdir (File. (System/getProperty "user.home") ".ssh")]
+    (first
+      (filter #(.exists %)
+        (map #(File. sshdir %) files)))))
+
+(deftask release => jar
+  (ant Scp {:todir "clojars@clojars.org:" :trust true :keyfile (keyfile ["id_rsa" "id_dsa" "identity"])}
+    (add-fileset FileSet {:dir (:root project) :includes "pom.xml"})
+    (add-fileset FileSet {:dir (:root project) :includes (jarfile project)})))

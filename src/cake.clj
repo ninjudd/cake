@@ -23,8 +23,7 @@
 (defn group [project]
   (if (or (= project 'clojure) (= project 'clojure-contrib))
     "org.clojure"
-    (or (namespace project)
-        (name project))))
+    (or (namespace project) (name project))))
 
 (def project (atom nil))
 
@@ -44,6 +43,9 @@
                          :compile-path (str ~root "/classes")
                          :source-path  (str ~root "/src")
                          :test-path    (str ~root "/test")))))))
+
+(defn classpath [project]
+  (cake.ant/path (:source-path project) (str (:library-path project) "/*")))
 
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can

@@ -69,9 +69,6 @@
         (.. path createPathElement (setPath p))))
     path))
 
-(defn classpath [project]
-  (path (:source-path project) (str (:library-path project) "/*")))
-
 (defn args [task args]
   (doseq [a args]
     (.. task createArg (setValue a))))
