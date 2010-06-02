@@ -1,6 +1,8 @@
 pom.xml
+cake.gemspec
 .deps
 *.jar
 *~
+pkg/
 lib/
 classes/
