@@ -2,7 +2,7 @@
   (:use cake cake.ant)
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
            [org.apache.maven.model Dependency License]
-           [org.apache.tools.ant.taskdefs Copy]))
+           [org.apache.tools.ant.taskdefs Copy Delete]))
 
 (def repositories
   {"central"           "http://repo1.maven.org/maven2"
@@ -33,6 +33,7 @@
     (add-dependencies (project :dependencies)))
   (let [dest (java.io.File. (:library-path project))]
     (.mkdirs dest)
+    (ant Delete {} (add-fileset {:dir dest :includes "*.jar"}))
     (ant Copy {:todir dest :flatten true}
       (.addFileset (get-reference "cake.dep.fileset")))))
 
