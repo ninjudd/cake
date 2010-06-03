@@ -3,4 +3,4 @@
 
 (deftest test-other-example
   (println "running test-other-example...")
-  (is false))
+  (is true))
