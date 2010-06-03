@@ -1,5 +1,5 @@
 (ns cake.tasks.test
-  (:use cake cake.oven
+  (:use cake
         [clojure.contrib.find-namespaces :only [find-namespaces-in-dir]])
   (:import [java.io File]))
 

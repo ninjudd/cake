@@ -1,5 +1,6 @@
 (ns user
   (:use cake.ant
+        [cake :only [bake]]
         [clojure.useful :only [abort]]
         [cake.tasks.jar :only [uberjarfile]])
   (:import [org.apache.tools.ant.taskdefs Copy ExecTask]))
@@ -20,3 +21,8 @@
   (let [gem (str "cake-" (:version project) ".gem")]
     (ant ExecTask {:executable "gem" :dir (str (:root project) "/gem")}
          (args ["push" gem]))))
+
+(deftask foo
+  (bake
+   (use 'bake.foo)
+   (foo "baz!")))

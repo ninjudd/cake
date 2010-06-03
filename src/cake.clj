@@ -86,6 +86,16 @@
            (when (verbose? opts) (println " " name "complete."))
            (assoc-in tasks [name :run?] true))))))
 
+(defmacro bake [& body]
+  "Execute body in a fork of the jvm with the classpath of your project."
+  `(do (require 'cake.ant)
+       (cake.ant/ant org.apache.tools.ant.taskdefs.Java
+         {:classname   "clojure.main"
+          :classpath   (cake.ant/classpath project (:test-path project) (System/getProperty "bakepath"))
+          :fork        true
+          :failonerror true}
+         (cake.ant/args ["-e" (prn-str '(do ~@body))]))))
+
 (defmacro task-doc [task]
   "Print documentation for a task."
   (println "-------------------------")
