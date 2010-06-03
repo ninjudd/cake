@@ -17,7 +17,7 @@
 (defn to-compile [project]
   (let [aot (or (:aot project) (:namespaces project))
         aot (cond (string? aot) (vector aot)
-                  (= :all aot)  (find-namespaces-in-dir (:source-path project))
+                  (= :all aot)  (find-namespaces-in-dir (File. (:source-path project)))
                   :else         aot)]
     (if-let [main (:main project)]
       (conj aot main)
@@ -29,7 +29,7 @@
              :fork        true
              :failonerror true}
        (sys {:clojure.compile.path (:compile-path project)})
-       (args (to-compile project))))
+       (args (map name (to-compile project)))))
 
 (deftask compile
   (compile-java project)

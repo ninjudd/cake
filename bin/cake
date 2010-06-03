@@ -8,7 +8,7 @@ def get(url, dest)
 end
 
 def cake(*args)
-  system %Q( java -cp #{$classpath} clojure.main -e "(use 'cake)(-main)" /dev/null #{args.join(' ')} )
+  system %Q( java -d32 -cp #{$classpath} clojure.main -e "(use 'cake)(-main)" /dev/null #{args.join(' ')} )
 end
 
 file = File.readlink(__FILE__) rescue __FILE__
@@ -20,7 +20,7 @@ $classpath = File.exists?(jar) ? jar : "#{root}/src/:#{root}/lib/*"
 # Bootstap cake dependencies.
 if not File.exists?(lib)
   url ="http://github.com/downloads/ninjudd/cake-standalone/cake.jar"
-  echo "fetching cake standalone jar from #{url}..."
+  puts "fetching cake standalone jar from #{url}..."
   File.makedirs(lib)
   get(url, lib)
 end
