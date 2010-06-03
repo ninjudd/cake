@@ -74,8 +74,8 @@
         (.. path createPathElement (setPath p))))
     path))
 
-(defn classpath [project]
-  (path (:source-path project) (str (:library-path project) "/*")))
+(defn classpath [project & paths]
+  (apply path (:source-path project) (str (:library-path project) "/*") paths))
 
 (defn args [task args]
   (doseq [a args]

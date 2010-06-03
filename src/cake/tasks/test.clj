@@ -23,28 +23,27 @@
                     (map prep-opt to-test))
         to-test   (group-opts to-test)
         foo       (println "b:" to-test)]
-    (bake `(do
-             (require 'clojure.test)
-             (doseq [ns# '~test-nses]
-               (require ns#))
-             (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)]
-               (doseq [fn# (:fn '~to-test)]
-                 (let [test-fn# (ns-resolve (symbol (namespace fn#)) (symbol (name fn#)))]
-                   (clojure.test/test-var test-fn#)))
+    (bake
+     (require 'clojure.test)
+     (doseq [ns# '~test-nses]
+       (require ns#))
+     (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)]
+       (doseq [fn# (:fn '~to-test)]
+         (let [test-fn# (ns-resolve (symbol (namespace fn#)) (symbol (name fn#)))]
+           (clojure.test/test-var test-fn#)))
 
-               (println @clojure.test/*report-counters*)
+       (println @clojure.test/*report-counters*)
 
-               (doseq [ns# (:ns '~to-test)]
-                 (clojure.test/test-all-vars ns#))
-               
-               (println @clojure.test/*report-counters*)
+       (doseq [ns# (:ns '~to-test)]
+         (clojure.test/test-all-vars ns#))
 
-               (comment doseq [tag# (:tag '~to-test)]
-                 (println "tag:" tag#)
-                 
-                 ))
+       (println @clojure.test/*report-counters*)
 
-             (comment let [start# (System/nanoTime)]
-               (apply clojure.test/run-tests ('~to-test false))
-               (println "Finished in" (/ (- (System/nanoTime) start#) (Math/pow 10 9)) "seconds.\n"))))))
+       (comment doseq [tag# (:tag '~to-test)]
+                (println "tag:" tag#)
 
+                ))
+
+     (comment let [start# (System/nanoTime)]
+              (apply clojure.test/run-tests ('~to-test false))
+              (println "Finished in" (/ (- (System/nanoTime) start#) (Math/pow 10 9)) "seconds.\n")))))

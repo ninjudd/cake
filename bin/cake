@@ -8,14 +8,18 @@ def get(url, dest)
 end
 
 def cake(*args)
-  system %Q( java -d32 -cp #{$classpath} clojure.main -e "(use 'cake)(-main)" /dev/null #{args.join(' ')} )
+  system %Q( java -d32 -cp #{$classpath} -Dbakepath="#{$bakepath}" clojure.main -e "(use 'cake)(-main)" /dev/null #{args.join(' ')} )
+end
+
+def exists_or(file1, file2)
+  File.exists?(file1) ? file1 : file2
 end
 
 file = File.readlink(__FILE__) rescue __FILE__
 root = File.dirname(File.dirname(file))
 lib  = "#{root}/lib"
-jar  = "#{root}/lib/cake.jar"
-$classpath = File.exists?(jar) ? jar : "#{root}/src/:#{root}/lib/*"
+$classpath = exists_or("#{lib}/cake.jar", "#{root}/src/:#{lib}/*")
+$bakepath  = exists_or("#{lib}/bake.jar", "#{root}/bake")
 
 # Bootstap cake dependencies.
 if not File.exists?(lib)
