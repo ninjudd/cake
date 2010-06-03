@@ -51,8 +51,7 @@
     (log "Building jar: " jarfile)
     (doto (DefaultShader.)
       (.enableLogging (ConsoleLogger. ConsoleLogger/LEVEL_WARN "foo"))
-      (.shade (jars project) jarfile [] [] [(ComponentsXmlResourceTransformer.)]))
-    (ant Copy {:file jarfile :tofile (File. (:root project) "cake.jar")})))
+      (.shade (jars project) jarfile [] [] [(ComponentsXmlResourceTransformer.)]))))
 
 (deftask uberjar => jar
   (uberjar project))

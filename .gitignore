@@ -1,8 +1,7 @@
 pom.xml
 .deps
 *.jar
-*.gem
 *~
-pkg/
+gem/
 lib/
 classes/

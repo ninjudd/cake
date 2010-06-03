@@ -28,7 +28,7 @@
              :classpath   (classpath project)
              :fork        true
              :failonerror true}
-       (env {:clojure.compile.path "classes"})
+       (sys {:clojure.compile.path (:compile-path project)})
        (args (to-compile project))))
 
 (deftask compile

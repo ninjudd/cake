@@ -81,9 +81,14 @@
   (doseq [a args]
     (.. task createArg (setValue a))))
 
-(defn env [task map]
+(defn sys [task map]
   (doseq [[key val] map]
     (.addSysproperty task
+     (make Environment$Variable {:key (name key) :value val}))))
+
+(defn env [task map]
+  (doseq [[key val] map]
+    (.addEnv task
      (make Environment$Variable {:key (name key) :value val}))))
 
 (defn init-project [root]
