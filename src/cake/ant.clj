@@ -1,9 +1,9 @@
 (ns cake.ant
   "Lancet-inspired ant helpers."
-  (:use [clojure.useful :only [conj-vec]])
+  (:require cake)
   (:import [org.apache.tools.ant Project NoBannerLogger]
            [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]
-           [org.apache.tools.ant.taskdefs Manifest Manifest$Attribute]
+           [org.apache.tools.ant.taskdefs Echo Manifest Manifest$Attribute]
            [java.beans Introspector]))
 
 (def ant-project (atom nil))
@@ -46,6 +46,7 @@
 (defmacro ant [task attrs & forms]
   `(doto (make* ~task ~attrs)
      ~@forms
+     (.setTaskName (name cake/current-task))
      (.execute)))
 
 (defn get-reference [ref-id]
@@ -73,6 +74,9 @@
         (.. path createPathElement (setPath p))))
     path))
 
+(defn classpath [project]
+  (path (:source-path project) (str (:library-path project) "/*")))
+
 (defn args [task args]
   (doseq [a args]
     (.. task createArg (setValue a))))
@@ -91,6 +95,9 @@
          {:message-output-level Project/MSG_INFO
           :output-print-stream  System/out
           :error-print-stream   System/err})))))
+
+(defn log [& message]
+  (ant Echo {:message (apply str message)}))
 
 (defmethod coerce [java.io.File String] [_ str] (java.io.File. str))
 (defmethod coerce :default [type val]

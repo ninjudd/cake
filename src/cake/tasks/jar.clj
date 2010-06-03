@@ -1,13 +1,17 @@
 (ns cake.tasks.jar
   (:use cake cake.ant
         [clojure.useful :only [absorb]])
-  (:import [org.apache.tools.ant.taskdefs Jar]
+  (:import [org.apache.tools.ant.taskdefs Jar Copy]
            [org.apache.tools.ant.taskdefs.optional.ssh Scp]
            [org.apache.tools.ant.types FileSet ZipFileSet]
+           [org.codehaus.plexus.logging.console ConsoleLogger]
+           [org.apache.maven.plugins.shade DefaultShader]
+           [org.apache.maven.plugins.shade.resource ComponentsXmlResourceTransformer]
+           ;; [org.apache.maven.plugin.war WarMojo]
            [java.io File]))
 
 (defn jarfile [project]
-  (format "%s-%s.jar" (:artifact-id project) (:version project)))
+  (File. (:root project) (format "%s-%s.jar" (:artifact-id project) (:version project))))
 
 (defn manifest [project]
   (merge (:manifest project)
@@ -30,18 +34,25 @@
   (jar project))
 
 (defn uberjarfile [project]
-  (format "%s-%s-standalone.jar" (:artifact-id project) (:version project)))
+  (File. (:root project) (format "%s-%s-standalone.jar" (:artifact-id project) (:version project))))
 
 (defn add-jars [task dir]
   (doseq [jar (file-seq (File. dir))]
     (when (.endsWith (.getName jar) ".jar")
       (add-zipfileset task {:src jar :excludes "project.clj META-INF/** meta-inf/**"}))))
 
+(defn jars [project]
+  (into #{(jarfile project)}
+    (filter #(.endsWith (.getName %) ".jar")
+      (file-seq (File. (:library-path project))))))
+
 (defn uberjar [project]
-  (ant Jar {:dest-file (uberjarfile project)}
-    (add-manifest (manifest project))
-    (add-zipfileset {:src (jarfile project)})
-    (add-jars (:library-path project))))
+  (let [jarfile (uberjarfile project)]
+    (log "Building jar: " jarfile)
+    (doto (DefaultShader.)
+      (.enableLogging (ConsoleLogger. ConsoleLogger/LEVEL_WARN "foo"))
+      (.shade (jars project) jarfile [] [] [(ComponentsXmlResourceTransformer.)]))
+    (ant Copy {:file jarfile :tofile (File. (:root project) "cake.jar")})))
 
 (deftask uberjar => jar
   (uberjar project))

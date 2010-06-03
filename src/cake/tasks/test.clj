@@ -1,9 +1,7 @@
 (ns cake.tasks.test
-  (:use cake
-        cake.ant
+  (:use cake cake.oven
         [clojure.contrib.find-namespaces :only [find-namespaces-in-dir]])
-  (:import [org.apache.tools.ant.taskdefs Java]
-           [java.io File]))
+  (:import [java.io File]))
 
 (defn prep-opt [str]
   (if (.startsWith str ":")

@@ -1,7 +1,6 @@
 (ns cake
   (:use clojure.useful
-        [cake.project :only [init]]
-        [cake.ant :only [ant path args]]))
+        [cake.project :only [init]]))
 
 (def tasks (atom {}))
 
@@ -9,6 +8,9 @@
   (let [task (first *command-line-args*)]
     (parse-args (when task (keyword task))
                 (next *command-line-args*))))
+
+(defn verbose? [opts]
+  (or (:v opts) (:verbose opts)))
 
 (defn cat [s1 s2]
   (if s1 (str s1 " " s2) s2))
@@ -31,7 +33,8 @@
 (defmacro defproject [project-name version & args]
   (let [root (.getParent (java.io.File. *file*))
         artifact (name project-name)]
-    `(do (cake.ant/init-project ~root)
+    `(do (require 'cake.ant)
+         (cake.ant/init-project ~root)
          (require 'cake.tasks.defaults)
          (compare-and-set! project nil
            (-> (apply hash-map '~args)
@@ -44,9 +47,6 @@
                          :compile-path (str ~root "/classes")
                          :source-path  (str ~root "/src")
                          :test-path    (str ~root "/test")))))))
-
-(defn classpath [project]
-  (cake.ant/path (:source-path project) (str (:library-path project) "/*")))
 
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
@@ -68,6 +68,8 @@
 (defn remove-task! [name]
   (swap! tasks dissoc name))
 
+(def current-task nil)
+
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
   ([name] (swap! tasks run-task name) nil)
@@ -78,24 +80,16 @@
          tasks
          (let [tasks (reduce run-task tasks (task :deps))]
            (doseq [action (task :actions)]
-             (binding [project @project]
+             (binding [project      @project
+                       current-task name]
                (action)))
-           (assoc-in tasks [name :run?] true)))
-       (println "cake:" name "complete."))))
+           (when (verbose? opts) (println " " name "complete."))
+           (assoc-in tasks [name :run?] true))))))
 
 (defmacro task-doc [task]
   "Print documentation for a task."
   (println "-------------------------")
   (println "cake" (name task) " ;" (:doc (@tasks task))))
-
-(defn bake [form]
-  "execute a form in a fork of the jvm with the classpath of your project"
-  (ant org.apache.tools.ant.taskdefs.Java
-       {:classname   "clojure.main"
-        :classpath   (path "src" "lib/*" "test")
-        :fork        true
-        :failonerror true}
-       (args ["-e" (prn-str form)])))
 
 (defn -main []
   (init)
