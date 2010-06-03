@@ -21,8 +21,3 @@
   (let [gem (str "cake-" (:version project) ".gem")]
     (ant ExecTask {:executable "gem" :dir (str (:root project) "/gem")}
          (args ["push" gem]))))
-
-(deftask foo
-  (bake
-   (use 'bake.foo)
-   (foo "baz!")))
