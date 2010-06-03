@@ -5,26 +5,48 @@
   (:import [org.apache.tools.ant.taskdefs Java]
            [java.io File]))
 
-(comment defmacro bench [expr]
-  "from stuart halloway's programming clojure, pg 205- http://github.com/stuarthalloway/programming-clojure/blob/master/examples/macros.clj"
-  `(let [start# (System/nanoTime)
-         result# ~expr]
-     {:result result# :elapsed (- (System/nanoTime) start#)}))
+(defn prep-opt [str]
+  (if (.startsWith str ":")
+    (read-string str)
+    (symbol str)))
 
-(defmacro bench [expr]
-  `(let [~'start (System/nanoTime)
-         ~'result ~expr]
-     {:result ~'result :elapsed (- (System/nanoTime) ~'start)}))
+(defn group-opts [coll]
+  (group-by #(cond (and (namespace %) (name %)) :fn
+                   (keyword? %)                 :tag
+                   :else                        :ns)
+            coll))
 
 (deftask test
   (println "opts:" opts)
-  (let [to-test (find-namespaces-in-dir (File. (:root project) "test"))]
+  (let [test-nses (find-namespaces-in-dir (File. (:root project) "test"))
+        to-test   (:test opts)
+        to-test   (if (nil? to-test)
+                    test-nses
+                    (map prep-opt to-test))
+        to-test   (group-opts to-test)
+        foo       (println "b:" to-test)]
     (bake `(do
              (require 'clojure.test)
-             (doseq [ns# '~to-test]
+             (doseq [ns# '~test-nses]
                (require ns#))
-             (let [start#      (System/nanoTime)]
-               (apply clojure.test/run-tests '~to-test)
-               (println "Finished in" (/ (- (System/nanoTime) start#) (Math/pow 10 9)) "seconds.\n"))))))
+             (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)]
+               (doseq [fn# (:fn '~to-test)]
+                 (let [test-fn# (ns-resolve (symbol (namespace fn#)) (symbol (name fn#)))]
+                   (clojure.test/test-var test-fn#)))
 
+               (println @clojure.test/*report-counters*)
+
+               (doseq [ns# (:ns '~to-test)]
+                 (clojure.test/test-all-vars ns#))
+               
+               (println @clojure.test/*report-counters*)
+
+               (comment doseq [tag# (:tag '~to-test)]
+                 (println "tag:" tag#)
+                 
+                 ))
+
+             (comment let [start# (System/nanoTime)]
+               (apply clojure.test/run-tests ('~to-test false))
+               (println "Finished in" (/ (- (System/nanoTime) start#) (Math/pow 10 9)) "seconds.\n"))))))
 
