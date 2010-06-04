@@ -12,17 +12,6 @@
 (defn verbose? [opts]
   (or (:v opts) (:verbose opts)))
 
-(defn cat [s1 s2]
-  (if s1 (str s1 " " s2) s2))
-
-(defn update-task [task deps doc actions]
-  {:pre [(every? symbol? deps) (every? fn? actions)]}
-  (let [task (or task {:actions [] :deps []})]
-    (-> task
-        (update :deps    into deps)
-        (update :doc     cat  doc)
-        (update :actions into actions))))
-
 (defn group [project]
   (if (or (= project 'clojure) (= project 'clojure-contrib))
     "org.clojure"
@@ -49,6 +38,22 @@
                          :source-path    (str ~root "/src")
                          :test-path      (str ~root "/test")))))))
 
+(defn dependency? [form]
+  (or (symbol? form)
+      (and (seq? form)
+           (include? (first form) ['fn* 'fn]))))
+
+(defn cat [s1 s2]
+  (if s1 (str s1 " " s2) s2))
+
+(defn update-task [task deps doc actions]
+  {:pre [(every? dependency? deps) (every? fn? actions)]}
+  (let [task (or task {:actions [] :deps []})]
+    (-> task
+        (update :deps    into deps)
+        (update :doc     cat  doc)
+        (update :actions into actions))))
+
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
    be broken up among multiple deftask calls and even multiple files:
@@ -58,7 +63,7 @@
      (do-something-else))"
   [name & body]
   (let [[deps body] (if (= '=> (first body))
-                      (split-with symbol? (rest body))
+                      (split-with dependency? (rest body))
                       [() body])
         [doc actions] (if (string? (first body))
                         (split-at 1 body)
@@ -74,18 +79,21 @@
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
   ([name] (swap! tasks run-task name) nil)
-  ([tasks name]
-     (let [task (tasks name)]
-       (when (nil? task) (abort "Unknown task:" name))
-       (if (:run? task)
-         tasks
-         (let [tasks (reduce run-task tasks (task :deps))]
-           (doseq [action (task :actions)]
-             (binding [project      @project
-                       current-task name]
-               (action)))
-           (when (verbose? opts) (println " " name "complete."))
-           (assoc-in tasks [name :run?] true))))))
+  ([tasks form]
+     (if (list? form)
+       (binding [project @project]
+         ((eval form)) ; excute anonymous dependency
+         tasks)
+       (let [name form, task (tasks name)]
+         (when (nil? task) (abort "Unknown task:" name))
+         (if (:run? task)
+           tasks
+           (let [tasks (reduce run-task tasks (task :deps))]
+             (doseq [action (task :actions)]
+               (binding [project @project, current-task name]
+                 (action)))
+             (when (verbose? opts) (println " " name "complete."))
+             (assoc-in tasks [name :run?] true)))))))
 
 (defmacro bake [& body]
   "Execute body in a fork of the jvm with the classpath of your project."
