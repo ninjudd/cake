@@ -1,6 +1,5 @@
 (ns user
   (:use cake.ant
-        [cake :only [bake]]
         [clojure.useful :only [abort]]
         [cake.tasks.jar :only [uberjarfile]])
   (:import [org.apache.tools.ant.taskdefs Copy ExecTask]))

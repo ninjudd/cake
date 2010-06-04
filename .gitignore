@@ -1,6 +1,7 @@
 pom.xml
 .deps
 *.jar
+*.war
 *~
 gem/
 lib/

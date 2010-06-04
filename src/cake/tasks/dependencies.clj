@@ -1,7 +1,7 @@
 (ns cake.tasks.dependencies
   (:use cake cake.ant)
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
-           [org.apache.maven.model Dependency License]
+           [org.apache.maven.model Dependency Exclusion License]
            [org.apache.tools.ant.taskdefs Copy Delete]))
 
 (def repositories
@@ -20,12 +20,23 @@
     (.addConfiguredRemoteRepository task
       (make RemoteRepository {:id id :url url}))))
 
-(defn add-dependencies [task dependencies]
-  (doseq [[dep version] dependencies]
-    (let [dep (make Dependency {:group-id (group dep) :artifact-id (name dep) :version version})]
-      (if (instance? Pom task)
-        (.addConfiguredDependency task dep)
-        (.addDependency task dep)))))
+(defn exclusion [dep]
+  (make Exclusion {:group-id (group dep) :artifact-id (name dep)}))
+
+(defn- add-dep [task dep]
+  (if (instance? Pom task)
+    (.addConfiguredDependency task dep)
+    (.addDependency task dep)))
+
+(defn add-dependencies [task deps]
+  (doseq [[dep version & opts] deps]
+    (let [opts (apply array-map opts)]
+      (add-dep task
+       (make Dependency
+         {:group-id    (group dep)
+          :artifact-id (name dep)
+          :version     version
+          :exclusions  (map exclusion (:exclusions opts))})))))
 
 (defn deps [project]
   (ant DependenciesTask {:fileset-id "cake.dep.fileset" :path-id (:name project)}

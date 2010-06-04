@@ -15,14 +15,20 @@
                (replaceAll "-$1")
                toLowerCase)))
 
+(defn property-setters [class]
+  (reduce
+   (fn [map property]
+     (assoc map (property-key property) (.getWriteMethod property)))
+   {} (.getPropertyDescriptors (Introspector/getBeanInfo class)))  )
+
 (defn set-attributes! [instance attrs]
-  (doseq [property (.getPropertyDescriptors (Introspector/getBeanInfo (class instance)))]
-    (let [key    (property-key property)
-          val    (attrs key)
-          setter (.getWriteMethod property)]
-      (when-not (or (nil? val) (nil? setter))
-        (let [type (first (.getParameterTypes setter))]
-          (.invoke setter instance (into-array [(coerce type val)])))))))
+  (let [setters (property-setters (class instance))]
+    (doseq [[key val] attrs]
+      (if-let [setter (setters key)]
+        (when-not (nil? val)
+          (let [type (first (.getParameterTypes setter))]
+            (.invoke setter instance (into-array [(coerce type val)]))))
+        (throw (Exception. (str "property not found for " key)))))))
 
 (defn make*
   ([class attrs]
@@ -53,12 +59,14 @@
   (.getReference @ant-project ref-id))
 
 (defmacro add-fileset [task attrs & forms]
-  `(.addFileset ~task
-     (make FileSet ~attrs ~@forms)))
+  (let [attrs (merge {:error-on-missing-dir false} attrs)]
+    `(.addFileset ~task
+       (make FileSet ~attrs ~@forms))))
 
 (defmacro add-zipfileset [task attrs & forms]
-  `(.addFileset ~task
-     (make ZipFileSet ~attrs ~@forms)))
+  (let [attrs (merge {:error-on-missing-dir false} attrs)]
+    `(.addFileset ~task
+       (make ZipFileSet ~attrs ~@forms))))
 
 (defn add-manifest [task attrs]
   (let [manifest (Manifest.)]

@@ -43,10 +43,11 @@
                       :root        ~root
                       :version     ~version)
                (assoc-or :name         ~artifact
-                         :library-path (str ~root "/lib")
-                         :compile-path (str ~root "/classes")
-                         :source-path  (str ~root "/src")
-                         :test-path    (str ~root "/test")))))))
+                         :library-path   (str ~root "/lib")
+                         :compile-path   (str ~root "/classes")
+                         :resources-path (str ~root "/resources")
+                         :source-path    (str ~root "/src")
+                         :test-path      (str ~root "/test")))))))
 
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
