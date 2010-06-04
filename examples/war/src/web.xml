@@ -1,0 +1,10 @@
+<web-app>
+ <servlet>
+   <servlet-name>cake war</servlet-name>
+   <servlet-class>servlet</servlet-class>
+ </servlet>
+ <servlet-mapping>
+   <servlet-name>cake war</servlet-name>
+   <url-pattern>/</url-pattern>
+ </servlet-mapping>
+</web-app>
