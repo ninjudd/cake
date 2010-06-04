@@ -88,13 +88,16 @@
 
 (defmacro bake [& body]
   "Execute body in a fork of the jvm with the classpath of your project."
-  `(do (require 'cake.ant)
-       (cake.ant/ant org.apache.tools.ant.taskdefs.Java
-         {:classname   "clojure.main"
-          :classpath   (cake.ant/classpath project (:test-path project) (System/getProperty "bakepath"))
-          :fork        true
-          :failonerror true}
-         (cake.ant/args ["-e" (prn-str '(do ~@body))]))))
+  (let [code (prn-str `(do (def ~'project '~(deref project))
+                           (def ~'opts ~opts)
+                           ~@body))]
+    `(do (require 'cake.ant)
+         (cake.ant/ant org.apache.tools.ant.taskdefs.Java
+           {:classname   "clojure.main"
+            :classpath   (cake.ant/classpath project (:test-path project) (System/getProperty "bakepath"))
+            :fork        true
+            :failonerror true}
+           (cake.ant/args ["-e" ~code])))))
 
 (defmacro task-doc [task]
   "Print documentation for a task."
