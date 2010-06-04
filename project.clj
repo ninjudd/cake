@@ -1,4 +1,4 @@
-(defproject cake "0.2.4-SNAPSHOT"
+(defproject cake "0.2.4-SNAPSHOT" :aot :all
   :description "Save your fork, there's cake!"
   :dependencies [[org.clojure/clojure "1.2.0-master-SNAPSHOT"]
                  [org.clojure/clojure-contrib "1.2.0-SNAPSHOT"]
