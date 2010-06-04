@@ -24,7 +24,6 @@
         artifact (name project-name)]
     `(do (require 'cake.ant)
          (cake.ant/init-project ~root)
-         (require 'cake.tasks.defaults)
          (compare-and-set! project nil
            (-> (apply hash-map '~args)
                (assoc :artifact-id ~artifact
@@ -36,7 +35,10 @@
                          :compile-path   (str ~root "/classes")
                          :resources-path (str ~root "/resources")
                          :source-path    (str ~root "/src")
-                         :test-path      (str ~root "/test")))))))
+                         :test-path      (str ~root "/test"))))
+         ; @project must be set before we include the tasks for bake to work.
+         (require 'cake.tasks.defaults))))
+
 
 (defn dependency? [form]
   (or (symbol? form)
