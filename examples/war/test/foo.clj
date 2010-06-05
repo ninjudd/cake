@@ -8,3 +8,4 @@
 (deftest ^{:tags [:a]} baz
   (println "baz ran!")
   (is true))
+

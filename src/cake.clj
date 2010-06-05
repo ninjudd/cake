@@ -119,4 +119,5 @@
   (init)
   (let [task (first *command-line-args*)]
     (run-task (symbol (or task 'default)))
-    (System/exit 0)))
+    (System/exit 0)
+    ))
