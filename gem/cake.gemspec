@@ -9,6 +9,6 @@ Gem::Specification.new do |s|
   s.description = "Save your fork, there's cake!"
   s.email = 'code@justinbalthrop.com'
   s.executables = ['cake']
-  s.files = ['cake.gemspec', 'bin/cake', 'lib/cake.jar']
+  s.files = ['cake.gemspec', 'bin/cake', 'lib/cake.jar', 'lib/bake.jar']
   s.homepage = 'http://github.com/ninjudd/cake'
 end

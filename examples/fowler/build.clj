@@ -2,7 +2,7 @@
   "This task generates code. It has no dependencies."
   (println "generating code..."))
 
-(deftask compile => code-gen
+(deftask compilation => code-gen
   "This task does the compilation. It depends on code-gen."
   (println "compiling..."))
 
@@ -10,6 +10,6 @@
   "This task loads the test data. It depends on code-gen."
   (println "loading test data..."))
 
-(deftask test => compile, data-load
+(deftask run-test => compilation, data-load
   "This task runs the tests. It depends on compile and data-load."
   (println "running tests..."))

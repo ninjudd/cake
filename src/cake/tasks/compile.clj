@@ -18,7 +18,9 @@
 (defn stale? [sourcefile classfile]
   (> (.lastModified sourcefile) (.lastModified classfile)))
 
-(defn aot [project]
+(defn aot
+  "Return a function that takes a namespace and returns whether it should be aot compiled."
+  [project]
   (let [aot (or (:aot project) (:namespaces project))]
     (if (= :all aot)
       (constantly true)

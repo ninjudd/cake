@@ -17,14 +17,15 @@
     "org.clojure"
     (or (namespace project) (name project))))
 
-(def project (atom nil))
+(def project nil)
+(def the-project (atom nil))
 
 (defmacro defproject [project-name version & args]
   (let [root (.getParent (java.io.File. *file*))
         artifact (name project-name)]
     `(do (require 'cake.ant)
          (cake.ant/init-project ~root)
-         (compare-and-set! project nil
+         (compare-and-set! the-project nil
            (-> (apply hash-map '~args)
                (assoc :artifact-id ~artifact
                       :group-id    ~(group project-name)
@@ -36,9 +37,8 @@
                          :resources-path (str ~root "/resources")
                          :source-path    (str ~root "/src")
                          :test-path      (str ~root "/test"))))
-         ; @project must be set before we include the tasks for bake to work.
+         ; @the-project must be set before we include the tasks for bake to work.
          (require 'cake.tasks.defaults))))
-
 
 (defn dependency? [form]
   (or (symbol? form)
@@ -83,7 +83,7 @@
   ([name] (swap! tasks run-task name) nil)
   ([tasks form]
      (if (list? form)
-       (binding [project @project]
+       (binding [project @the-project]
          ((eval form)) ; excute anonymous dependency
          tasks)
        (let [name form, task (tasks name)]
@@ -92,14 +92,14 @@
            tasks
            (let [tasks (reduce run-task tasks (task :deps))]
              (doseq [action (task :actions)]
-               (binding [project @project, current-task name]
+               (binding [project @the-project, current-task name]
                  (action)))
              (when (verbose? opts) (println " " name "complete."))
              (assoc-in tasks [name :run?] true)))))))
 
 (defmacro bake [& body]
   "Execute body in a fork of the jvm with the classpath of your project."
-  (let [code (prn-str `(do (def ~'project '~(deref project))
+  (let [code (prn-str `(do (def ~'project '~(deref the-project))
                            (def ~'opts ~opts)
                            ~@body))]
     `(do (require 'cake.ant)

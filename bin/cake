@@ -1,36 +1,93 @@
 #!/usr/bin/env ruby
 # Save your fork, there's cake!"
-
+require 'ftools'
 require 'open-uri'
+require 'rexml/document'
 
-def get(url, dest)
-  open("#{dest}/#{File.basename(url)}", "wb").write(open(url))
+$repo = "http://clojars.org/repo/cake/cake"
+$file = File.readlink(__FILE__) rescue __FILE__
+$root = File.dirname(File.dirname($file))
+
+def have_cake(version, dest)
+  jar  = version =~ /(.*)-SNAPSHOT/ ? "cake-#{$1}-#{snapshot(version)}.jar" : "cake-#{version}.jar"
+  dest = File.expand_path(dest)
+  path = "#{dest}/#{jar}"
+
+  if not File.exists?(path)
+    puts "fetching cake libraries. this may take a moment..."
+    url = "#{$repo}/#{version}/#{jar}"
+    File.makedirs(dest)
+    open(url) do |jar|
+      open(path, "wb") do |file|
+        while (buf = jar.read(8192))
+          file.write buf
+        end
+      end
+    end
+  end
+  path
+rescue OpenURI::HTTPError => e
+  puts "unable to find cake version #{version} on clojars."
+  puts "please check http://github.com/ninjudd/cake for latest install instructions."
+  exit
 end
 
-def cake(*args)
-  system %Q( java -d32 -cp #{$classpath} -Dbakepath="#{$bakepath}" clojure.main -e "(use 'cake)(-main)" /dev/null #{args.join(' ')} )
+def eat_cake(*args)
+  opts = %{ -d32 -cp #{$classpath} -Dbakepath="#{$bakepath}" }
+  system %{ java #{opts} clojure.main -e "(use 'cake)(-main)" /dev/null #{args.join(' ')} }
 end
 
-def exists_or(file1, file2)
-  File.exists?(file1) ? file1 : file2
+def current_version
+  open("#{$repo}/maven-metadata.xml") do |file|
+    doc = REXML::Document.new file
+    doc.elements['metadata'].elements['versioning'].elements['versions'].elements.to_a('version').last.get_text.to_s
+  end
 end
 
-file = File.readlink(__FILE__) rescue __FILE__
-root = File.dirname(File.dirname(file))
-lib  = "#{root}/lib"
-$classpath = exists_or("#{lib}/cake.jar", "#{root}/src/:#{lib}/*")
-$bakepath  = exists_or("#{lib}/bake.jar", "#{root}/bake")
+def snapshot(version)
+  open("#{$repo}/#{version}/maven-metadata.xml") do |file|
+    doc = REXML::Document.new file
+    snapshot  = doc.elements['metadata'].elements['versioning'].elements['snapshot'].elements
+    timestamp = snapshot['timestamp'].get_text
+    build_num = snapshot['buildNumber'].get_text
+    "#{timestamp}-#{build_num}"
+  end
+end
+
+def extract(jar, file)
+  dest = File.dirname(jar)
+  system %{ jar xf #{jar} -C #{dest} #{file} }
+  "#{dest}/#{file}"
+end
 
 # Bootstap cake dependencies.
-if not File.exists?(lib)
-  url ="http://github.com/downloads/ninjudd/cake-standalone/cake.jar"
-  puts "fetching cake standalone jar from #{url}..."
-  File.makedirs(lib)
-  get(url, lib)
+lib = "#{$root}/lib"
+if File.exists?("#{$root}/.gitignore")
+  if Dir["#{lib}/*.jar"].empty?
+    # In a new git checkout, need to fetch dependencies.
+    version = IO.read("#{$root}/project.clj").first.match(/defproject cake \"(.*)\"/)[1]
+    have_cake(version, lib)
+  end
+  $classpath = "#{$root}/src/:#{lib}/*"
+  $bakepath  = "#{$root}/bake"
+else
+  cake_jar = "#{lib}/cake.jar"
+  bake_jar = "#{lib}/bake.jar"
+  if File.exists?(cake_jar) and File.exists?(bake_jar)
+    # Inside a gem install.
+    $classpath = cake_jar
+    $bakepath  = bake_jar
+  else
+    # Naked script.
+    version    = current_version
+    dest       = "~/.m2/repository/cake/cake/#{version}"
+    $classpath = have_cake(version, dest)
+    $bakepath  = extract($classpath, "bake-#{version}.jar")
+  end
 end
 
 if not File.exists?("pom.xml") or test(?>, "project.clj", "pom.xml") and ARGV.first != "deps"
-  cake("deps")
+  eat_cake("deps")
 end
 
-cake(*ARGV)
+eat_cake(*ARGV)
