@@ -36,6 +36,7 @@
 (deftask release => uberjar, gem
   (when-not (snapshot? project)
     (let [gem (str "cake-" (:version project) ".gem")]
+      (log "Releasing gem: " gem)
       (ant ExecTask {:executable "gem" :dir (str (:root project) "/gem")}
            (args ["push" gem]))))
   (let [uberjarfile (uberjarfile project)
