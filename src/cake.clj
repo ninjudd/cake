@@ -17,15 +17,14 @@
     "org.clojure"
     (or (namespace project) (name project))))
 
-(def project nil)
-(def the-project (atom nil))
+(def cake-project (atom nil))
 
 (defmacro defproject [project-name version & args]
   (let [root (.getParent (java.io.File. *file*))
         artifact (name project-name)]
     `(do (require 'cake.ant)
          (cake.ant/init-project ~root)
-         (compare-and-set! the-project nil
+         (compare-and-set! cake-project nil
            (-> (apply hash-map '~args)
                (assoc :artifact-id ~artifact
                       :group-id    ~(group project-name)
@@ -37,7 +36,7 @@
                          :resources-path (str ~root "/resources")
                          :source-path    (str ~root "/src")
                          :test-path      (str ~root "/test"))))
-         ; @the-project must be set before we include the tasks for bake to work.
+         ; @cake-project must be set before we include the tasks for bake to work.
          (require 'cake.tasks.defaults))))
 
 (defn dependency? [form]
@@ -50,7 +49,7 @@
 
 (defn update-task [task deps doc actions]
   {:pre [(every? dependency? deps) (every? fn? actions)]}
-  (let [task (or task {:actions [] :deps []})]
+  (let [task (or task {:actions [] :deps [] :run? (atom false)})]
     (-> task
         (update :deps    into deps)
         (update :doc     cat  doc)
@@ -76,30 +75,26 @@
 (defn remove-task! [name]
   (swap! tasks dissoc name))
 
+(def project nil)
 (def current-task nil)
 
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
-  ([name] (swap! tasks run-task name) nil)
-  ([tasks form]
-     (if (list? form)
-       (binding [project @the-project]
-         ((eval form)) ; excute anonymous dependency
-         tasks)
-       (let [name form, task (tasks name)]
-         (when (nil? task) (abort "Unknown task:" name))
-         (if (:run? task)
-           tasks
-           (let [tasks (reduce run-task tasks (task :deps))]
-             (doseq [action (task :actions)]
-               (binding [project @the-project, current-task name]
-                 (action)))
-             (when (verbose? opts) (println " " name "complete."))
-             (assoc-in tasks [name :run?] true)))))))
+  [form]
+  (if (list? form)
+    (binding [project @cake-project] ((eval form))) ; excute anonymous dependency
+    (let [name form, task (@tasks name)]
+      (when (nil? task) (abort "Unknown task:" name))
+      (when-not @(:run? task)
+        (doseq [dep (:deps task)] (run-task dep))
+        (doseq [action (:actions task)]
+          (binding [project @cake-project, current-task name]
+            (action)))
+        (compare-and-set! (get-in @tasks [name :run?]) false true)))))
 
 (defmacro bake [& body]
   "Execute body in a fork of the jvm with the classpath of your project."
-  (let [code (prn-str `(do (def ~'project '~(deref the-project))
+  (let [code (prn-str `(do (def ~'project '~(deref cake-project))
                            (def ~'opts ~opts)
                            ~@body))]
     `(do (require 'cake.ant)
@@ -119,5 +114,4 @@
   (init)
   (let [task (first *command-line-args*)]
     (run-task (symbol (or task 'default)))
-    (System/exit 0)
-    ))
+    (System/exit 0)))
