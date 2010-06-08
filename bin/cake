@@ -63,9 +63,11 @@ end
 def daemon(cmd)
   pid = fork do
     Process.setsid
-    STDIN.reopen  '/dev/null'
-    STDOUT.reopen '/dev/null', 'a'
-    STDERR.reopen '/dev/null', 'a'
+    if not ENV['DEBUG']
+      STDIN.reopen  '/dev/null'
+      STDOUT.reopen '/dev/null', 'a'
+      STDERR.reopen '/dev/null', 'a'
+    end
     trap('TERM') { exit }
     exec(cmd)
   end

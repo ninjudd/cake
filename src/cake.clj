@@ -1,11 +1,9 @@
 (ns cake
-  (:use clojure.useful
-        [cake.project :only [init]]
-        [clojure.contrib.server-socket :only [create-server]])
+  (:use clojure.useful cake.server
+        [cake.project :only [init]])
   (:require [cake.ant :as ant])
-  (:import [java.io InputStreamReader OutputStream OutputStreamWriter BufferedReader]
-           [clojure.lang LineNumberingPushbackReader]
-           [java.net Socket InetAddress]))
+  (:import [java.io InputStreamReader OutputStreamWriter BufferedReader]
+           [java.net Socket]))
 
 ; vars to be bound in each thread
 (def run? nil)
@@ -92,13 +90,6 @@
 
 (def bake-port nil)
 
-(defn copy-out [reader]
-  (Thread/sleep 100)
-  (comment .write *out* (.read reader))
-  (while (.ready reader)
-    (.write *out* (.read reader)))
-  (flush))
-
 (defn bake* [form]
   (let [form   `(~'let [~'opts ~opts, ~'project '~project] ~form)
         socket (Socket. "localhost" (int bake-port))
@@ -109,12 +100,7 @@
       (.flush))
     (while-let [line (.readLine reader)]
       (println line))
-    (comment loop [line (.readLine reader)]
-      (when line
-        (println line)
-        (recur (.readLine reader))))
     (flush)))
-
 
 (defmacro bake [bindings & body]
   "Execute body in a fork of the jvm with the classpath of your project."
@@ -126,19 +112,14 @@
   (println "-------------------------")
   (println "cake" (name task) " ;" (:doc (@tasks task))))
 
-(defn process-command [ins outs]
-  (binding [*in*  (LineNumberingPushbackReader. (InputStreamReader. ins))
-            *out* (OutputStreamWriter. outs)
-            *err* *out*]
-    (let [[task args port] (read)]
-      (binding [ant/ant-project (ant/init-project @cake-project outs)
-                opts (parse-args (keyword task) (map str args))
-                bake-port port
-                run? {}]
-        (try (run-task (symbol (or task 'default)))
-             (catch Exception e
-               (.printStackTrace e (java.io.PrintStream. outs))))))))
+(defn process-command [form]
+  (let [[task args port] form]
+    (binding [ant/ant-project (ant/init-project @cake-project *outs*)
+              opts (parse-args (keyword task) (map str args))
+              bake-port port
+              run? {}]
+      (run-task (symbol (or task 'default))))))
 
 (defn start-server [port]
   (init)
-  (create-server port process-command 0 (InetAddress/getByName "localhost")))
+  (create-server port process-command))
