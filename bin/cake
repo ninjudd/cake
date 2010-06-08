@@ -72,7 +72,6 @@ def daemon(cmd)
       STDOUT.reopen '/dev/null', 'a'
       STDERR.reopen '/dev/null', 'a'
     end
-    trap('TERM') { exit }
     exec(cmd)
   end
   Process.detach(pid)
@@ -89,7 +88,7 @@ def modtime(path)
   elsif File.directory?(path)
     modtime = Time.at(0)
     Find.find(path) do |file|
-      modtime = [modtime, File.mtime(file)].max
+      modtime = [modtime, File.mtime(file)].max if File.exists?(file)
     end
     modtime
   else
@@ -129,11 +128,14 @@ MIN_PORT = 2**13
 MAX_PORT = 2**16
 def start_jvm(type, classpath)
   if restart?(type, classpath)
-    stop_jvm(type)
-  else
-    pid, port = read_config(type)
+    stop_jvm(type, 'HUP')
+    sleep(0.1)
+    if File.exists?(pidfile(type))
+      puts "warning: files in classpath have changed but cannot restart #{type} jvm because there are existing connections (use 'cake stop' to force)"
+    end
   end
 
+  pid, port = read_config(type)
   if pid.nil?
     port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
     puts "starting #{type} jvm on port #{port}" if debug?
@@ -145,11 +147,11 @@ rescue Errno::EADDRNOTAVAIL => e
   retry
 end
 
-def stop_jvm(type)
+def stop_jvm(type, signal = 'TERM')
   pid, port = read_config(type)
   if pid
-    puts "stopping #{type} server on port #{port}" if debug?
-    Process.kill('TERM', pid)
+    puts "sending #{signal} to #{type} server on port #{port}" if debug?
+    Process.kill(signal, pid)
   end
 end
 

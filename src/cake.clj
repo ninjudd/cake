@@ -122,4 +122,4 @@
 
 (defn start-server [port]
   (init)
-  (create-server port process-command))
+  (create-server port process-command ".cake/cake.pid"))
