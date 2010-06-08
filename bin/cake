@@ -1,12 +1,12 @@
 #!/usr/bin/env ruby
 # Save your fork, there's cake!"
 require 'ftools'
+require 'find'
 require 'open-uri'
 require 'rexml/document'
 require 'socket'
 require 'timeout'
 require 'readline'
-require 'pp'
 
 file     = File.readlink(__FILE__) rescue __FILE__
 $cakedir = File.dirname(File.dirname(file))
@@ -60,10 +60,14 @@ def extract(jar, file)
   "#{dest}/#{file}"
 end
 
+def debug?
+  ENV['DEBUG'] || ENV['debug']
+end
+
 def daemon(cmd)
   pid = fork do
     Process.setsid
-    if not ENV['DEBUG']
+    if not debug?
       STDIN.reopen  '/dev/null'
       STDOUT.reopen '/dev/null', 'a'
       STDERR.reopen '/dev/null', 'a'
@@ -77,6 +81,31 @@ end
 
 def pidfile(type)
   "#{$confdir}/#{type}.pid"
+end
+
+def modtime(path)
+  if path.kind_of?(Array)
+    path.collect {|f| modtime(f)}.max
+  elsif File.directory?(path)
+    modtime = Time.at(0)
+    Find.find(path) do |file|
+      modtime = [modtime, File.mtime(file)].max
+    end
+    modtime
+  else
+    File.mtime(path) if File.exists?(path)
+  end || Time.at(0)
+end
+
+def restart?(type, classpath)
+  start_time = modtime(pidfile(type))
+
+  files = classpath.split(':').collect do |path|
+    path = "#{path}.jar" if path =~ /\*$/
+    Dir[path]
+  end
+
+  modtime(files) > start_time
 end
 
 def read_config(type)
@@ -99,10 +128,15 @@ end
 MIN_PORT = 2**13
 MAX_PORT = 2**16
 def start_jvm(type, classpath)
-  pid, port = read_config(type)
+  if restart?(type, classpath)
+    stop_jvm(type)
+  else
+    pid, port = read_config(type)
+  end
+
   if pid.nil?
     port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    puts "starting #{type} jvm on port #{port}"
+    puts "starting #{type} jvm on port #{port}" if debug?
     pid  = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
     File.open(pidfile(type), 'w') {|f| f.write("#{pid}\n#{port}\n") }
   end
@@ -114,7 +148,7 @@ end
 def stop_jvm(type)
   pid, port = read_config(type)
   if pid
-    puts "stopping #{type} server on port #{port}"
+    puts "stopping #{type} server on port #{port}" if debug?
     Process.kill('TERM', pid)
   end
 end
@@ -204,7 +238,8 @@ else
     if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
       send_command('deps')
     end
-    $bakeport = start_jvm(:bake, "#{bakepath}:src:src/clj:classes:lib/*")
+    pwd = Dir.getwd
+    $bakeport = start_jvm(:bake, "#{bakepath}:#{pwd}/src:#{pwd}/src/clj:#{pwd}/classes:#{pwd}/lib/*")
   end
 
   if ARGV.first == 'repl'
