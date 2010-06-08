@@ -127,13 +127,7 @@ end
 MIN_PORT = 2**13
 MAX_PORT = 2**16
 def start_jvm(type, classpath)
-  if restart?(type, classpath)
-    stop_jvm(type, 'HUP')
-    sleep(0.1)
-    if File.exists?(pidfile(type))
-      puts "warning: files in classpath have changed but cannot restart #{type} jvm because there are existing connections (use 'cake stop' to force)"
-    end
-  end
+  stop_jvm(type) if restart?(type, classpath)
 
   pid, port = read_config(type)
   if pid.nil?
@@ -147,12 +141,23 @@ rescue Errno::EADDRNOTAVAIL => e
   retry
 end
 
-def stop_jvm(type, signal = 'TERM')
+def stop_jvm(type, opts = {})
   pid, port = read_config(type)
-  if pid
-    puts "sending #{signal} to #{type} server on port #{port}" if debug?
-    Process.kill(signal, pid)
+  if port
+    socket = TCPSocket.new("localhost", port)
+    action = opts[:force] ? ":force-quit" : ":quit"
+    puts "sending #{action} to #{type} server on port #{port}" if debug?
+    socket.write(action + "\n")
+    if socket.gets == "true\n"
+      File.unlink(pidfile(type))
+    else
+      puts "-------------------------------------------"
+      puts "warning: classpath has changed but can't restart #{type} jvm because there are active connections"
+      puts "         close active connections or use 'cake stop' to force quit"
+      puts "-------------------------------------------"
+    end
   end
+rescue Errno::ECONNREFUSED => e
 end
 
 def connect(port)
@@ -160,6 +165,15 @@ def connect(port)
 rescue Errno::ECONNREFUSED => e
   sleep 1
   retry
+end
+
+def send_command(command = 'default', *args)
+  socket = connect($cakeport)
+  socket.write("(#{command} [#{args.join(' ')}] #{$bakeport})\n")
+
+  while(line = socket.gets)
+    puts line
+  end
 end
 
 MARKER = rand.to_s
@@ -170,7 +184,7 @@ START_REPL = <<-END
     :prompt #(printf "%s=> #{MARKER}\n" (ns-name *ns*)))
 END
 
-def read_and_prompt(socket)
+def read_until_prompt(socket)
   while line = socket.gets
     if line =~ PROMPT
       return $1
@@ -180,27 +194,36 @@ def read_and_prompt(socket)
   end
 end
 
-class RestartRepl < Exception; end
+def complete?(input)
+  socket = connect($bakeport)
+  socket.write(":validate #{input}")
+  socket.close_write # send eof
+  socket.gets != "incomplete\n"
+end
+
+def readline(initial_prompt)
+  input = ""
+  prompt = initial_prompt.clone
+  while line = Readline.readline(prompt, true)
+    input << " " + line
+    return input if complete?(input)
+    prompt[-2] = ?*
+  end
+rescue Interrupt => e
+  retry
+end
+
 def repl
   loop do
     socket = connect($bakeport)
     socket.write START_REPL
     socket.gets # burn extra prompt
 
-    while prompt = read_and_prompt(socket)
-      line = Readline.readline(prompt, true)
+    while prompt = read_until_prompt(socket)
+      line = readline(prompt)
       return unless line
       socket.write(line + "\n")
     end
-  end
-end
-
-def send_command(command = 'default', *args)
-  socket = connect($cakeport)
-  socket.write("(#{command} [#{args.join(' ')}] #{$bakeport})")
-
-  while(line = socket.gets)
-    puts line
   end
 end
 
@@ -231,8 +254,8 @@ else
 end
 
 if ARGV.first == 'stop'
-  stop_jvm(:cake)
-  stop_jvm(:bake)
+  stop_jvm(:cake, :force => true)
+  stop_jvm(:bake, :force => true)
 else
   $cakeport = start_jvm(:cake, cakepath)
 

@@ -1,32 +1,49 @@
 (ns cake.server
-  (:use [clojure.useful :only [trap]])
   (:require [clojure.contrib.server-socket :as server-socket])
-  (:import [java.io File PrintStream InputStreamReader OutputStreamWriter]
+  (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream]
            [clojure.lang LineNumberingPushbackReader]
            [java.net InetAddress]))
 
 (def *ins*  nil)
 (def *outs* nil)
 
+(def servers (atom []))
+
+(defn num-connections []
+  (reduce + (map #(count @(:connections %)) @servers)))
+
+(defn quit? [command]
+  (or (= :force-quit command)
+      (and (= :quit command) (>= 1 (num-connections)))))
+
+(defn- process-command [command]
+  (cond (= :validate command)
+        (println
+         (try (read)
+              "valid"
+              (catch clojure.lang.LispReader$ReaderException e
+                (if (.contains (.getMessage e) "EOF")
+                  "incomplete"
+                  "invalid"))))
+        (quit? command)
+        (do (println "true")
+            (System/exit 0))))
+
 (defn- create-server* [port f]
   (server-socket/create-server port
     (fn [ins outs]
       (binding [*in*   (LineNumberingPushbackReader. (InputStreamReader. ins))
                 *out*  (OutputStreamWriter. outs)
-                *err*  *out*
+                *err*  (PrintWriter. #^OutputStream outs true)
                 *ins*  ins
                 *outs* outs]
         (let [form (read)]
-          (try (f form)
-               (catch Exception e
-                 (.printStackTrace e (PrintStream. outs)))))))
+          (if (keyword? form)
+            (process-command form)
+            (try (f form)
+                 (catch Exception e
+                   (.printStackTrace e (PrintStream. outs))))))))
     0 (InetAddress/getByName "localhost")))
 
-(defn create-server [port f pidfile]
-  (let [server (create-server* port f)]
-    (trap "HUP"
-      (fn [signal]
-        (when (empty? @(:connections server))
-          (do (.delete (File. pidfile))
-              (System/exit 0)))))
-    server))
+(defn create-server [port f]
+  (swap! servers conj (create-server* port f)))
