@@ -1,13 +1,16 @@
 (ns cake
   (:use clojure.useful
-        [cake.project :only [init]]))
+        [cake.project :only [init]]
+        [clojure.contrib.server-socket :only [create-server]])
+  (:require [cake.ant :as ant])
+  (:import [java.io InputStreamReader OutputStream OutputStreamWriter BufferedReader]
+           [clojure.lang LineNumberingPushbackReader]
+           [java.net Socket InetAddress]))
 
-(def tasks (atom {}))
-
-(def opts
-  (let [task (first *command-line-args*)]
-    (parse-args (when task (keyword task))
-                (next *command-line-args*))))
+; vars to be bound in each thread
+(def run? nil)
+(def opts nil)
+(def project nil)
 
 (defn verbose? [opts]
   (or (:v opts) (:verbose opts)))
@@ -22,9 +25,7 @@
 (defmacro defproject [project-name version & args]
   (let [root (.getParent (java.io.File. *file*))
         artifact (name project-name)]
-    `(do (require 'cake.ant)
-         (cake.ant/init-project ~root)
-         (compare-and-set! cake-project nil
+    `(do (compare-and-set! cake-project nil
            (-> (apply hash-map '~args)
                (assoc :artifact-id ~artifact
                       :group-id    ~(group project-name)
@@ -47,9 +48,11 @@
 (defn cat [s1 s2]
   (if s1 (str s1 " " s2) s2))
 
+(def tasks (atom {}))
+
 (defn update-task [task deps doc actions]
   {:pre [(every? dependency? deps) (every? fn? actions)]}
-  (let [task (or task {:actions [] :deps [] :run? (atom false)})]
+  (let [task (or task {:actions [] :deps []})]
     (-> task
         (update :deps    into deps)
         (update :doc     cat  doc)
@@ -75,45 +78,67 @@
 (defn remove-task! [name]
   (swap! tasks dissoc name))
 
-(def project nil)
-(def current-task nil)
-
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
   [form]
   (if (list? form)
     (binding [project @cake-project] ((eval form))) ; excute anonymous dependency
     (let [name form, task (@tasks name)]
-      (when (nil? task) (abort "Unknown task:" name))
-      (when-not @(:run? task)
+      (when-not (run? task)
         (doseq [dep (:deps task)] (run-task dep))
-        (doseq [action (:actions task)]
-          (binding [project @cake-project, current-task name]
-            (action)))
-        (compare-and-set! (get-in @tasks [name :run?]) false true)))))
+        (binding [project @cake-project, ant/current-task name]
+          (doseq [action (:actions task)] (action)))
+        (set! run? (assoc run? name true))))))
+
+(def bake-port nil)
+
+(defn copy-out [reader]
+  (Thread/sleep 100)
+  (comment .write *out* (.read reader))
+  (while (.ready reader)
+    (.write *out* (.read reader)))
+  (flush))
+
+(defn bake* [form]
+  (let [form   `(~'let [~'opts ~opts, ~'project '~project] ~form)
+        socket (Socket. "localhost" (int bake-port))
+        reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
+        writer (OutputStreamWriter. (.getOutputStream socket))]
+    (doto writer
+      (.write (prn-str form))
+      (.flush))
+    (while-let [line (.readLine reader)]
+      (println line))
+    (comment loop [line (.readLine reader)]
+      (when line
+        (println line)
+        (recur (.readLine reader))))
+    (flush)))
+
 
 (defmacro bake [bindings & body]
   "Execute body in a fork of the jvm with the classpath of your project."
-  (let [code (prn-str `(do
-                         (let ~bindings 
-                           (def ~'project '~(deref cake-project))
-                           (def ~'opts ~opts)
-                           ~@body)))]
-    `(do (require 'cake.ant)
-         (cake.ant/ant org.apache.tools.ant.taskdefs.Java
-           {:classname   "clojure.main"
-            :classpath   (cake.ant/classpath project (:test-path project) (System/getProperty "bakepath"))
-            :fork        true
-            :failonerror true}
-           (cake.ant/args ["-e" ~code])))))
+  (let [form (if (seq bindings) `(let ~bindings ~@body) `(do ~@body))]
+    `(bake* '~form)))
 
 (defmacro task-doc [task]
   "Print documentation for a task."
   (println "-------------------------")
   (println "cake" (name task) " ;" (:doc (@tasks task))))
 
-(defn -main []
+(defn process-command [ins outs]
+  (binding [*in*  (LineNumberingPushbackReader. (InputStreamReader. ins))
+            *out* (OutputStreamWriter. outs)
+            *err* *out*]
+    (let [[task args port] (read)]
+      (binding [ant/ant-project (ant/init-project @cake-project outs)
+                opts (parse-args (keyword task) (map str args))
+                bake-port port
+                run? {}]
+        (try (run-task (symbol (or task 'default)))
+             (catch Exception e
+               (.printStackTrace e (java.io.PrintStream. outs))))))))
+
+(defn start-server [port]
   (init)
-  (let [task (first *command-line-args*)]
-    (run-task (symbol (or task 'default)))
-    (System/exit 0)))
+  (create-server port process-command 0 (InetAddress/getByName "localhost")))

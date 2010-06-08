@@ -1,12 +1,11 @@
 (ns cake.ant
   "Lancet-inspired ant helpers."
-  (:require cake)
   (:import [org.apache.tools.ant Project NoBannerLogger]
            [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]
            [org.apache.tools.ant.taskdefs Echo Manifest Manifest$Attribute]
            [java.beans Introspector]))
 
-(def ant-project (atom nil))
+(def ant-project nil)
 
 (defmulti coerce (fn [type val] [type (class val)]))
 
@@ -37,11 +36,11 @@
   ([class]
      (let [signature (into-array Class [Project])]
        (try (.newInstance (.getConstructor class signature)
-              (into-array [@ant-project]))
+              (into-array [ant-project]))
             (catch NoSuchMethodException e
               (let [instance (.newInstance class)]
                 (try (.invoke (.getMethod class "setProject" signature)
-                       instance (into-array [@ant-project]))
+                       instance (into-array [ant-project]))
                      (catch NoSuchMethodException e))
                 instance))))))
 
@@ -49,14 +48,16 @@
   `(doto (make* ~task ~attrs)
      ~@forms))
 
+(def current-task nil)
+
 (defmacro ant [task attrs & forms]
   `(doto (make* ~task ~attrs)
      ~@forms
-     (.setTaskName (name cake/current-task))
+     (.setTaskName (name current-task))
      (.execute)))
 
 (defn get-reference [ref-id]
-  (.getReference @ant-project ref-id))
+  (.getReference ant-project ref-id))
 
 (defmacro add-fileset [task attrs & forms]
   (let [attrs (merge {:error-on-missing-dir false} attrs)]
@@ -75,7 +76,7 @@
     (.addConfiguredManifest task manifest)))
 
 (defn path [& paths]
-  (let [path (Path. @ant-project)]
+  (let [path (Path. ant-project)]
     (doseq [p paths]
       (if (.endsWith p "*")
         (add-fileset path {:includes "*.jar" :dir (subs p 0 (dec (count p)))})
@@ -99,15 +100,15 @@
     (.addEnv task
      (make Environment$Variable {:key (name key) :value val}))))
 
-(defn init-project [root]
-  (compare-and-set! ant-project nil
-    (make Project {:basedir root}
-      (.init)
-      (.addBuildListener
-       (make NoBannerLogger
-         {:message-output-level Project/MSG_INFO
-          :output-print-stream  System/out
-          :error-print-stream   System/err})))))
+(defn init-project [project outs]
+  (let [outs (java.io.PrintStream. outs)]
+    (make Project {:basedir (:root project)}
+          (.init)
+          (.addBuildListener
+           (make NoBannerLogger
+                 {:message-output-level Project/MSG_INFO
+                  :output-print-stream  outs
+                  :error-print-stream   outs})))))
 
 (defn log [& message]
   (ant Echo {:message (apply str message)}))

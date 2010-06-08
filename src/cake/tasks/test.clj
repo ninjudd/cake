@@ -3,7 +3,7 @@
   (:import [java.io File]))
 
 (deftask test
-  (bake 
+  (bake []
    (require 'clojure.test)
    (use 'bake.test)
    (let [start (System/nanoTime)]
@@ -15,5 +15,5 @@
                       (run-tests-for-tags grouped-tests (all-test-namespaces project)))]
          (if (> (count results) 1)
            (-> (apply merge-with + results) (assoc :type :summary) clojure.test/report))))
-     
+
      (println "Finished in" (/ (- (System/nanoTime) start) (Math/pow 10 9)) "seconds.\n"))))

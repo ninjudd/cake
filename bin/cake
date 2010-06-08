@@ -3,12 +3,17 @@
 require 'ftools'
 require 'open-uri'
 require 'rexml/document'
+require 'socket'
+require 'timeout'
+require 'readline'
+require 'pp'
 
-$repo = "http://clojars.org/repo/cake/cake"
-$file = File.readlink(__FILE__) rescue __FILE__
-$root = File.dirname(File.dirname($file))
+file     = File.readlink(__FILE__) rescue __FILE__
+$cakedir = File.dirname(File.dirname(file))
+$confdir = ".cake"
+$repo    = "http://clojars.org/repo/cake/cake"
 
-def have_cake(version, dest)
+def get_cake(version, dest)
   jar  = version =~ /(.*)-SNAPSHOT/ ? "cake-#{$1}-#{snapshot(version)}.jar" : "cake-#{version}.jar"
   dest = File.expand_path(dest)
   path = "#{dest}/#{jar}"
@@ -30,11 +35,6 @@ rescue OpenURI::HTTPError => e
   puts "unable to find cake version #{version} on clojars."
   puts "please check http://github.com/ninjudd/cake for latest install instructions."
   exit
-end
-
-def eat_cake(*args)
-  opts = %{ -d32 -cp #{$classpath} -Dbakepath="#{$bakepath}" }
-  system %{ java #{opts} clojure.main -e "(use 'cake)(-main)" /dev/null #{args.join(' ')} }
 end
 
 def current_version
@@ -60,34 +60,154 @@ def extract(jar, file)
   "#{dest}/#{file}"
 end
 
+def daemon(cmd)
+  pid = fork do
+    Process.setsid
+    STDIN.reopen  '/dev/null'
+    STDOUT.reopen '/dev/null', 'a'
+    STDERR.reopen '/dev/null', 'a'
+    trap('TERM') { exit }
+    exec(cmd)
+  end
+  Process.detach(pid)
+  pid
+end
+
+def pidfile(type)
+  "#{$confdir}/#{type}.pid"
+end
+
+def read_config(type)
+  if File.exists?($confdir)
+    begin
+      pid, port = IO.read(pidfile(type)).map {|l| l.to_i}
+      Process.kill(0, pid) # make sure pid is valid
+      [pid, port]
+    rescue Errno::ENOENT => e # no pidfile
+      []
+    rescue Errno::ESRCH => e # invalid pid
+      File.unlink(pidfile(type))
+      []
+    end
+  else
+    File.makedirs($confdir)
+  end
+end
+
+MIN_PORT = 2**13
+MAX_PORT = 2**16
+def start_jvm(type, classpath)
+  pid, port = read_config(type)
+  if pid.nil?
+    port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
+    puts "starting #{type} jvm on port #{port}"
+    pid  = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
+    File.open(pidfile(type), 'w') {|f| f.write("#{pid}\n#{port}\n") }
+  end
+  port
+rescue Errno::EADDRNOTAVAIL => e
+  retry
+end
+
+def stop_jvm(type)
+  pid, port = read_config(type)
+  if pid
+    puts "stopping #{type} server on port #{port}"
+    Process.kill('TERM', pid)
+  end
+end
+
+def connect(port)
+  TCPSocket.new("localhost", port)
+rescue Errno::ECONNREFUSED => e
+  sleep 1
+  retry
+end
+
+MARKER = rand.to_s
+PROMPT = /^(.*)#{MARKER}$/
+START_REPL = <<-END
+  (clojure.main/repl
+    :init   #(in-ns 'user)
+    :prompt #(printf "%s=> #{MARKER}\n" (ns-name *ns*)))
+END
+
+def read_and_prompt(socket)
+  while line = socket.gets
+    if line =~ PROMPT
+      return $1
+    else
+      puts line
+    end
+  end
+end
+
+class RestartRepl < Exception; end
+def repl
+  loop do
+    socket = connect($bakeport)
+    socket.write START_REPL
+    socket.gets # burn extra prompt
+
+    while prompt = read_and_prompt(socket)
+      line = Readline.readline(prompt, true)
+      return unless line
+      socket.write(line + "\n")
+    end
+  end
+end
+
+def send_command(command = 'default', *args)
+  socket = connect($cakeport)
+  socket.write("(#{command} [#{args.join(' ')}] #{$bakeport})")
+
+  while(line = socket.gets)
+    puts line
+  end
+end
+
 # Bootstap cake dependencies.
-lib = "#{$root}/lib"
-if File.exists?("#{$root}/.gitignore")
+lib = "#{$cakedir}/lib"
+if File.exists?("#{$cakedir}/.gitignore")
   if Dir["#{lib}/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
-    version = IO.read("#{$root}/project.clj").first.match(/defproject cake \"(.*)\"/)[1]
-    have_cake(version, lib)
+    version = IO.read("#{$cakedir}/project.clj").first.match(/defproject cake \"(.*)\"/)[1]
+    get_cake(version, lib)
   end
-  $classpath = "#{$root}/src/:#{lib}/*"
-  $bakepath  = "#{$root}/bake"
+  cakepath = "#{$cakedir}/src/:#{lib}/*"
+  bakepath = "#{$cakedir}/bake"
 else
-  cake_jar = "#{lib}/cake.jar"
-  bake_jar = "#{lib}/bake.jar"
-  if File.exists?(cake_jar) and File.exists?(bake_jar)
+  cakejar = "#{lib}/cake.jar"
+  bakejar = "#{lib}/bake.jar"
+  if File.exists?(cakejar) and File.exists?(bakejar)
     # Inside a gem install.
-    $classpath = cake_jar
-    $bakepath  = bake_jar
+    cakepath = cakejar
+    bakepath = bakejar
   else
     # Naked script.
-    version    = current_version
-    dest       = "~/.m2/repository/cake/cake/#{version}"
-    $classpath = have_cake(version, dest)
-    $bakepath  = extract($classpath, "bake-#{version}.jar")
+    version  = current_version
+    dest     = "~/.m2/repository/cake/cake/#{version}"
+    cakepath = get_cake(version, dest)
+    bakepath = extract(classpath, "bake-#{version}.jar")
   end
 end
 
-if not File.exists?("pom.xml") or test(?>, "project.clj", "pom.xml") and ARGV.first != "deps"
-  eat_cake("deps")
-end
+if ARGV.first == 'stop'
+  stop_jvm(:cake)
+  stop_jvm(:bake)
+else
+  $cakeport = start_jvm(:cake, cakepath)
 
-eat_cake(*ARGV)
+  if ARGV.first != 'deps' and File.exists?('project.clj')
+    if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
+      send_command('deps')
+    end
+    $bakeport = start_jvm(:bake, "#{bakepath}:src:src/clj:classes:lib/*")
+  end
+
+  if ARGV.first == 'repl'
+    repl
+  else
+    send_command(*ARGV)
+  end
+end
