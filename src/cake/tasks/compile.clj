@@ -13,7 +13,9 @@
                 :srcdir            (path (:source-path project))
                 :fork              true
                 :failonerror       true
-                :includeantruntime false})))
+                :includeantruntime false}))
+  (println "compile-java ran.")
+  )
 
 (defn stale? [sourcefile classfile]
   (> (.lastModified sourcefile) (.lastModified classfile)))
@@ -41,14 +43,21 @@
           (when (and (compile? namespace) (stale? sourcefile classfile))
             namespace))))))
 
-(defn compile-clojure [project]
+(defn old-compile-clojure [project]
   (ant Java {:classname   "clojure.lang.Compile"
              :classpath   (classpath project)
              :fork        true
              :failonerror true}
        (sys {:clojure.compile.path (:compile-path project)})
-       (args (map name (stale-namespaces project)))))
+       (args (map name (stale-namespaces project))))
+    (println "compile-clojure ran."))
+
+(defn compile-clojure [project]
+  (comment bake (println "oo-hoo")
+        (compile))
+    (println "new compile-clojure ran."))
 
 (deftask compile
+  (println "compile called")
   (compile-java project)
   (compile-clojure project))

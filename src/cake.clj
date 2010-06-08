@@ -92,11 +92,13 @@
             (action)))
         (compare-and-set! (get-in @tasks [name :run?]) false true)))))
 
-(defmacro bake [& body]
+(defmacro bake [bindings & body]
   "Execute body in a fork of the jvm with the classpath of your project."
-  (let [code (prn-str `(do (def ~'project '~(deref cake-project))
+  (let [code (prn-str `(do
+                         (let ~bindings 
+                           (def ~'project '~(deref cake-project))
                            (def ~'opts ~opts)
-                           ~@body))]
+                           ~@body)))]
     `(do (require 'cake.ant)
          (cake.ant/ant org.apache.tools.ant.taskdefs.Java
            {:classname   "clojure.main"

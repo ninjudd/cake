@@ -5,6 +5,6 @@
                  [clojure-useful "0.1.1-SNAPSHOT"]
                  [swank-clojure "1.2.1"]
                  [jline "0.9.94"]]
-  :aot "servlet"
+  :aot [servlet]
 )
 

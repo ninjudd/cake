@@ -1,13 +1,11 @@
 (ns cake.tasks.repl
   (:use cake cake.ant)
-  (:import [org.apache.tools.ant.taskdefs Java]))
-
-(defn repl [project]
-  (ant Java {:classname   "jline.ConsoleRunner"
-             :classpath   (classpath project)
-             :fork        true}
-       (args ["clojure.main"])))
+  (:require [clojure.contrib.server-socket :as ss]))
 
 (deftask repl
-  (comment bake (clojure.main/repl))
-  (repl project))
+  (ss/create-repl-server 9229))
+
+(comment 
+  (require '[clojure.contrib.server-socket :as ss])
+  (import '(java.net InetAddress))
+  (ss/create-repl-server 9225 0 (InetAddress/getByName "127.0.0.1")))
