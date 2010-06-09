@@ -1,14 +1,12 @@
+(ns cake)
+(def current-task nil) ; current-task must be declared here so cake.ant can access it for logging
+
 (ns cake
   (:use clojure.useful cake.server
         [cake.project :only [init]])
   (:require [cake.ant :as ant])
   (:import [java.io InputStreamReader OutputStreamWriter BufferedReader]
            [java.net Socket ConnectException]))
-
-; vars to be bound in each thread
-(def run? nil)
-(def opts nil)
-(def project nil)
 
 (defn verbose? [opts]
   (or (:v opts) (:verbose opts)))
@@ -19,6 +17,7 @@
     (or (namespace project) (name project))))
 
 (def cake-project (atom nil))
+(def project nil)
 
 (defmacro defproject [project-name version & args]
   (let [root (.getParent (java.io.File. *file*))
@@ -46,8 +45,6 @@
 (defn cat [s1 s2]
   (if s1 (str s1 " " s2) s2))
 
-(def tasks (atom {}))
-
 (defn update-task [task deps doc actions]
   {:pre [(every? dependency? deps) (every? fn? actions)]}
   (let [task (or task {:actions [] :deps []})]
@@ -55,6 +52,9 @@
         (update :deps    into deps)
         (update :doc     cat  doc)
         (update :actions into actions))))
+
+(def tasks (atom {}))
+(def run? nil)
 
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
@@ -86,7 +86,7 @@
         (println "unknown task:" name)
         (when-not (run? task)
           (doseq [dep (:deps task)] (run-task dep))
-          (binding [project @cake-project, ant/current-task name]
+          (binding [current-task name]
             (doseq [action (:actions task)] (action)))
           (set! run? (assoc run? name true)))))))
 
@@ -98,27 +98,43 @@
       socket
       (recur))))
 
-(defn bake* [bindings body]
-  (let [defs (for [[sym val] bindings] (list 'def sym (list 'quote val)))]
-    (if (nil? bake-port)
-      (println "bake not supported. perhaps you don't have a project.clj")
-      (let [form  `(do ~@defs ~@body)
-            socket (bake-connect (int bake-port))
-            reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
-            writer (OutputStreamWriter. (.getOutputStream socket))]
-        (doto writer
-          (.write (prn-str form))
-          (.flush))
-        (while-let [line (.readLine reader)]
-                   (println line))
-        (flush)))))
+(defn- quote-if
+  "We need to quote the binding keys so they are not evaluated within the bake syntax-quote and the
+   binding values so they are not evaluated in the bake* syntax-quote. This function makes that possible."
+  [pred bindings]
+  (reduce
+   (fn [v form]
+     (if (pred (count v))
+       (conj v (list 'quote form))
+       (conj v form)))
+   [] bindings))
+
+(defn bake* [ns-forms bindings body]
+  (if (nil? bake-port)
+    (println "bake not supported. perhaps you don't have a project.clj")
+    (let [ns     (symbol (str "bake.task." (name current-task)))
+          forms `[(~'ns ~ns ~@ns-forms) (~'let ~(quote-if odd? bindings) ~@body)]
+          socket (bake-connect (int bake-port))
+          reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
+          writer (OutputStreamWriter. (.getOutputStream socket))]
+      (doto writer
+        (.write (prn-str forms))
+        (.flush))
+      (while-let [line (.readLine reader)]
+        (println line))
+      (flush))))
 
 (defmacro bake
-  "Execute body in a fork of the jvm with the classpath of your project."
-  [bindings & body]
-  (let [bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)
-        bindings (for [[sym val] (partition 2 bindings)] [(list 'quote sym) val])]
-    `(bake* [~@bindings] '~body)))
+  "Execute code in a separate jvm with the classpath of your projects. Bindings allow passing
+   state to the project jvm. Namespace forms like use and require must be specified before bindings."
+  {:arglists '([ns-forms* bindings body*])}
+  [& forms]
+  (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)
+        bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)
+        ;; ns-forms (for [[kname & args] ns-forms]
+        ;;            (cons (symbol (name kname)) (map #(list 'quote %) args)))
+        ]
+    `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
 (defmacro task-doc
   "Print documentation for a task."
@@ -126,9 +142,12 @@
   (println "-------------------------")
   (println "cake" (name task) " ;" (:doc (@tasks task))))
 
+(def opts nil)
+
 (defn process-command [form]
   (let [[task args port] form]
-    (binding [ant/ant-project (ant/init-project @cake-project *outs*)
+    (binding [project @cake-project
+              ant/ant-project (ant/init-project project *outs*)
               opts (parse-args (keyword task) (map str args))
               bake-port port
               run? {}]
