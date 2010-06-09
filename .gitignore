@@ -6,3 +6,4 @@ pom.xml
 gem/
 lib/
 classes/
+.*
