@@ -39,20 +39,10 @@
           (when (and (compile? namespace) (stale? sourcefile classfile))
             namespace))))))
 
-(defn old-compile-clojure [project]
-  (ant Java {:classname   "clojure.lang.Compile"
-             :classpath   (classpath project)
-             :fork        true
-             :failonerror true}
-       (sys {:clojure.compile.path (file "classes")})
-       (args (map name (stale-namespaces project)))))
-
 (defn compile-clojure [project]
-  (bake [namespaces   (stale-namespaces project)
-         compile-path (file-name "classes")]
-     (binding [*compile-path* compile-path]
-       (doseq [lib namespaces]
-         (compile lib)))))
+  (bake [namespaces (stale-namespaces project)]
+    (doseq [lib namespaces]
+      (compile lib))))
 
 (deftask compile
   (compile-java project)
