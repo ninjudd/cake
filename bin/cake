@@ -283,7 +283,7 @@ else
       send_command('deps')
     end
     pwd = Dir.getwd
-    $bakeport = start_jvm(:bake, "#{bakepath}:#{pwd}/src:#{pwd}/src/clj:#{pwd}/classes:#{pwd}/lib/*")
+    $bakeport = start_jvm(:bake, "#{bakepath}:#{pwd}/src:#{pwd}/test:#{pwd}/src/clj:#{pwd}/classes:#{pwd}/lib/*")
   end
 
   if ARGV.first == 'repl'
