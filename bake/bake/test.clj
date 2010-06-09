@@ -1,5 +1,6 @@
 (ns bake.test
-  (:use [clojure.contrib.find-namespaces :only [find-namespaces-in-dir]])
+  (:use [bake :only [defm]]
+        [clojure.contrib.find-namespaces :only [find-namespaces-in-dir]])
   (:require clojure.test))
 
 (defn map-tags [nses]
@@ -9,7 +10,7 @@
                 tag (:tags (meta f))]
             {tag [f]})))
 
-(defn all-test-namespaces [project]
+(defm all-test-namespaces [project]
   (find-namespaces-in-dir (java.io.File. "test")))
 
 (defn prep-opt [str]
