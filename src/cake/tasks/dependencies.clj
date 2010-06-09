@@ -38,15 +38,14 @@
           :version     version
           :exclusions  (map exclusion (:exclusions opts))})))))
 
-(defn deps [project]
+(defn fetch-deps [dependencies dest]
   (ant DependenciesTask {:fileset-id "cake.dep.fileset" :path-id (:name project)}
-    (add-repositories repositories)
-    (add-dependencies (project :dependencies)))
-  (let [dest (file "lib")]
-    (.mkdirs dest)
-    (ant Delete {} (add-fileset {:dir dest :includes "*.jar"}))
-    (ant Copy {:todir dest :flatten true}
-      (.addFileset (get-reference "cake.dep.fileset")))))
+       (add-repositories repositories)
+       (add-dependencies dependencies))
+  (.mkdirs dest)
+  (ant Delete {} (add-fileset {:dir dest :includes "*.jar"}))
+  (ant Copy {:todir dest :flatten true}
+       (.addFileset (get-reference "cake.dep.fileset"))))
 
 (defn pom [project]
   (let [refid "cake.pom"
@@ -59,5 +58,6 @@
 
 (deftask deps "Fetch dependencies and create pom.xml"
   (println "Fetching dependencies...")
-  (deps project)
+  (fetch-deps (:dependencies project)     (file "lib"))
+  (fetch-deps (:dev-dependencies project) (file "lib/dev"))
   (pom project))
