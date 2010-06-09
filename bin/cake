@@ -85,7 +85,7 @@ end
 def modtime(path)
   if path.kind_of?(Array)
     path.collect {|f| modtime(f)}.max
-  elsif File.directory?(path)
+  elsif File.directory?(path) and not File.basename(path) == '.' # don't descend into dirs that end in /.
     modtime = Time.at(0)
     Find.find(path) do |file|
       modtime = [modtime, File.mtime(file)].max if File.exists?(file)
@@ -100,8 +100,11 @@ def restart?(type, classpath)
   start_time = modtime(pidfile(type))
 
   files = classpath.split(':').collect do |path|
-    path = "#{path}.jar" if path =~ /\*$/
-    Dir[path]
+    if path =~ /(.*)\/\*$/
+      Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
+    else
+      Dir[path]
+    end
   end
   files.concat ["project.clj", "build.clj"] if type == :cake
 
