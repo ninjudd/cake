@@ -74,8 +74,8 @@
         actions (vec (map #(list 'fn [] %) actions))]
     `(swap! tasks update '~name update-task '~deps '~doc ~actions)))
 
-(defn remove-task! [name]
-  (swap! tasks dissoc name))
+(defmacro undeftask [& names]
+  `(swap! tasks dissoc '~@names))
 
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."

@@ -30,7 +30,7 @@
              (env {"CAKE_VERSION" (:version project)})
              (args ["build" "cake.gemspec"])))))
 
-(remove-task! 'release)
+(undeftask release)
 (deftask release => uberjar, gem
   (when-not (snapshot? project)
     (let [gem (str "cake-" (:version project) ".gem")]
