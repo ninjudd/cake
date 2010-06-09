@@ -5,7 +5,7 @@
   (:use clojure.useful cake.server
         [cake.project :only [init]])
   (:require [cake.ant :as ant])
-  (:import [java.io InputStreamReader OutputStreamWriter BufferedReader]
+  (:import [java.io File InputStreamReader OutputStreamWriter BufferedReader]
            [java.net Socket ConnectException]))
 
 (defn verbose? [opts]
@@ -20,7 +20,7 @@
 (def project nil)
 
 (defmacro defproject [project-name version & args]
-  (let [root (.getParent (java.io.File. *file*))
+  (let [root (.getParent (File. *file*))
         artifact (name project-name)]
     `(do (compare-and-set! cake-project nil
            (-> (apply hash-map '~args)
@@ -28,14 +28,12 @@
                       :group-id    ~(group project-name)
                       :root        ~root
                       :version     ~version)
-               (assoc-or :name         ~artifact
-                         :library-path   (str ~root "/lib")
-                         :compile-path   (str ~root "/classes")
-                         :resources-path (str ~root "/resources")
-                         :source-path    (str ~root "/src")
-                         :test-path      (str ~root "/test"))))
+               (assoc-or :name ~artifact)))
          ; @cake-project must be set before we include the tasks for bake to work.
          (require 'cake.tasks.defaults))))
+
+(defn file [& path]
+  (File. (apply str (interpose "/" (cons (:root project) path)))))
 
 (defn dependency? [form]
   (or (symbol? form)

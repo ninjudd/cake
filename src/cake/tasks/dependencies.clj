@@ -42,7 +42,7 @@
   (ant DependenciesTask {:fileset-id "cake.dep.fileset" :path-id (:name project)}
     (add-repositories repositories)
     (add-dependencies (project :dependencies)))
-  (let [dest (java.io.File. (:library-path project))]
+  (let [dest (file "lib")]
     (.mkdirs dest)
     (ant Delete {} (add-fileset {:dir dest :includes "*.jar"}))
     (ant Copy {:todir dest :flatten true}
@@ -50,7 +50,7 @@
 
 (defn pom [project]
   (let [refid "cake.pom"
-        file  (java.io.File. (project :root) "pom.xml")
+        file  (file "pom.xml")
         attrs (select-keys project [:artifact-id :group-id :version :name :description])]
     (ant Pom (assoc attrs :id refid)
       (add-license (project :license))

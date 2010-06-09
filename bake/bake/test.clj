@@ -1,17 +1,16 @@
 (ns bake.test
-  (:import [java.io File])
-  (:use [clojure.contrib.find-namespaces :only [find-namespaces-in-dir]]))
+  (:use [clojure.contrib.find-namespaces :only [find-namespaces-in-dir]])
+  (:require clojure.test))
 
-(defn map-tags [nses] 
+(defn map-tags [nses]
   (reduce (partial merge-with concat)
           (for [ns nses
                 [name f] (ns-publics ns)
                 tag (:tags (meta f))]
             {tag [f]})))
 
-(def all-test-namespaces
-     (memoize (fn [project]
-                (find-namespaces-in-dir (File. (:test-path project))))))
+(defn all-test-namespaces [project]
+  (find-namespaces-in-dir (java.io.File. "test")))
 
 (defn prep-opt [str]
   (if (.startsWith str ":")

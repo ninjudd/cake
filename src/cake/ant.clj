@@ -83,7 +83,7 @@
     path))
 
 (defn classpath [project & paths]
-  (apply path (:source-path project) (str (:library-path project) "/*") paths))
+  (apply path "src" "lib/*" paths))
 
 (defn args [task args]
   (doseq [a args]

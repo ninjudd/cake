@@ -10,7 +10,7 @@
            [java.io File]))
 
 (defn jarfile [project]
-  (File. (:root project) (format "%s-%s.jar" (:artifact-id project) (:version project))))
+  (file (format "%s-%s.jar" (:artifact-id project) (:version project))))
 
 (defn manifest [project]
   (merge (:manifest project)
@@ -24,21 +24,21 @@
         cake  (format "META-INF/cake/%s/%s"  (:group-id project) (:artifact-id project))]
     (ant Jar {:dest-file (jarfile project)}
          (add-manifest (manifest project))
-         (add-zipfileset {:dir (:root project) :prefix maven :includes "pom.xml"})
-         (add-zipfileset {:dir (:root project) :prefix cake  :includes "*.clj"})
-         (add-fileset    {:dir (:compile-path project)})
-         (add-fileset    {:dir (:source-path project)}))))
+         (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
+         (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
+         (add-fileset    {:dir (file "classes")})
+         (add-fileset    {:dir (file "src")}))))
 
 (deftask jar => compile
   (jar project))
 
 (defn uberjarfile [project]
-  (File. (:root project) (format "%s-%s-standalone.jar" (:artifact-id project) (:version project))))
+  (file (format "%s-%s-standalone.jar" (:artifact-id project) (:version project))))
 
 (defn jars [project]
   (into #{(jarfile project)}
     (filter #(.endsWith (.getName %) ".jar")
-      (file-seq (File. (:library-path project))))))
+      (file-seq (file "lib")))))
 
 (defn rebuild-uberjar? [jarfile jars]
   (let [last-mod (.lastModified jarfile)]
@@ -57,23 +57,23 @@
   (uberjar project))
 
 (defn warfile [project]
-  (File. (:root project) (format "%s-%s.war" (:artifact-id project) (:version project))))
+  (file (format "%s-%s.war" (:artifact-id project) (:version project))))
 
 (defn war [project]
   (let [web     "WEB-INF"
         classes (str web "/classes")]
     (ant War {:dest-file (warfile project)}
-         (add-zipfileset {:dir (:source-path project)    :prefix web     :includes "*web.xml"})
-         (add-zipfileset {:dir (:compile-path project)   :prefix classes :includes "*.class"})
-         (add-zipfileset {:dir (:resources-path project) :prefix classes :includes "*"})
-         (add-fileset    {:dir (File. (:source-path project) "html")}))))
+         (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})
+         (add-zipfileset {:dir (file "classes")   :prefix classes :includes "*.class"})
+         (add-zipfileset {:dir (file "resources") :prefix classes :includes "*"})
+         (add-fileset    {:dir (file "src" "html")}))))
 
 (deftask war => compile
   (war project))
 
 (defn uberwar [project]
   (ant War {:dest-file (warfile project) :update true}
-       (add-zipfileset {:dir (:library-path project) :prefix "WEB-INF/lib" :includes "*.jar"})))
+       (add-zipfileset {:dir (file "lib") :prefix "WEB-INF/lib" :includes "*.jar"})))
 
 (deftask uberwar => war
   (uberwar project))
@@ -87,7 +87,7 @@
 (defn release [jar]
   (log "Releasing to clojars: " jar)
   (ant Scp {:todir "clojars@clojars.org:" :trust true :keyfile (keyfile ["id_rsa" "id_dsa" "identity"])}
-       (add-fileset {:file (File. (:root project) "pom.xml")})
+       (add-fileset {:file (file "pom.xml")})
        (add-fileset {:file jar})))
 
 (deftask release => jar

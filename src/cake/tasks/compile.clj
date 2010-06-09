@@ -2,15 +2,14 @@
   (:use cake cake.ant
         [clojure.useful :only [include?]]
         [clojure.contrib.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]])
-  (:import [org.apache.tools.ant.taskdefs Javac Java]
-           [java.io File]))
+  (:import [org.apache.tools.ant.taskdefs Javac Java]))
 
 (defn compile-java [project]
-  (let [dest (File. (:compile-path project))]
+  (let [dest (file "classes")]
     (.mkdirs dest)
     (ant Javac {:destdir           dest
                 :classpath         (classpath project)
-                :srcdir            (path (:source-path project))
+                :srcdir            (path "classes")
                 :fork              true
                 :failonerror       true
                 :includeantruntime false}))
@@ -37,9 +36,9 @@
 (defn stale-namespaces [project]
   (let [compile? (aot project)]
     (remove nil?
-      (for [sourcefile (find-clojure-sources-in-dir (File. (:source-path project)))]
+      (for [sourcefile (find-clojure-sources-in-dir (file "src"))]
         (let [namespace  (second (read-file-ns-decl sourcefile))
-              classfile (File. (:compile-path project) (classfile namespace))]
+              classfile (file "classes" (classfile namespace))]
           (when (and (compile? namespace) (stale? sourcefile classfile))
             namespace))))))
 
@@ -48,7 +47,7 @@
              :classpath   (classpath project)
              :fork        true
              :failonerror true}
-       (sys {:clojure.compile.path (:compile-path project)})
+       (sys {:clojure.compile.path (file "classes")})
        (args (map name (stale-namespaces project))))
     (println "compile-clojure ran."))
 
