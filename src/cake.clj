@@ -32,8 +32,11 @@
          ; @cake-project must be set before we include the tasks for bake to work.
          (require 'cake.tasks.defaults))))
 
+(defn file-name [& path]
+  (apply str (interpose "/" (cons (:root project) path))))
+
 (defn file [& path]
-  (File. (apply str (interpose "/" (cons (:root project) path)))))
+  (File. (apply file-name path)))
 
 (defn dependency? [form]
   (or (symbol? form)

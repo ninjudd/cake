@@ -12,9 +12,7 @@
                 :srcdir            (path "classes")
                 :fork              true
                 :failonerror       true
-                :includeantruntime false}))
-  (println "compile-java ran.")
-  )
+                :includeantruntime false})))
 
 (defn stale? [sourcefile classfile]
   (> (.lastModified sourcefile) (.lastModified classfile)))
@@ -30,8 +28,7 @@
             (include? namespace aot))))))
 
 (defn classfile [namespace]
-  (str (.. (str namespace) (replace "-" "_") (replace "." "/"))
-       "__init.class"))
+  (str (.. (str namespace) (replace "-" "_") (replace "." "/")) "__init.class"))
 
 (defn stale-namespaces [project]
   (let [compile? (aot project)]
@@ -48,15 +45,15 @@
              :fork        true
              :failonerror true}
        (sys {:clojure.compile.path (file "classes")})
-       (args (map name (stale-namespaces project))))
-    (println "compile-clojure ran."))
+       (args (map name (stale-namespaces project)))))
 
 (defn compile-clojure [project]
-  (comment bake (println "oo-hoo")
-        (compile))
-    (println "new compile-clojure ran."))
+  (bake [namespaces   (stale-namespaces project)
+         compile-path (file-name "classes")]
+     (binding [*compile-path* compile-path]
+       (doseq [lib namespaces]
+         (compile lib)))))
 
 (deftask compile
-  (println "compile called")
   (compile-java project)
   (compile-clojure project))
