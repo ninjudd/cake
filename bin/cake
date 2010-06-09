@@ -103,6 +103,7 @@ def restart?(type, classpath)
     path = "#{path}.jar" if path =~ /\*$/
     Dir[path]
   end
+  files.concat ["project.clj", "build.clj"] if type == :cake
 
   modtime(files) > start_time
 end
