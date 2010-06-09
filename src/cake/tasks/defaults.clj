@@ -5,6 +5,3 @@
             cake.tasks.compile
             cake.tasks.dependencies
             cake.tasks.repl))
-
-(deftask help
-  (println "this is the help command"))

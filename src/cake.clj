@@ -3,7 +3,7 @@
         [cake.project :only [init]])
   (:require [cake.ant :as ant])
   (:import [java.io InputStreamReader OutputStreamWriter BufferedReader]
-           [java.net Socket]))
+           [java.net Socket ConnectException]))
 
 ; vars to be bound in each thread
 (def run? nil)
@@ -82,33 +82,54 @@
   (if (list? form)
     (binding [project @cake-project] ((eval form))) ; excute anonymous dependency
     (let [name form, task (@tasks name)]
-      (when-not (run? task)
-        (doseq [dep (:deps task)] (run-task dep))
-        (binding [project @cake-project, ant/current-task name]
-          (doseq [action (:actions task)] (action)))
-        (set! run? (assoc run? name true))))))
+      (if (nil? task)
+        (println "unknown task:" name)
+        (when-not (run? task)
+          (doseq [dep (:deps task)] (run-task dep))
+          (binding [project @cake-project, ant/current-task name]
+            (doseq [action (:actions task)] (action)))
+          (set! run? (assoc run? name true)))))))
 
 (def bake-port nil)
 
-(defn bake* [form]
-  (let [form   `(~'let [~'opts ~opts, ~'project '~project] ~form)
-        socket (Socket. "localhost" (int bake-port))
-        reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
-        writer (OutputStreamWriter. (.getOutputStream socket))]
-    (doto writer
-      (.write (prn-str form))
-      (.flush))
-    (while-let [line (.readLine reader)]
-      (println line))
-    (flush)))
+(defn- bake-connect [port]
+  (loop []
+    (if-let [socket (try (Socket. "localhost" (int port)) (catch ConnectException e))]
+      socket
+      (recur))))
 
-(defmacro bake 
+(defn- quote-if
+  "We need to quote the binding keys so they are not evaluated within the bake syntax-quote and the
+   binding values so they are not evaluated in the bake* syntax-quote. This function makes that possible."
+  [pred bindings]
+  (reduce
+   (fn [v form]
+     (if (pred (count v))
+       (conj v (list 'quote form))
+       (conj v form)))
+   [] bindings))
+
+(defn bake* [bindings body]
+  (if (nil? bake-port)
+    (println "bake not supported. perhaps you don't have a project.clj")
+    (let [form  `(~'let ~(quote-if odd? bindings) ~@body)
+          socket (bake-connect (int bake-port))
+          reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
+          writer (OutputStreamWriter. (.getOutputStream socket))]
+      (doto writer
+        (.write (prn-str form))
+        (.flush))
+      (while-let [line (.readLine reader)]
+                 (println line))
+      (flush))))
+
+(defmacro bake
   "Execute body in a fork of the jvm with the classpath of your project."
   [bindings & body]
-  (let [form (if (seq bindings) `(let ~bindings ~@body) `(do ~@body))]
-    `(bake* '~form)))
+  (let [bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)]
+    `(bake* ~(quote-if even? bindings) '~body)))
 
-(defmacro task-doc 
+(defmacro task-doc
   "Print documentation for a task."
   [task]
   (println "-------------------------")
