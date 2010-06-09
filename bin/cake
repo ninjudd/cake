@@ -152,7 +152,7 @@ def stop_jvm(type, opts = {})
       File.unlink(pidfile(type))
     else
       puts "-------------------------------------------"
-      puts "warning: classpath has changed but can't restart #{type} jvm because there are active connections"
+      puts "warning: classes have changed but can't restart #{type} jvm with active connections"
       puts "         close active connections or use 'cake stop' to force quit"
       puts "-------------------------------------------"
     end
@@ -170,7 +170,6 @@ end
 def send_command(command = 'default', *args)
   socket = connect($cakeport)
   socket.write("(#{command} [#{args.join(' ')}] #{$bakeport})\n")
-
   while(line = socket.gets)
     puts line
   end
@@ -195,6 +194,7 @@ def read_until_prompt(socket)
 end
 
 def complete?(input)
+  return true if input.empty?
   socket = connect($bakeport)
   socket.write(":validate #{input}")
   socket.close_write # send eof
@@ -204,16 +204,29 @@ end
 def readline(initial_prompt)
   input = ""
   prompt = initial_prompt.clone
-  while line = Readline.readline(prompt, true)
-    input << " " + line
-    return input if complete?(input)
+  while line = Readline.readline(prompt)
+    input << " " unless input.empty?
+    input << line
+    if complete?(input)
+      Readline::HISTORY.push(input)
+      return input
+    end
     prompt[-2] = ?*
   end
 rescue Interrupt => e
+  return nil if input.empty?
+  Readline::HISTORY.push(input)
   retry
 end
 
+HISTORY_NUM  = 500
+HISTORY_FILE = ".cake/history"
+
 def repl
+  open(HISTORY_FILE) do |file|
+    file.each {|line| Readline::HISTORY << line.chomp}
+  end if File.exists?(HISTORY_FILE)
+
   loop do
     socket = connect($bakeport)
     socket.write START_REPL
@@ -224,6 +237,11 @@ def repl
       return unless line
       socket.write(line + "\n")
     end
+  end
+ensure
+  open(HISTORY_FILE, 'w') do |file|
+    history = Readline::HISTORY.to_a
+    file.puts(history[-HISTORY_NUM..-1] || history)
   end
 end
 
