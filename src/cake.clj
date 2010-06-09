@@ -130,10 +130,7 @@
   {:arglists '([ns-forms* bindings body*])}
   [& forms]
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)
-        bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)
-        ;; ns-forms (for [[kname & args] ns-forms]
-        ;;            (cons (symbol (name kname)) (map #(list 'quote %) args)))
-        ]
+        bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
 (defmacro task-doc
