@@ -4,4 +4,8 @@
             cake.tasks.test
             cake.tasks.compile
             cake.tasks.dependencies
-            cake.tasks.repl))
+            cake.tasks.swank))
+
+(deftask help
+  (println "this is the help command"))
+

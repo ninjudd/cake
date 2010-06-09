@@ -1,4 +1,5 @@
 (ns servlet
   (:gen-class))
 
-(println "rice")
+(println "servlet evaled")
+
