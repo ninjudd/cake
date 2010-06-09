@@ -98,36 +98,27 @@
       socket
       (recur))))
 
-(defn- quote-if
-  "We need to quote the binding keys so they are not evaluated within the bake syntax-quote and the
-   binding values so they are not evaluated in the bake* syntax-quote. This function makes that possible."
-  [pred bindings]
-  (reduce
-   (fn [v form]
-     (if (pred (count v))
-       (conj v (list 'quote form))
-       (conj v form)))
-   [] bindings))
-
 (defn bake* [bindings body]
-  (if (nil? bake-port)
-    (println "bake not supported. perhaps you don't have a project.clj")
-    (let [form  `(~'let ~(quote-if odd? bindings) ~@body)
-          socket (bake-connect (int bake-port))
-          reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
-          writer (OutputStreamWriter. (.getOutputStream socket))]
-      (doto writer
-        (.write (prn-str form))
-        (.flush))
-      (while-let [line (.readLine reader)]
-                 (println line))
-      (flush))))
+  (let [defs (for [[sym val] bindings] (list 'def sym (list 'quote val)))]
+    (if (nil? bake-port)
+      (println "bake not supported. perhaps you don't have a project.clj")
+      (let [form  `(do ~@defs ~@body)
+            socket (bake-connect (int bake-port))
+            reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
+            writer (OutputStreamWriter. (.getOutputStream socket))]
+        (doto writer
+          (.write (prn-str form))
+          (.flush))
+        (while-let [line (.readLine reader)]
+                   (println line))
+        (flush)))))
 
 (defmacro bake
   "Execute body in a fork of the jvm with the classpath of your project."
   [bindings & body]
-  (let [bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)]
-    `(bake* ~(quote-if even? bindings) '~body)))
+  (let [bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)
+        bindings (for [[sym val] (partition 2 bindings)] [(list 'quote sym) val])]
+    `(bake* [~@bindings] '~body)))
 
 (defmacro task-doc
   "Print documentation for a task."
