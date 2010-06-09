@@ -102,13 +102,15 @@
       (println line))
     (flush)))
 
-(defmacro bake [bindings & body]
+(defmacro bake 
   "Execute body in a fork of the jvm with the classpath of your project."
+  [bindings & body]
   (let [form (if (seq bindings) `(let ~bindings ~@body) `(do ~@body))]
     `(bake* '~form)))
 
-(defmacro task-doc [task]
+(defmacro task-doc 
   "Print documentation for a task."
+  [task]
   (println "-------------------------")
   (println "cake" (name task) " ;" (:doc (@tasks task))))
 
