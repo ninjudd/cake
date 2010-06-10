@@ -14,7 +14,7 @@
   "Print tasks with documentation (use -a for all tasks)."
   (println "-------------------------------------------")
   (let [all?     (:a opts)
-        taskdocs (for [[sym task] @tasks :when (or all? (seq (:doc task)))]
+        taskdocs (for [[sym task] @tasks :when (and (not= 'default sym) (or all? (seq (:doc task))))]
                    [(name sym) (str (first (:doc task)))])
         taskdocs (into implicit-taskdocs taskdocs)
         width  (apply max (map #(count (first %)) taskdocs))
