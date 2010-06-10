@@ -59,6 +59,12 @@
 (def tasks (atom {}))
 (def run? nil)
 
+(def implicit-tasks
+  {'repl    "Start an interactive shell."
+   'stop    "Stop cake and project jvm processes."
+   'start   "Start cake and project jvm processes."
+   'restart "Restart cake and project jvm processes."})
+
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
    be broken up among multiple deftask calls and even multiple files:
@@ -67,6 +73,7 @@
      (do-something)
      (do-something-else))"
   [name & body]
+  (verify (not (implicit-tasks name)) (format "Cannot redefine %s task" name))
   (let [[deps body] (if (= '=> (first body))
                       (split-with dependency? (rest body))
                       [() body])
@@ -148,4 +155,5 @@
 
 (defn start-server [port]
   (init)
-  (create-server port process-command))
+  (create-server port process-command)
+  nil)
