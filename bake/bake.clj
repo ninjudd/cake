@@ -17,4 +17,5 @@
 
 (defn start-server [port]
   (create-server port eval-multi :quit verify-quit :reload reload-files)
-  (bake.swank/start))
+  (bake.swank/start)
+  nil)
