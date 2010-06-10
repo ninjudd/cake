@@ -280,13 +280,14 @@ if ['reset', 'stop'].include?(ARGV.first)
   stop_jvm(:bake, :force => true)
 else
   pwd = Dir.getwd
-  $cakeport = start_jvm(:cake, "#{cakepath}:#{pwd}/lib/dev/*")
+  srcpath = "#{pwd}/src:#{pwd}/src/clj"
+  $cakeport = start_jvm(:cake, "#{cakepath}:#{srcpath}:#{pwd}/lib/dev/*")
 
   if ARGV.first != 'deps' and File.exists?('project.clj')
     if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
       send_command('deps')
     end
-    $bakeport = start_jvm(:bake, "#{bakepath}:#{pwd}/src:#{pwd}/test:#{pwd}/src/clj:#{pwd}/classes:#{pwd}/lib/*:#{pwd}/lib/dev/*")
+    $bakeport = start_jvm(:bake, "#{bakepath}:#{srcpath}:#{pwd}/classes:#{pwd}/test:#{pwd}/lib/*:#{pwd}/lib/dev/*")
   end
 
   if ARGV.first == 'repl'

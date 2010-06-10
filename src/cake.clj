@@ -21,16 +21,21 @@
 
 (defmacro defproject [project-name version & args]
   (let [root (.getParent (File. *file*))
-        artifact (name project-name)]
+        artifact (name project-name)
+        opts (apply hash-map args)
+        [tasks task-opts] (split-with symbol? (:tasks opts))
+        task-opts (apply hash-map task-opts)]
     `(do (compare-and-set! cake-project nil
-           (-> (apply hash-map '~args)
+           (-> '~opts
                (assoc :artifact-id ~artifact
                       :group-id    ~(group project-name)
                       :root        ~root
                       :version     ~version)
                (assoc-or :name ~artifact)))
          ; @cake-project must be set before we include the tasks for bake to work.
-         (require 'cake.tasks.defaults))))
+         (require 'cake.tasks.defaults)
+         ~@(for [ns tasks] `(require '~ns))
+         (undeftask ~@(:exclude task-opts)))))
 
 (defn file-name [& path]
   (apply str (interpose "/" (cons (:root project) path))))
@@ -75,7 +80,7 @@
     `(swap! tasks update '~name update-task '~deps '~doc ~actions)))
 
 (defmacro undeftask [& names]
-  `(swap! tasks dissoc '~@names))
+  `(swap! tasks dissoc ~@(map #(list 'quote %) names)))
 
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
