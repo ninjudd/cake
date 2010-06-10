@@ -123,7 +123,8 @@
         (.flush))
       (while-let [line (.readLine reader)]
         (println line))
-      (flush))))
+      (flush)
+      (.close socket))))
 
 (defmacro bake
   "Execute code in a separate jvm with the classpath of your projects. Bindings allow passing

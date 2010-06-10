@@ -1,13 +1,6 @@
 (ns bake
-  (:use cake.server)
+  (:use cake.server bake.utils)
   (:require clojure.main bake.swank))
-
-; From clojure.useful, but I don't want to implicitly include it in every project.
-(defmacro defm [name & fdecl]
-  "Define a function with memoization. Takes the same arguments as defn."
-  `(let [var (defn ~name ~@fdecl)]
-     (alter-var-root var #(with-meta (memoize %) (meta %)))
-     var))
 
 (defn eval-multi [form]
   (clojure.main/with-bindings
@@ -23,4 +16,5 @@
   (doseq [file (read)] (load-file file)))
 
 (defn start-server [port]
-  (create-server port eval-multi :quit verify-quit :reload reload-files))
+  (create-server port eval-multi :quit verify-quit :reload reload-files)
+  (bake.swank/start))
