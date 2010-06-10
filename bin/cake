@@ -60,18 +60,14 @@ def extract(jar, file)
   "#{dest}/#{file}"
 end
 
-def debug?
-  ENV['DEBUG'] || ENV['debug']
+def verbose?
+  @verbose = ARGV.any? {|arg| arg =~ /^(-?-v)|(-?-verbose)$/} if @verbose.nil?
+  @verbose
 end
 
 def daemon(cmd)
   pid = fork do
     Process.setsid
-    if not debug?
-      STDIN.reopen  '/dev/null'
-      STDOUT.reopen '/dev/null', 'a'
-      STDERR.reopen '/dev/null', 'a'
-    end
     exec(cmd)
   end
   Process.detach(pid)
@@ -136,7 +132,7 @@ def start_jvm(type, classpath)
   pid, port = read_config(type)
   if pid.nil?
     port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    puts "starting #{type} jvm on port #{port}" if debug?
+    puts "starting #{type} jvm on port #{port}" if verbose?
     pid  = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
     File.open(pidfile(type), 'w') {|f| f.write("#{pid}\n#{port}\n") }
   end
@@ -150,7 +146,7 @@ def stop_jvm(type, opts = {})
   if port
     socket = TCPSocket.new("localhost", port)
     action = opts[:force] ? ":force-quit" : ":quit"
-    puts "sending #{action} to #{type} server on port #{port}" if debug?
+    puts "sending #{action} to #{type} server on port #{port}" if verbose?
     socket.write(action + "\n")
     if socket.gets == "true\n"
       File.unlink(pidfile(type))
@@ -171,7 +167,7 @@ rescue Errno::ECONNREFUSED => e
   retry
 end
 
-def send_command(command = 'default', *args)
+def send_command(command, *args)
   socket = connect($cakeport)
   socket.write("(#{command} [#{args.join(' ')}] #{$bakeport})\n")
   while(line = socket.gets)
@@ -275,24 +271,33 @@ else
   end
 end
 
-if ['reset', 'stop'].include?(ARGV.first)
+command = (ARGV.first || 'default').to_sym
+
+if [:stop, :restart].include?(command)
   stop_jvm(:cake, :force => true)
   stop_jvm(:bake, :force => true)
+
+  if command == :stop
+    puts "cake jvm processes stopped"
+    exit
+  end
+end
+
+pwd = Dir.getwd
+srcpath = "#{pwd}/src:#{pwd}/src/clj"
+$cakeport = start_jvm(:cake, "#{cakepath}:#{srcpath}:#{pwd}/lib/dev/*")
+
+if command != :deps and File.exists?('project.clj')
+  if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
+    send_command(:deps)
+  end
+  $bakeport = start_jvm(:bake, "#{bakepath}:#{srcpath}:#{pwd}/classes:#{pwd}/test:#{pwd}/lib/*:#{pwd}/lib/dev/*")
+end
+
+if [:start, :reload, :restart].include?(command)
+  puts "cake jvm processes #{command}ed"
+elsif command == :repl
+  repl
 else
-  pwd = Dir.getwd
-  srcpath = "#{pwd}/src:#{pwd}/src/clj"
-  $cakeport = start_jvm(:cake, "#{cakepath}:#{srcpath}:#{pwd}/lib/dev/*")
-
-  if ARGV.first != 'deps' and File.exists?('project.clj')
-    if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
-      send_command('deps')
-    end
-    $bakeport = start_jvm(:bake, "#{bakepath}:#{srcpath}:#{pwd}/classes:#{pwd}/test:#{pwd}/lib/*:#{pwd}/lib/dev/*")
-  end
-
-  if ARGV.first == 'repl'
-    repl
-  else
-    send_command(*ARGV)
-  end
+  send_command(*ARGV)
 end
