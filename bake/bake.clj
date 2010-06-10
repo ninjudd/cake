@@ -19,5 +19,8 @@
   (when (= 0 (bake.swank/num-connections))
     ok))
 
+(defn reload-files [_]
+  (doseq [file (read)] (load-file file)))
+
 (defn start-server [port]
-  (create-server port eval-multi :quit verify-quit))
+  (create-server port eval-multi :quit verify-quit :reload reload-files))
