@@ -13,9 +13,12 @@
     ok))
 
 (defn reload-files [_]
-  (doseq [file (read)] (load-file file)))
+  (doseq [file (read)]
+    (load-file file)))
 
 (defn start-server [port]
   (create-server port eval-multi :quit verify-quit :reload reload-files)
   (bake.swank/start)
   nil)
+
+

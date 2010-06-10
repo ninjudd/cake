@@ -7,6 +7,7 @@ require 'rexml/document'
 require 'socket'
 require 'timeout'
 require 'readline'
+require 'fileutils'
 
 file     = File.readlink(__FILE__) rescue __FILE__
 $cakedir = File.dirname(File.dirname(file))
@@ -78,33 +79,32 @@ def pidfile(type)
   "#{$confdir}/#{type}.pid"
 end
 
-def modtime(path)
-  if path.kind_of?(Array)
-    path.collect {|f| modtime(f)}.max
-  elsif File.directory?(path) and not File.basename(path) == '.' # don't descend into dirs that end in /.
-    modtime = Time.at(0)
-    Find.find(path) do |file|
-      modtime = [modtime, File.mtime(file)].max if File.exists?(file)
-    end
-    modtime
-  else
-    File.mtime(path) if File.exists?(path)
-  end || Time.at(0)
+def stale?(start_time, path)
+  if File.exists?(path)
+    File.mtime(path) > start_time
+  end
 end
 
-def restart?(type, classpath)
-  start_time = modtime(pidfile(type))
-
-  files = classpath.split(':').collect do |path|
+def stale_files(type, classpath)
+  this_pidfile = pidfile(type)
+  start_time = File.mtime(this_pidfile) if File.exists?(this_pidfile)
+  start_time ||= Time.at(0)
+  files = []
+  classpath.split(':').each do |path|
     if path =~ /(.*)\/\*$/
-      Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
+      files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
     else
-      Dir[path]
+      Find.find(path) do |f|
+        files << f if File.exists?(f) and !File.directory?(f)
+      end
     end
   end
-  files.concat ["project.clj", "build.clj"] if type == :cake
 
-  modtime(files) > start_time
+  ["project.clj", "build.clj"].each do |f|
+    files << f if File.exists?(f)
+  end if type == :cake
+
+  files.select{ |f| stale?(start_time, f)}
 end
 
 def read_config(type)
@@ -126,13 +126,27 @@ end
 
 MIN_PORT = 2**13
 MAX_PORT = 2**16
-def start_jvm(type, classpath)
-  stop_jvm(type) if restart?(type, classpath)
 
-  pid, port = read_config(type)
+def init_jvm(type, classpath)
+  stale = stale_files(type, classpath)
+  if stale.any?{ |f| File.extname(f) != ".clj"}
+    stop_jvm(type) 
+  else
+    pid, port = read_config(type)    
+        
+    if stale.any? and type == :bake and pid
+      socket = TCPSocket.new("localhost", port)
+      socket.write ":reload [#{stale.map{ |f| "\"" + f + "\"" }.join(" ")}]\n"
+      while line = socket.gets
+        puts line
+      end
+      FileUtils.touch(pidfile(type))
+    end
+  end
+  
   if pid.nil?
     port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    puts "starting #{type} jvm on port #{port}" if verbose?
+    puts "starting #{type} jvm on port #{port}" if debug?
     pid  = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
     File.open(pidfile(type), 'w') {|f| f.write("#{pid}\n#{port}\n") }
   end
@@ -285,13 +299,13 @@ end
 
 pwd = Dir.getwd
 srcpath = "#{pwd}/src:#{pwd}/src/clj"
-$cakeport = start_jvm(:cake, "#{cakepath}:#{srcpath}:#{pwd}/lib/dev/*")
+$cakeport = init_jvm(:cake, "#{cakepath}:#{srcpath}:#{pwd}/lib/dev/*")
 
 if command != :deps and File.exists?('project.clj')
   if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
     send_command(:deps)
   end
-  $bakeport = start_jvm(:bake, "#{bakepath}:#{srcpath}:#{pwd}/classes:#{pwd}/test:#{pwd}/lib/*:#{pwd}/lib/dev/*")
+  $bakeport = init_jvm(:bake, "#{bakepath}:#{srcpath}:#{pwd}/classes:#{pwd}/test:#{pwd}/lib/*:#{pwd}/lib/dev/*")
 end
 
 if [:start, :reload, :restart].include?(command)

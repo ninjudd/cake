@@ -39,12 +39,13 @@
                   *ins*  ins
                   *outs* outs]
           (let [form (read)]
-            (if (keyword? form)
-              (let [cmd (or (commands form) identity)]
-                (process-command (cmd form)))
-              (try (f form)
-                   (catch Exception e
-                     (.printStackTrace e (PrintStream. outs))))))))
+            (try
+              (if (keyword? form)
+                (let [cmd (or (commands form) identity)]
+                  (process-command (cmd form)))
+                (f form))
+              (catch Exception e
+                (.printStackTrace e (PrintStream. outs)))))))
       0 (InetAddress/getByName "localhost"))))
 
 (defn create-server [port f & commands]
