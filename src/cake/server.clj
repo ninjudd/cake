@@ -29,21 +29,23 @@
         (do (println "true")
             (System/exit 0))))
 
-(defn- create-server* [port f]
-  (server-socket/create-server port
-    (fn [ins outs]
-      (binding [*in*   (LineNumberingPushbackReader. (InputStreamReader. ins))
-                *out*  (OutputStreamWriter. outs)
-                *err*  (PrintWriter. #^OutputStream outs true)
-                *ins*  ins
-                *outs* outs]
-        (let [form (read)]
-          (if (keyword? form)
-            (process-command form)
-            (try (f form)
-                 (catch Exception e
-                   (.printStackTrace e (PrintStream. outs))))))))
-    0 (InetAddress/getByName "localhost")))
+(defn- create-server* [port f commands]
+  (let [commands (apply hash-map commands)]
+    (server-socket/create-server port
+      (fn [ins outs]
+        (binding [*in*   (LineNumberingPushbackReader. (InputStreamReader. ins))
+                  *out*  (OutputStreamWriter. outs)
+                  *err*  (PrintWriter. #^OutputStream outs true)
+                  *ins*  ins
+                  *outs* outs]
+          (let [form (read)]
+            (if (keyword? form)
+              (let [cmd (or (commands form) identity)]
+                (process-command (cmd form)))
+              (try (f form)
+                   (catch Exception e
+                     (.printStackTrace e (PrintStream. outs))))))))
+      0 (InetAddress/getByName "localhost"))))
 
-(defn create-server [port f]
-  (swap! servers conj (create-server* port f)))
+(defn create-server [port f & commands]
+  (swap! servers conj (create-server* port f commands)))

@@ -1,6 +1,6 @@
 (ns bake
   (:use cake.server)
-  (:require clojure.main))
+  (:require clojure.main bake.swank))
 
 ; From clojure.useful, but I don't want to implicitly include it in every project.
 (defmacro defm [name & fdecl]
@@ -15,5 +15,9 @@
       (doseq [f form] (eval f))
       (eval form))))
 
+(defn verify-quit [ok]
+  (when (= 0 (bake.swank/num-connections))
+    ok))
+
 (defn start-server [port]
-  (create-server port eval-multi))
+  (create-server port eval-multi :quit verify-quit))
