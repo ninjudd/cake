@@ -30,6 +30,7 @@
          (add-fileset    {:dir (file "src")}))))
 
 (deftask jar => compile
+  "Build a jar file containing project source and class files."
   (jar project))
 
 (defn uberjarfile [project]
@@ -54,6 +55,7 @@
         (.shade jars jarfile [] [] [(ComponentsXmlResourceTransformer.)])))))
 
 (deftask uberjar => jar
+  "Create a standalone jar containing all project dependencies."
   (uberjar project))
 
 (defn warfile [project]
@@ -69,6 +71,7 @@
          (add-fileset    {:dir (file "src" "html")}))))
 
 (deftask war => compile
+  "Create a web archive containing project source and class files."
   (war project))
 
 (defn uberwar [project]
@@ -76,6 +79,7 @@
        (add-zipfileset {:dir (file "lib") :prefix "WEB-INF/lib" :includes "*.jar"})))
 
 (deftask uberwar => war
+  "Create a web archive containing all project dependencies."
   (uberwar project))
 
 (defn keyfile [files]
@@ -91,4 +95,5 @@
        (add-fileset {:file jar})))
 
 (deftask release => jar
+  "Release project jar to clojars."
   (release (jarfile project)))

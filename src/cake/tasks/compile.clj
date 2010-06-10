@@ -45,5 +45,6 @@
       (compile lib))))
 
 (deftask compile
+  "Compile all clojure and java source files."
   (compile-java project)
   (compile-clojure project))

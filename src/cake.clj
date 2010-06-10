@@ -48,15 +48,12 @@
       (and (seq? form)
            (include? (first form) ['fn* 'fn]))))
 
-(defn cat [s1 s2]
-  (if s1 (str s1 " " s2) s2))
-
 (defn update-task [task deps doc actions]
   {:pre [(every? dependency? deps) (every? fn? actions)]}
-  (let [task (or task {:actions [] :deps []})]
+  (let [task (or task {:actions [] :deps [] :doc []})]
     (-> task
         (update :deps    into deps)
-        (update :doc     cat  doc)
+        (update :doc     into doc)
         (update :actions into actions))))
 
 (def tasks (atom {}))
@@ -73,9 +70,7 @@
   (let [[deps body] (if (= '=> (first body))
                       (split-with dependency? (rest body))
                       [() body])
-        [doc actions] (if (string? (first body))
-                        (split-at 1 body)
-                        [nil body])
+        [doc actions] (split-with string? body)
         actions (vec (map #(list 'fn [] %) actions))]
     `(swap! tasks update '~name update-task '~deps '~doc ~actions)))
 
@@ -138,12 +133,6 @@
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)
         bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
-
-(defmacro task-doc
-  "Print documentation for a task."
-  [task]
-  (println "-------------------------")
-  (println "cake" (name task) " ;" (:doc (@tasks task))))
 
 (def opts nil)
 

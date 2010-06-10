@@ -57,7 +57,7 @@
       (add-dependencies (project :dependencies)))
     (ant WritePomTask {:pom-ref-id refid :file file})))
 
-(deftask deps "Fetch dependencies and create pom.xml"
+(deftask deps "Fetch dependencies and create pom.xml."
   (println "Fetching dependencies...")
   (fetch-deps (:dependencies project)     (file "lib"))
   (fetch-deps (:dev-dependencies project) (file "lib/dev"))

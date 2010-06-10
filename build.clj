@@ -20,6 +20,7 @@
   (.endsWith (:version project) "SNAPSHOT"))
 
 (deftask gem
+  "Build standalone gem package."
   (if (snapshot? project)
     (println "will not make gem since this is a snapshot version:" (:version project))
     (do (run-task 'uberjar)
@@ -32,6 +33,7 @@
 
 (undeftask release)
 (deftask release => uberjar, gem
+  "Release project jar to clojars and gem package to rubygems."
   (when-not (snapshot? project)
     (let [gem (str "cake-" (:version project) ".gem")]
       (log "Releasing gem: " gem)

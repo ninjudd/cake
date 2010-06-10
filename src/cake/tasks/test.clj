@@ -3,6 +3,7 @@
   (:import [java.io File]))
 
 (deftask test
+  "Run project tests."
   (bake (:use bake.test) []
     (let [start (System/nanoTime)]
       (doseq [ns (all-test-namespaces project)] (require ns))
