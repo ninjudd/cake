@@ -5,11 +5,12 @@
 (deftask test
   "Run project tests."
   (bake (:use bake.test) []
-    (let [start (System/nanoTime)]
-      (doseq [ns (all-test-namespaces project)] (require ns))
-      (let [grouped-tests (get-grouped-tests project opts)]
+    (let [start (System/nanoTime)
+          nses  (all-test-namespaces project)]
+      (doseq [ns nses] (require ns))
+      (let [grouped-tests (get-grouped-tests nses opts)]
         (let [results (concat
-                       (run-tests-for-fns grouped-tests)
+                       (run-tests-for-fns  grouped-tests)
                        (run-tests-for-nses grouped-tests)
                        (run-tests-for-tags grouped-tests (all-test-namespaces project)))]
           (if (> (count results) 1)

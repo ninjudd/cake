@@ -1,6 +1,5 @@
 (ns bake.test
-  (:use [bake :only [defm]]
-        [cake.contrib.find-namespaces :only [find-namespaces-in-dir]])
+  (:use [cake.contrib.find-namespaces :only [find-namespaces-in-dir]])
   (:require clojure.test))
 
 (defn map-tags [nses]
@@ -10,7 +9,7 @@
                 tag (:tags (meta f))]
             {tag [f]})))
 
-(defm all-test-namespaces [project]
+(defn all-test-namespaces [project]
   (find-namespaces-in-dir (java.io.File. "test")))
 
 (defn prep-opt [str]
@@ -24,11 +23,11 @@
                    :else :ns)
             coll))
 
-(defn get-grouped-tests [project opts]
+(defn get-grouped-tests [namespaces opts]
   (let [tests (:test opts)]
     (group-opts
      (if (nil? tests)
-       (all-test-namespaces project)
+       namespaces
        (map prep-opt tests)))))
 
 (defn run-tests-for-fns [grouped-tests]

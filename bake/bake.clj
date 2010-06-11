@@ -1,5 +1,5 @@
 (ns bake
-  (:use cake.server bake.utils
+  (:use cake.server
         [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require clojure.main bake.swank))
 
@@ -15,7 +15,7 @@
 
 (defn reload-files [_]
   (doseq [file (read)]
-    (let [ns (second (read-file-ns-decl (java.io.File. file)))]
+    (if-let [ns (second (read-file-ns-decl (java.io.File. file)))]
       (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
         (load-file file)))))
 
