@@ -63,9 +63,35 @@ def extract(jar, file)
   "#{dest}/#{file}"
 end
 
+def add_opt!(key, *vals)
+  ($opts[key.to_sym] ||= []).concat vals
+end
+
+def parse_opts!
+  $command = (ARGV.shift || 'default').to_sym
+  $opts = {}
+  ARGV.each do |opt|
+    case opt
+    when /^-(\w*)$/                then $1.chars.each {|c| add_opt!(c, "")}
+    when /^--?([-\w]*)=([-,\w]+)$/ then add_opt!($1, *$2.split(','))
+    when /^--?([-\w]*)$/           then add_opt!($1, "")
+    else                                add_opt!($command, opt)
+    end
+  end
+  $opts.freeze
+end
+parse_opts!
+
 def verbose?
-  @verbose = ARGV.any? {|arg| arg =~ /^(-?-v)|(-?-verbose)$/} if @verbose.nil?
-  @verbose
+  $opts[:v] or $opts[:verbose]
+end
+
+def debug?
+  $opts[:d] or $opts[:debug]
+end
+
+def restart?
+  $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command)
 end
 
 class JVM
@@ -104,12 +130,15 @@ class JVM
       with_socket do |socket|
         stale_files = stale_files.collect {|f| %{"#{f}"} }
         socket.write ":reload [#{stale_files.join(" ")}]\n"
-        if socket.gets
-          puts "#{type}: unable to reload all files" if verbose?
-          stop
-        else
+        if socket.eof?
           FileUtils.touch(pidfile)
           @start_time = Time.now
+        else
+          while line = socket.gets
+            puts line
+          end if debug?
+          puts "#{type}: unable to reload all files" if verbose?
+          stop
         end
       end
     end
@@ -265,21 +294,20 @@ private
   def complete?(input)
     return true if input.empty?
     with_socket(true) do |socket|
-      socket.write(":validate #{input}")
+      socket.write(":validate #{input.join("\n")}")
       socket.close_write # send eof
       socket.gets != "incomplete\n"
     end
   end
 
   def readline(initial_prompt)
-    input = ""
+    input = []
     prompt = initial_prompt.clone
     while line = Readline.readline(prompt)
-      input << " " unless input.empty?
       input << line
       if complete?(input)
-        Readline::HISTORY.push(input)
-        return input
+        Readline::HISTORY.push(input.join(' '))
+        return input.join("\n")
       end
       prompt[-2] = ?*
     end
@@ -322,30 +350,24 @@ srcpath = "#{pwd}/src:#{pwd}/src/clj"
 cake = Cake.new("#{cakepath}:#{srcpath}:#{pwd}/lib/dev/*")
 bake = Bake.new("#{bakepath}:#{srcpath}:#{pwd}/classes:#{pwd}/test:#{pwd}/lib/*:#{pwd}/lib/dev/*")
 
-command = (ARGV.first || 'default').to_sym
-
-if [:stop, :restart].include?(command)
+if restart?
   cake.stop(:force => true)
   bake.stop(:force => true)
-
-  if command == :stop
-    puts "cake jvm processes stopped"
-    exit
-  end
+  exit if $command == :stop
 end
 
 cake.init
-if command != :deps and File.exists?('project.clj')
+if $command != :deps and File.exists?('project.clj')
   cake.send_command(:deps) if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
   bake.init
   cake.init # must check if dev dependencies have changed
   cake.bake_port = bake.port
 end
 
-if [:start, :reload, :restart].include?(command)
-  puts "cake jvm processes #{command}ed"
-elsif command == :repl
+if [:start, :reload, :restart].include?($command)
+  puts "cake jvm processes #{$command}ed"
+elsif $command == :repl
   bake.repl
 else
-  cake.send_command(*ARGV)
+  cake.send_command($command, ARGV)
 end
