@@ -13,6 +13,7 @@ file     = File.readlink(__FILE__) rescue __FILE__
 $cakedir = File.dirname(File.dirname(file))
 $confdir = ".cake"
 $repo    = "http://clojars.org/repo/cake/cake"
+File.makedirs($confdir)
 
 def get_cake(version, dest)
   jar  = version =~ /(.*)-SNAPSHOT/ ? "cake-#{$1}-#{snapshot(version)}.jar" : "cake-#{version}.jar"
@@ -66,200 +67,228 @@ def verbose?
   @verbose
 end
 
-def daemon(cmd)
-  pid = fork do
-    Process.setsid
-    exec(cmd)
+class JVM
+  attr_reader :type, :classpath, :port, :pid, :pidfile, :start_time
+
+  def initialize(classpath)
+    @type       = self.class.name.downcase
+    @classpath  = classpath
+    @pidfile    = "#{$confdir}/#{type}.pid"
+    @start_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.at(0)
+
+    @pid, @port = IO.read(pidfile).map {|l| l.to_i}
+    Process.kill(0, @pid) # make sure pid is valid
+
+  rescue Errno::ESRCH, Errno::ENOENT => e
+    reset! # no pidfile or invalid pid
   end
-  Process.detach(pid)
-  pid
-end
 
-def pidfile(type)
-  "#{$confdir}/#{type}.pid"
-end
-
-def stale?(start_time, path)
-  if File.exists?(path)
-    File.mtime(path) > start_time
+  def running?
+    not pid.nil?
   end
-end
 
-def stale_files(type, classpath)
-  this_pidfile = pidfile(type)
-  start_time = File.mtime(this_pidfile) if File.exists?(this_pidfile)
-  start_time ||= Time.at(0)
-  files = []
-  classpath.split(':').each do |path|
-    if path =~ /(.*)\/\*$/
-      files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
-    else
-      Find.find(path) do |f|
-        files << f if File.exists?(f) and !File.directory?(f)
+  def init
+    stop if running? and files.any? {|f| stale?(f)}
+    start
+  end
+
+  MIN_PORT = 2**13
+  MAX_PORT = 2**16
+
+  def start
+    return if running?
+    @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
+    puts "starting #{type} jvm on port #{port}" if verbose?
+    @pid = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
+    File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
+
+  rescue Errno::EADDRNOTAVAIL => e
+    retry
+  end
+
+  def stop(opts = {})
+    with_socket do |socket|
+      action = opts[:force] ? ":force-quit" : ":quit"
+      puts "sending #{action} to #{type} server on port #{port}" if verbose?
+      socket.write(action + "\n")
+      if socket.gets == "true\n"
+        File.unlink(pidfile)
+        @pid, @port = []
+      else
+        puts "-------------------------------------------"
+        puts "warning: classes have changed but can't restart #{type} jvm with active connections"
+        puts "         close active connections or use 'cake stop' to force quit"
+        puts "-------------------------------------------"
       end
     end
   end
 
-  ["project.clj", "build.clj"].each do |f|
-    files << f if File.exists?(f)
-  end if type == :cake
-
-  files.select{ |f| stale?(start_time, f)}
-end
-
-def read_config(type)
-  if File.exists?($confdir)
-    begin
-      pid, port = IO.read(pidfile(type)).map {|l| l.to_i}
-      Process.kill(0, pid) # make sure pid is valid
-      [pid, port]
-    rescue Errno::ENOENT => e # no pidfile
-      []
-    rescue Errno::ESRCH => e # invalid pid
-      File.unlink(pidfile(type))
-      []
+  def files
+    files = []
+    classpath.split(':').each do |path|
+      if path =~ /(.*)\/\*$/
+        files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
+      else
+        Find.find(path) do |f|
+          files << f if File.exists?(f) and not File.directory?(f)
+        end
+      end
     end
-  else
-    File.makedirs($confdir)
+    files
+  end
+
+private
+
+  def reset!
+    File.unlink(pidfile) if File.exists?(pidfile)
+    @pid, @port = []
+  end
+
+  def stale?(file)
+    File.exists?(file) and File.mtime(file) > start_time
+  end
+
+  def daemon(cmd)
+    pid = fork do
+      Process.setsid
+      exec(cmd)
+    end
+    Process.detach(pid)
+    pid
+  end
+
+  def with_socket(wait = false)
+    return unless port
+    socket = TCPSocket.new("localhost", port)
+    result = yield(socket)
+    socket.close
+    result
+  rescue Errno::ECONNREFUSED => e
+    sleep 1
+    retry
   end
 end
 
-MIN_PORT = 2**13
-MAX_PORT = 2**16
+class Cake < JVM
+  attr_accessor :bake_port
 
-def init_jvm(type, classpath)
-  stale = stale_files(type, classpath)
-  if stale.any?{ |f| File.extname(f) != ".clj"}
-    stop_jvm(type)
-  else
-    pid, port = read_config(type)
+  def files
+    super.concat ["project.clj", "build.clj"]
+  end
 
-    if stale.any? and type == :bake and pid
-      socket = TCPSocket.new("localhost", port)
-      socket.write ":reload [#{stale.map{ |f| "\"" + f + "\"" }.join(" ")}]\n"
+  def send_command(command, *args)
+    with_socket(true) do |socket|
+      socket.write("(#{command} [#{args.join(' ')}] #{bake_port})\n")
+      while(line = socket.gets)
+        puts line
+      end
+    end
+  end
+end
+
+class Bake < JVM
+  def init
+    if running?
+      stale = files.select {|f| stale?(f)}
+      if stale.all? {|f| File.extname(f) == ".clj"}
+        reload_files(stale)
+      elsif stale.any?
+        stop
+      end
+    end
+    start
+  end
+
+  def reload_files(files)
+    with_socket do |socket|
+      socket.write ":reload [#{files.map{ |f| "\"" + f + "\"" }.join(" ")}]\n"
       while line = socket.gets
         puts line
       end
-      FileUtils.touch(pidfile(type))
+    end
+    FileUtils.touch(pidfile)
+  end
+
+  MARKER = rand.to_s
+  PROMPT = /^(.*)#{MARKER}$/
+  START_REPL = <<-END
+    (clojure.main/repl
+      :init   #(in-ns 'user)
+      :prompt #(printf "%s=> #{MARKER}\n" (ns-name *ns*)))
+  END
+
+  def repl
+    load_history
+    loop do
+      with_socket(true) do |socket|
+        socket.write START_REPL
+        socket.gets # burn extra prompt
+
+        while prompt = read_until_prompt(socket)
+          line = readline(prompt)
+          return unless line
+          socket.write(line + "\n")
+        end
+      end
+    end
+  ensure
+    save_history
+  end
+
+private
+
+  HISTORY_NUM  = 500
+  HISTORY_FILE = ".cake/history"
+
+  def load_history
+    open(HISTORY_FILE) do |file|
+      file.each {|line| Readline::HISTORY << line.chomp}
+    end if File.exists?(HISTORY_FILE)
+  end
+
+  def save_history
+    open(HISTORY_FILE, 'w') do |file|
+      history = Readline::HISTORY.to_a
+      file.puts(history[-HISTORY_NUM..-1] || history)
     end
   end
 
-  if pid.nil?
-    port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    puts "starting #{type} jvm on port #{port}" if verbose?
-    pid  = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
-    File.open(pidfile(type), 'w') {|f| f.write("#{pid}\n#{port}\n") }
-  end
-  port
-rescue Errno::EADDRNOTAVAIL => e
-  retry
-end
-
-def stop_jvm(type, opts = {})
-  pid, port = read_config(type)
-  if port
-    socket = TCPSocket.new("localhost", port)
-    action = opts[:force] ? ":force-quit" : ":quit"
-    puts "sending #{action} to #{type} server on port #{port}" if verbose?
-    socket.write(action + "\n")
-    if socket.gets == "true\n"
-      File.unlink(pidfile(type))
-    else
-      puts "-------------------------------------------"
-      puts "warning: classes have changed but can't restart #{type} jvm with active connections"
-      puts "         close active connections or use 'cake stop' to force quit"
-      puts "-------------------------------------------"
-    end
-  end
-rescue Errno::ECONNREFUSED => e
-end
-
-def connect(port)
-  TCPSocket.new("localhost", port)
-rescue Errno::ECONNREFUSED => e
-  sleep 1
-  retry
-end
-
-def send_command(command, *args)
-  socket = connect($cakeport)
-  socket.write("(#{command} [#{args.join(' ')}] #{$bakeport})\n")
-  while(line = socket.gets)
-    puts line
-  end
-end
-
-MARKER = rand.to_s
-PROMPT = /^(.*)#{MARKER}$/
-START_REPL = <<-END
-  (clojure.main/repl
-    :init   #(in-ns 'user)
-    :prompt #(printf "%s=> #{MARKER}\n" (ns-name *ns*)))
-END
-
-def read_until_prompt(socket)
-  while line = socket.gets
-    if line =~ PROMPT
-      return $1
-    else
+  def read_until_prompt(socket)
+    while line = socket.gets
+      return $1 if line =~ PROMPT
       puts line
     end
   end
-end
 
-def complete?(input)
-  return true if input.empty?
-  socket = connect($bakeport)
-  socket.write(":validate #{input}")
-  socket.close_write # send eof
-  socket.gets != "incomplete\n"
-end
-
-def readline(initial_prompt)
-  input = ""
-  prompt = initial_prompt.clone
-  while line = Readline.readline(prompt)
-    input << " " unless input.empty?
-    input << line
-    if complete?(input)
-      Readline::HISTORY.push(input)
-      return input
-    end
-    prompt[-2] = ?*
-  end
-rescue Interrupt => e
-  return nil if input.empty?
-  Readline::HISTORY.push(input)
-  retry
-end
-
-HISTORY_NUM  = 500
-HISTORY_FILE = ".cake/history"
-
-def repl
-  open(HISTORY_FILE) do |file|
-    file.each {|line| Readline::HISTORY << line.chomp}
-  end if File.exists?(HISTORY_FILE)
-
-  loop do
-    socket = connect($bakeport)
-    socket.write START_REPL
-    socket.gets # burn extra prompt
-
-    while prompt = read_until_prompt(socket)
-      line = readline(prompt)
-      return unless line
-      socket.write(line + "\n")
+  def complete?(input)
+    return true if input.empty?
+    with_socket(true) do |socket|
+      socket.write(":validate #{input}")
+      socket.close_write # send eof
+      socket.gets != "incomplete\n"
     end
   end
-ensure
-  open(HISTORY_FILE, 'w') do |file|
-    history = Readline::HISTORY.to_a
-    file.puts(history[-HISTORY_NUM..-1] || history)
+
+  def readline(initial_prompt)
+    input = ""
+    prompt = initial_prompt.clone
+    while line = Readline.readline(prompt)
+      input << " " unless input.empty?
+      input << line
+      if complete?(input)
+        Readline::HISTORY.push(input)
+        return input
+      end
+      prompt[-2] = ?*
+    end
+  rescue Interrupt => e
+    return nil if input.empty?
+    Readline::HISTORY.push(input)
+    retry
   end
 end
 
-# Bootstap cake dependencies.
+# Bootstrap cake dependencies.
 lib = "#{$cakedir}/lib"
 if File.exists?("#{$cakedir}/.gitignore")
   if Dir["#{lib}/*.jar"].empty?
@@ -285,11 +314,17 @@ else
   end
 end
 
+pwd = Dir.getwd
+srcpath = "#{pwd}/src:#{pwd}/src/clj"
+
+cake = Cake.new("#{cakepath}:#{srcpath}:#{pwd}/lib/dev/*")
+bake = Bake.new("#{bakepath}:#{srcpath}:#{pwd}/classes:#{pwd}/test:#{pwd}/lib/*:#{pwd}/lib/dev/*")
+
 command = (ARGV.first || 'default').to_sym
 
 if [:stop, :restart].include?(command)
-  stop_jvm(:cake, :force => true)
-  stop_jvm(:bake, :force => true)
+  cake.stop(:force => true)
+  bake.stop(:force => true)
 
   if command == :stop
     puts "cake jvm processes stopped"
@@ -297,21 +332,18 @@ if [:stop, :restart].include?(command)
   end
 end
 
-pwd = Dir.getwd
-srcpath = "#{pwd}/src:#{pwd}/src/clj"
-$cakeport = init_jvm(:cake, "#{cakepath}:#{srcpath}:#{pwd}/lib/dev/*")
-
+cake.init
 if command != :deps and File.exists?('project.clj')
-  if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
-    send_command(:deps)
-  end
-  $bakeport = init_jvm(:bake, "#{bakepath}:#{srcpath}:#{pwd}/classes:#{pwd}/test:#{pwd}/lib/*:#{pwd}/lib/dev/*")
+  cake.send_command(:deps) if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
+  bake.init
+  cake.init # must check if dev dependencies have changed
+  cake.bake_port = bake.port
 end
 
 if [:start, :reload, :restart].include?(command)
   puts "cake jvm processes #{command}ed"
 elsif command == :repl
-  repl
+  bake.repl
 else
-  send_command(*ARGV)
+  cake.send_command(*ARGV)
 end
