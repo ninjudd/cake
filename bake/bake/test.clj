@@ -57,4 +57,3 @@
                  (clojure.test/report (assoc @clojure.test/*report-counters* :type :summary))
                  (println "----" )
                  @clojure.test/*report-counters*))))))
-
