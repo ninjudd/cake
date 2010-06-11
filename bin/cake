@@ -8,6 +8,7 @@ require 'socket'
 require 'timeout'
 require 'readline'
 require 'fileutils'
+require 'pp'
 
 file     = File.readlink(__FILE__) rescue __FILE__
 $cakedir = File.dirname(File.dirname(file))
@@ -74,7 +75,7 @@ class JVM
     @type       = self.class.name.downcase
     @classpath  = classpath
     @pidfile    = "#{$confdir}/#{type}.pid"
-    @start_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.at(0)
+    @start_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
 
     @pid, @port = IO.read(pidfile).map {|l| l.to_i}
     Process.kill(0, @pid) # make sure pid is valid
@@ -88,8 +89,30 @@ class JVM
   end
 
   def init
-    stop if running? and files.any? {|f| stale?(f)}
+    reload_stale_files if running?
     start
+  end
+
+  def reload_stale_files
+    stale_files = files.select {|f| stale?(f)}
+    return if stale_files.empty?
+    puts "#{type}: the following files have changed: #{stale_files.join(', ')}" if verbose?
+
+    if stale_files.any? {|f| File.extname(f) != ".clj"}
+      stop
+    else
+      with_socket do |socket|
+        stale_files = stale_files.collect {|f| %{"#{f}"} }
+        socket.write ":reload [#{stale_files.join(" ")}]\n"
+        if socket.gets
+          puts "#{type}: unable to reload all files" if verbose?
+          stop
+        else
+          FileUtils.touch(pidfile)
+          @start_time = Time.now
+        end
+      end
+    end
   end
 
   MIN_PORT = 2**13
@@ -98,7 +121,7 @@ class JVM
   def start
     return if running?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    puts "starting #{type} jvm on port #{port}" if verbose?
+    puts "#{type}: starting jvm on port #{port}" if verbose?
     @pid = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
 
@@ -109,11 +132,11 @@ class JVM
   def stop(opts = {})
     with_socket do |socket|
       action = opts[:force] ? ":force-quit" : ":quit"
-      puts "sending #{action} to #{type} server on port #{port}" if verbose?
+      puts "#{type}: sending #{action} to jvm on port #{port}" if verbose?
       socket.write(action + "\n")
-      if socket.gets == "true\n"
-        File.unlink(pidfile)
-        @pid, @port = []
+      line = socket.gets
+      if line == "true\n"
+        reset!
       else
         puts "-------------------------------------------"
         puts "warning: classes have changed but can't restart #{type} jvm with active connections"
@@ -125,7 +148,7 @@ class JVM
 
   def files
     files = []
-    classpath.split(':').each do |path|
+    classpath.split(':').uniq.each do |path|
       if path =~ /(.*)\/\*$/
         files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
       else
@@ -142,6 +165,7 @@ private
   def reset!
     File.unlink(pidfile) if File.exists?(pidfile)
     @pid, @port = []
+    @start_time = Time.now
   end
 
   def stale?(file)
@@ -187,28 +211,6 @@ class Cake < JVM
 end
 
 class Bake < JVM
-  def init
-    if running?
-      stale = files.select {|f| stale?(f)}
-      if stale.all? {|f| File.extname(f) == ".clj"}
-        reload_files(stale)
-      elsif stale.any?
-        stop
-      end
-    end
-    start
-  end
-
-  def reload_files(files)
-    with_socket do |socket|
-      socket.write ":reload [#{files.map{ |f| "\"" + f + "\"" }.join(" ")}]\n"
-      while line = socket.gets
-        puts line
-      end
-    end
-    FileUtils.touch(pidfile)
-  end
-
   MARKER = rand.to_s
   PROMPT = /^(.*)#{MARKER}$/
   START_REPL = <<-END
@@ -296,7 +298,7 @@ if File.exists?("#{$cakedir}/.gitignore")
     version = IO.read("#{$cakedir}/project.clj").first.match(/defproject cake \"(.*)\"/)[1]
     get_cake(version, lib)
   end
-  cakepath = "#{$cakedir}/src/:#{lib}/*"
+  cakepath = "#{$cakedir}/src:#{lib}/*"
   bakepath = "#{$cakedir}/bake"
 else
   cakejar = "#{lib}/cake.jar"

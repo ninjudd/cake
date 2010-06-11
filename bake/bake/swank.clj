@@ -2,7 +2,7 @@
   (:import [java.io StringWriter PrintWriter]))
 
 (def default-port 4005)
-(def port (atom nil))
+(defonce port (atom nil))
 (defn running? [] (not (nil? @port)))
 
 (defmacro if-ns [ns-reference then-form else-form]

@@ -2,10 +2,11 @@
 (def current-task nil) ; current-task must be declared here so cake.ant can access it for logging
 
 (ns cake
-  (:use clojure.useful cake.server
+  (:use clojure.useful
         [cake.project :only [init]])
-  (:require [cake.ant :as ant])
-  (:import [java.io File InputStreamReader OutputStreamWriter BufferedReader]
+  (:require [cake.server :as server]
+            [cake.ant :as ant])
+  (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader]
            [java.net Socket ConnectException]))
 
 (defn verbose? [opts]
@@ -16,7 +17,7 @@
     "org.clojure"
     (or (namespace project) (name project))))
 
-(def cake-project (atom nil))
+(defonce cake-project (atom nil))
 (def project nil)
 
 (defmacro defproject [project-name version & args]
@@ -56,7 +57,7 @@
         (update :doc     into doc)
         (update :actions into actions))))
 
-(def tasks (atom {}))
+(defonce tasks (atom {}))
 (def run? nil)
 
 (def implicit-tasks
@@ -148,13 +149,27 @@
 (defn process-command [form]
   (let [[task args port] form]
     (binding [project @cake-project
-              ant/ant-project (ant/init-project project *outs*)
+              ant/ant-project (ant/init-project project server/*outs*)
               opts (parse-args (keyword task) (map str args))
               bake-port port
               run? {}]
       (run-task (symbol (or task 'default))))))
 
+(defn task-file? [file]
+  (some (partial re-matches #".*\(deftask .*|.*\(defproject .*")
+        (line-seq (BufferedReader. (FileReader. file)))))
+
+(defn skip-task-files [load-file]
+  (fn [file]
+    (if (task-file? file)
+      (println "unable to reload file with deftask or defproject in it:" file)
+      (load-file file))))
+
+(defn reload-files []
+  (binding [clojure.core/load-file (skip-task-files load-file)]
+    (server/reload-files)))
+
 (defn start-server [port]
   (init)
-  (create-server port process-command)
+  (server/create port process-command :reload reload-files)
   nil)

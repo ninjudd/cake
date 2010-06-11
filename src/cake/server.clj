@@ -1,4 +1,5 @@
 (ns cake.server
+  (:use [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.contrib.server-socket :as server-socket])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream]
            [clojure.lang LineNumberingPushbackReader]
@@ -7,29 +8,45 @@
 (def *ins*  nil)
 (def *outs* nil)
 
-(def servers (atom []))
+(defonce servers (atom []))
 
 (defn num-connections []
   (reduce + (map #(count @(:connections %)) @servers)))
 
-(defn quit? [command]
-  (or (= :force-quit command)
-      (and (= :quit command) (>= 1 (num-connections)))))
+(defn validate-form []
+  (println
+   (try (read)
+        "valid"
+        (catch clojure.lang.LispReader$ReaderException e
+          (if (.contains (.getMessage e) "EOF")
+            "incomplete"
+            "invalid")))))
 
-(defn- process-command [command]
-  (cond (= :validate command)
-        (println
-         (try (read)
-              "valid"
-              (catch clojure.lang.LispReader$ReaderException e
-                (if (.contains (.getMessage e) "EOF")
-                  "incomplete"
-                  "invalid"))))
-        (quit? command)
-        (do (println "true")
-            (System/exit 0))))
+(defn reload-files []
+  (let [files (read)]
+    (doseq [file files]
+      (if (not (.endsWith file ".clj"))
+        (println "cannot reload non-clojure file:" file)
+        (if-let [ns (second (read-file-ns-decl (java.io.File. file)))]
+          (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
+            (load-file file)))))))
 
-(defn- create-server* [port f commands]
+(defn exit []
+  (println "true")
+  (flush)
+  (System/exit 0))
+
+(defn quit []
+  (when (>= 1 (num-connections))
+    (exit)))
+
+(def default-commands
+  {:validate   validate-form
+   :reload     reload-files
+   :force-quit exit
+   :quit       quit})
+
+(defn- create* [port f commands]
   (let [commands (apply hash-map commands)]
     (server-socket/create-server port
       (fn [ins outs]
@@ -41,12 +58,12 @@
           (let [form (read)]
             (try
               (if (keyword? form)
-                (let [cmd (or (commands form) identity)]
-                  (process-command (cmd form)))
+                (when-let [command (or (commands form) (default-commands form))]
+                  (command))
                 (f form))
               (catch Exception e
                 (.printStackTrace e (PrintStream. outs)))))))
       0 (InetAddress/getByName "localhost"))))
 
-(defn create-server [port f & commands]
-  (swap! servers conj (create-server* port f commands)))
+(defn create [port f & commands]
+  (swap! servers conj (create* port f commands)))

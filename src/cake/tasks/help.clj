@@ -7,7 +7,7 @@
   (println line)
   (let [deps (if (seq deps) (cons "=>" deps) deps)]
     (apply println "cake" name deps)
-    (doseq [doc docs] (println " ;;" doc))))
+    (doseq [doc docs] (println "  " doc))))
 
 (defn task-doc [& syms]
   (doseq [sym syms]
