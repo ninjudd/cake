@@ -150,7 +150,7 @@
   (let [[task args port] form]
     (binding [project @cake-project
               ant/ant-project (ant/init-project project server/*outs*)
-              opts (parse-args (keyword task) (map str args))
+              opts (parse-opts (keyword task) (map str args))
               bake-port port
               run? {}]
       (run-task (symbol (or task 'default))))))

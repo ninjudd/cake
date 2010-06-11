@@ -8,10 +8,12 @@
 
 ;;  Server socket library - includes REPL on socket
 
+;; renamed from clojure.contrib.server-socket to avoid conflicts
+
 (ns
   #^{:author "Craig McDaniel"
      :doc "Server socket library - includes REPL on socket"}
-  cake.contrib.server-socket ;; renamed from clojure.contrib.server-socket to avoid conflicts
+  cake.contrib.server-socket
   (:import (java.net InetAddress ServerSocket Socket SocketException)
            (java.io InputStreamReader OutputStream OutputStreamWriter PrintWriter)
            (clojure.lang LineNumberingPushbackReader))
