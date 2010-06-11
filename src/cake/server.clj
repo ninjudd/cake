@@ -1,5 +1,5 @@
 (ns cake.server
-  (:require [clojure.contrib.server-socket :as server-socket])
+  (:require [cake.contrib.server-socket :as server-socket])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream]
            [clojure.lang LineNumberingPushbackReader]
            [java.net InetAddress]))

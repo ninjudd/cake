@@ -130,10 +130,10 @@ MAX_PORT = 2**16
 def init_jvm(type, classpath)
   stale = stale_files(type, classpath)
   if stale.any?{ |f| File.extname(f) != ".clj"}
-    stop_jvm(type) 
+    stop_jvm(type)
   else
-    pid, port = read_config(type)    
-        
+    pid, port = read_config(type)
+
     if stale.any? and type == :bake and pid
       socket = TCPSocket.new("localhost", port)
       socket.write ":reload [#{stale.map{ |f| "\"" + f + "\"" }.join(" ")}]\n"
@@ -143,10 +143,10 @@ def init_jvm(type, classpath)
       FileUtils.touch(pidfile(type))
     end
   end
-  
+
   if pid.nil?
     port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    puts "starting #{type} jvm on port #{port}" if debug?
+    puts "starting #{type} jvm on port #{port}" if verbose?
     pid  = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
     File.open(pidfile(type), 'w') {|f| f.write("#{pid}\n#{port}\n") }
   end

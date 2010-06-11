@@ -1,7 +1,6 @@
 (defproject cake "0.2.6"
   :description "Save your fork, there's cake!"
   :dependencies [[org.clojure/clojure "1.2.0-master-SNAPSHOT"]
-                 [org.clojure/clojure-contrib "1.2.0-SNAPSHOT"]
                  [clojure-useful "0.1.6"]
                  [jline "0.9.94"]
                  [org.apache.ant/ant "1.8.1"]

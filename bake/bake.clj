@@ -1,5 +1,6 @@
 (ns bake
-  (:use cake.server bake.utils)
+  (:use cake.server bake.utils
+        [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require clojure.main bake.swank))
 
 (defn eval-multi [form]
@@ -14,11 +15,11 @@
 
 (defn reload-files [_]
   (doseq [file (read)]
-    (load-file file)))
+    (let [ns (second (read-file-ns-decl (java.io.File. file)))]
+      (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
+        (load-file file)))))
 
 (defn start-server [port]
   (create-server port eval-multi :quit verify-quit :reload reload-files)
   (bake.swank/start)
   nil)
-
-

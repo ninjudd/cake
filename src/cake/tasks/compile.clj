@@ -1,7 +1,7 @@
 (ns cake.tasks.compile
   (:use cake cake.ant
         [clojure.useful :only [include?]]
-        [clojure.contrib.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]])
+        [cake.contrib.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]])
   (:import [org.apache.tools.ant.taskdefs Javac Java]))
 
 (defn compile-java [project]
