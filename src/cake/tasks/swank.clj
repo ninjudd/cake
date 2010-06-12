@@ -22,9 +22,7 @@
       (fetch-deps [(:library swank)] (file "lib/dev")))))
 
 (deftask swank
-  "Report status of swank-clojure server and start it if not running."
-  "If installed, the swank-server is started automatically when cake starts, so this task is
-   primarily for ensuring it is running."
+  "Report status of swank server and start it if not running."
   (bake (:require [cake.swank :as swank])
         [opts (swank-opts project opts)]
         (if (not (swank/installed?))

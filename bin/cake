@@ -237,7 +237,7 @@ class Cake < JVM
   attr_accessor :bake_port
 
   def files
-    super.concat ["project.clj", "build.clj"]
+    super.concat ["project.clj", "build.clj", ".cake/swank"]
   end
 
   def send_command(command, *args)
