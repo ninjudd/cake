@@ -10,8 +10,9 @@
       (eval form))))
 
 (defn quit []
-  (when (= 0 (swank/num-connections))
-    (server/quit)))
+  (if (= 0 (swank/num-connections))
+    (server/quit)
+    (println "refusing to quit because there are active swank connections")))
 
 (defn start-server [port]
   (server/create port eval-multi :quit quit)
