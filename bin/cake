@@ -22,7 +22,7 @@ def get_cake(version, dest)
   path = "#{dest}/#{jar}"
 
   if not File.exists?(path)
-    puts "fetching cake libraries. this may take a moment..."
+    log(:deps, "fetching cake libraries. this may take a moment...")
     url = "#{$repo}/#{version}/#{jar}"
     File.makedirs(dest)
     open(url) do |jar|
@@ -35,8 +35,8 @@ def get_cake(version, dest)
   end
   path
 rescue OpenURI::HTTPError => e
-  puts "unable to find cake version #{version} on clojars."
-  puts "please check http://github.com/ninjudd/cake for latest install instructions."
+  log(:deps, "unable to find cake version #{version} on clojars.")
+  log(:deps, "please check http://github.com/ninjudd/cake for latest install instructions.")
   exit
 end
 
@@ -72,7 +72,8 @@ def add_opt!(key, *vals)
 end
 
 def parse_opts!
-  $command = (ARGV.shift || 'default').to_sym
+  ARGV.unshift('default') if ARGV.empty? or ARGV.first[0,1] == '-'
+  $command = ARGV.shift.to_sym
   $opts = {}
   ARGV.each do |opt|
     case opt
@@ -86,16 +87,26 @@ def parse_opts!
 end
 parse_opts!
 
-def verbose?
-  $opts[:v] or $opts[:verbose]
-end
-
 def debug?
   $opts[:d] or $opts[:debug]
 end
 
+def verbose?
+  debug? or $opts[:v] or $opts[:verbose]
+end
+
 def restart?
   $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command)
+end
+
+def admin_command?
+  [:start, :stop, :reload, :restart].include?($command)
+end
+
+def log(command, *message)
+  message.each do |line|
+    printf("%11s %s\n", "[#{command}]", line)
+  end
 end
 
 class JVM
@@ -125,22 +136,28 @@ class JVM
 
   def reload_stale_files
     stale_files = files.select {|f| stale?(f)}
-    return if stale_files.empty?
-    puts "#{type}: the following files have changed: #{stale_files.join(', ')}" if verbose?
 
-    if stale_files.any? {|f| File.extname(f) != ".clj"}
-      stop
+    if stale_files.empty?
+      log(:reload, "no stale #{type} files found") if verbose? and admin_command?
     else
-      with_socket do |socket|
-        stale_files = stale_files.collect {|f| %{"#{f}"} }
-        socket.write ":reload [#{stale_files.join(" ")}]\n"
-        if socket.eof?
-          FileUtils.touch(pidfile)
-          @start_time = Time.now
-        else
-          inspect(socket) if debug?
-          puts "#{type}: unable to reload all files" if verbose?
-          stop
+      log(:reload, "the following #{type} files have changed: #{stale_files.join(', ')}") if debug?
+
+      if stale_files.any? {|f| File.extname(f) != ".clj"}
+        log(:reload, "non-clojure #{type} files have changed, restarting") if verbose?
+        stop
+      else
+        log(:reload, "clojure #{type} files have changed, reloading") if verbose?
+        with_socket(0) do |socket|
+          stale_files = stale_files.collect {|f| %{"#{f}"} }
+          socket.write ":reload [#{stale_files.join(" ")}]\n"
+          if socket.eof?
+            FileUtils.touch(pidfile)
+            @start_time = Time.now
+          else
+            inspect(socket) if debug?
+            log(:reload, "unable to reload all #{type} files, restarting") if verbose?
+            stop
+          end
         end
       end
     end
@@ -152,28 +169,32 @@ class JVM
   def start
     return if running?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    puts "#{type}: starting jvm on port #{port}" if verbose?
+    log(:start, "starting #{type} jvm on port #{port}") if debug?
     @pid = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
-
+    log(:start, "#{type} jvm started") if verbose?
   rescue Errno::EADDRNOTAVAIL => e
     retry
   end
 
   def stop(opts = {})
-    with_socket do |socket|
-      action = opts[:force] ? ":force-quit" : ":quit"
-      puts "#{type}: sending #{action} to jvm on port #{port}" if verbose?
-      socket.write(action + "\n")
+    with_socket(0) do |socket|
+      action = opts[:force] ? "force-quit" : "quit"
+      log(:stop, "sending #{action} to #{type} jvm on port #{port}") if debug?
+      socket.write(":#{action}\n")
       if socket.eof?
+        log(:stop, "#{type} jvm stopped") if verbose?
         reset!
       else
         inspect(socket) if debug?
-        puts "-------------------------------------------"
-        puts "warning: classes have changed but can't restart #{type} jvm with active connections"
-        puts "         close active connections or use 'cake stop' to force quit"
+        if opts[:force]
+          log(:stop, "error stopping #{type} jvm, try 'cake kill' or 'cake kill -9'")
+        else
+          log(:reload, "warning: classes have changed but can't restart #{type} jvm with active connections")
+          log(:reload, "         close active connections or use 'cake stop' to force quit")
+        end
       end
-    end
+    end || (log(:stop, "#{type} jvm not running") if verbose?)
   end
 
   def kill
@@ -221,7 +242,7 @@ private
     pid
   end
 
-  def with_socket(wait = false)
+  def with_socket(retries = 5)
     return unless port
     socket = TCPSocket.new("localhost", port)
     result = yield(socket)
@@ -229,23 +250,23 @@ private
     result
   rescue Errno::ECONNREFUSED => e
     sleep 1
-    retry
+    retry if (retries -= 1) > 0
+    exit
   end
 end
 
 class Cake < JVM
-  attr_accessor :bake_port
-
   def files
     super.concat ["project.clj", "build.clj", ".cake/swank"]
   end
 
-  def send_command(command, *args)
-    with_socket(true) do |socket|
-      socket.write("(#{command} [#{args.join(' ')}] #{bake_port})\n")
+  def send_command(command, bakeport, *args)
+    with_socket do |socket|
+      socket.write("(#{command} [#{args.join(' ')}] #{bakeport})\n")
       while(line = socket.gets)
         puts line
       end
+      command
     end
   end
 end
@@ -262,7 +283,7 @@ class Bake < JVM
   def repl
     load_history
     loop do
-      with_socket(true) do |socket|
+      with_socket do |socket|
         socket.write START_REPL
         socket.gets # burn extra prompt
 
@@ -304,7 +325,7 @@ private
 
   def complete?(input)
     return true if input.empty?
-    with_socket(true) do |socket|
+    with_socket do |socket|
       socket.write(":validate #{input.join("\n")}")
       socket.close_write # send eof
       socket.gets != "incomplete\n"
@@ -374,20 +395,17 @@ end
 cake.init
 if $command != :deps and File.exists?('project.clj')
   if newer?('project.clj', 'pom.xml')
-    cake.send_command(:deps)
+    deps = cake.send_command(:deps)
   elsif newer?('.cake/swank', 'lib/dev')
-    cake.send_command(:"swank-deps")
+    deps = cake.send_command(:"swank-deps")
   end
 
   bake.init
-  cake.init # must check if dev dependencies have changed
-  cake.bake_port = bake.port
+  cake.init if deps # must check if dev dependencies have changed
 end
 
-if [:start, :reload, :restart].include?($command)
-  puts "cake jvm processes #{$command}ed"
-elsif $command == :repl
+if $command == :repl
   bake.repl
-else
-  cake.send_command($command, ARGV)
+elsif not [:start, :reload, :restart].include?($command)
+  cake.send_command($command, bake.port, ARGV)
 end

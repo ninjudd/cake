@@ -35,7 +35,7 @@
   (System/exit 0))
 
 (defn quit []
-  (if (>= 1 (num-connections))
+  (if (>= 1 (num-connections)) ;; add one for the current connection
     (exit)
     (println "refusing to quit because there are active connections")))
 
