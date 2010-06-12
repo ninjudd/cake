@@ -29,7 +29,7 @@
         [opts (swank-opts project opts)]
         (if (not (swank/installed?))
           (do (println "swank-clojure not installed.")
-              (println "add swank-clojure as a dependency in project.clj or add .cake/swank to enable"))
+              (println "add swank-clojure as a dependency in project.clj or touch .cake/swank to enable"))
           (if (swank/running?)
             (let [num (swank/num-connections), s (if (= 1 num) "" "s")]
               (println (format "swank currently running on port %d with %d active connection%s" (swank/port) num s)))
