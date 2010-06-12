@@ -63,6 +63,10 @@ def extract(jar, file)
   "#{dest}/#{file}"
 end
 
+def newer?(file1, file2)
+  not File.exists?(file2) or test(?>, file1, file2)
+end
+
 def add_opt!(key, *vals)
   ($opts[key.to_sym] ||= []).concat vals
 end
@@ -134,9 +138,7 @@ class JVM
           FileUtils.touch(pidfile)
           @start_time = Time.now
         else
-          while line = socket.gets
-            puts line
-          end if debug?
+          inspect(socket) if debug?
           puts "#{type}: unable to reload all files" if verbose?
           stop
         end
@@ -163,16 +165,19 @@ class JVM
       action = opts[:force] ? ":force-quit" : ":quit"
       puts "#{type}: sending #{action} to jvm on port #{port}" if verbose?
       socket.write(action + "\n")
-      line = socket.gets
-      if line == "true\n"
+      if socket.eof?
         reset!
       else
+        inspect(socket) if debug?
         puts "-------------------------------------------"
         puts "warning: classes have changed but can't restart #{type} jvm with active connections"
         puts "         close active connections or use 'cake stop' to force quit"
-        puts "-------------------------------------------"
       end
     end
+  end
+
+  def kill
+    Process.kill($opts[:"9"] ? "KILL" : "TERM", pid) if pid
   end
 
   def files
@@ -190,6 +195,12 @@ class JVM
   end
 
 private
+
+  def inspect(socket)
+    while line = socket.gets
+      puts line
+    end
+  end
 
   def reset!
     File.unlink(pidfile) if File.exists?(pidfile)
@@ -350,7 +361,11 @@ srcpath = "#{pwd}/src:#{pwd}/src/clj"
 cake = Cake.new("#{cakepath}:#{srcpath}:#{pwd}/lib/dev/*")
 bake = Bake.new("#{bakepath}:#{srcpath}:#{pwd}/classes:#{pwd}/test:#{pwd}/lib/*:#{pwd}/lib/dev/*")
 
-if restart?
+if $command == :kill
+  cake.kill
+  bake.kill
+  exit
+elsif restart?
   cake.stop(:force => true)
   bake.stop(:force => true)
   exit if $command == :stop
@@ -358,7 +373,12 @@ end
 
 cake.init
 if $command != :deps and File.exists?('project.clj')
-  cake.send_command(:deps) if not File.exists?('pom.xml') or test(?>, 'project.clj', 'pom.xml')
+  if newer?('project.clj', 'pom.xml')
+    cake.send_command(:deps)
+  elsif newer?('.cake/swank', 'lib/dev')
+    cake.send_command(:"swank-deps")
+  end
+
   bake.init
   cake.init # must check if dev dependencies have changed
   cake.bake_port = bake.port

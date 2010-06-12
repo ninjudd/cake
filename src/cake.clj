@@ -5,6 +5,7 @@
   (:use clojure.useful
         [cake.project :only [init]])
   (:require [cake.server :as server]
+            [cake.swank :as swank]
             [cake.ant :as ant])
   (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader]
            [java.net Socket ConnectException]))
@@ -31,7 +32,8 @@
                (assoc :artifact-id ~artifact
                       :group-id    ~(group project-name)
                       :root        ~root
-                      :version     ~version)
+                      :version     ~version
+                      :swank      '~(swank/config))
                (assoc-or :name ~artifact)))
          ; @cake-project must be set before we include the tasks for bake to work.
          (require 'cake.tasks.defaults)

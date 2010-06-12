@@ -59,6 +59,6 @@
 
 (deftask deps "Fetch dependencies and create pom.xml."
   (println "Fetching dependencies...")
-  (fetch-deps (:dependencies project)     (file "lib"))
+  (fetch-deps (:dependencies project) (file "lib"))
   (fetch-deps (:dev-dependencies project) (file "lib/dev"))
   (pom project))

@@ -32,13 +32,12 @@
             (load-file file)))))))
 
 (defn exit []
-  (println "true")
-  (flush)
   (System/exit 0))
 
 (defn quit []
-  (when (>= 1 (num-connections))
-    (exit)))
+  (if (>= 1 (num-connections))
+    (exit)
+    (println "refusing to quit because there are active connections")))
 
 (def default-commands
   {:validate   validate-form

@@ -1,5 +1,6 @@
 (ns bake
-  (:require clojure.main bake.swank
+  (:require clojure.main
+            [cake.swank :as swank]
             [cake.server :as server]))
 
 (defn eval-multi [form]
@@ -9,10 +10,12 @@
       (eval form))))
 
 (defn quit []
-  (when (= 0 (bake.swank/num-connections))
+  (when (= 0 (swank/num-connections))
     (server/quit)))
 
 (defn start-server [port]
   (server/create port eval-multi :quit quit)
-  (bake.swank/start)
+  (when-let [opts (swank/config)]
+    (when-not (= false (:auto-start opts))
+      (swank/start opts)))
   nil)
