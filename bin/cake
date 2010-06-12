@@ -144,7 +144,7 @@ class JVM
 
       if stale_files.any? {|f| File.extname(f) != ".clj"}
         log(:reload, "non-clojure #{type} files have changed, restarting") if verbose?
-        stop
+        stop(:reload)
       else
         log(:reload, "clojure #{type} files have changed, reloading") if verbose?
         with_socket(0) do |socket|
@@ -156,7 +156,7 @@ class JVM
           else
             inspect(socket) if debug?
             log(:reload, "unable to reload all #{type} files, restarting") if verbose?
-            stop
+            stop(:reload)
           end
         end
       end
@@ -177,24 +177,24 @@ class JVM
     retry
   end
 
-  def stop(opts = {})
+  def stop(mode = :stop)
     with_socket(0) do |socket|
-      action = opts[:force] ? "force-quit" : "quit"
-      log(:stop, "sending #{action} to #{type} jvm on port #{port}") if debug?
+      action = mode == :reload ? 'quit' : 'force-quit'
+      log(mode, "sending #{action} to #{type} jvm on port #{port}") if debug?
       socket.write(":#{action}\n")
       if socket.eof?
-        log(:stop, "#{type} jvm stopped") if verbose?
+        log(mode, "#{type} jvm stopped") if verbose?
         reset!
       else
         inspect(socket) if debug?
         if opts[:force]
-          log(:stop, "error stopping #{type} jvm, try 'cake kill' or 'cake kill -9'")
+          log(mode, "error stopping #{type} jvm, try 'cake kill' or 'cake kill -9'")
         else
-          log(:reload, "warning: classes have changed but can't restart #{type} jvm with active connections")
-          log(:reload, "         close active connections or use 'cake stop' to force quit")
+          log(mode, "warning: classes have changed but can't restart #{type} jvm with active connections")
+          log(mode, "         close active connections or use 'cake stop' to force quit")
         end
       end
-    end || (log(:stop, "#{type} jvm not running") if verbose?)
+    end || (log(mode, "#{type} jvm not running") if verbose?)
   end
 
   def kill
@@ -250,7 +250,7 @@ private
     result
   rescue Errno::ECONNREFUSED => e
     sleep 1
-    retry if (retries -= 1) > 0
+    retry if (retries -= 1) >= 0
     exit
   end
 end
@@ -387,8 +387,8 @@ if $command == :kill
   bake.kill
   exit
 elsif restart?
-  cake.stop(:force => true)
-  bake.stop(:force => true)
+  cake.stop
+  bake.stop
   exit if $command == :stop
 end
 
