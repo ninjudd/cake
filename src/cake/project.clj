@@ -1,8 +1,10 @@
 (ns cake.project
-  (:use cake))
+  (:require cake)
+  (:import [java.io File]))
 
-(defn init
-  ([] (init "project.clj" "build.clj"))
-  ([& files]
-     (doseq [file files :when (.exists (java.io.File. file))]
-       (load-file file))))
+(defn init []
+  (doseq [file ["project.clj" "build.clj"] :when (.exists (java.io.File. file))]
+    (load-file file))
+  (when-not @cake/cake-project (require 'cake.tasks.new))
+  (require 'cake.tasks.help))
+

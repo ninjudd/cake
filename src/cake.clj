@@ -1,5 +1,9 @@
 (ns cake)
-(def current-task nil) ; current-task must be declared here so cake.ant can access it for logging
+
+; must be declared first so other namespaces can access them
+(def current-task nil)
+(defonce cake-project (atom nil))
+(def project nil)
 
 (ns cake
   (:use clojure.useful
@@ -17,9 +21,6 @@
   (if (or (= project 'clojure) (= project 'clojure-contrib))
     "org.clojure"
     (or (namespace project) (name project))))
-
-(defonce cake-project (atom nil))
-(def project nil)
 
 (defmacro defproject [project-name version & args]
   (let [root (.getParent (File. *file*))
