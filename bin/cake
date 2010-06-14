@@ -187,7 +187,7 @@ class JVM
         reset!
       else
         inspect(socket) if debug?
-        if opts[:force]
+        if mode == :stop
           log(mode, "error stopping #{type} jvm, try 'cake kill' or 'cake kill -9'")
         else
           log(mode, "warning: classes have changed but can't restart #{type} jvm with active connections")
