@@ -29,7 +29,8 @@
         (println "cannot reload non-clojure file:" file)
         (if-let [ns (second (read-file-ns-decl (java.io.File. file)))]
           (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
-            (load-file file)))))))
+            (load-file file))
+          (println "cannot reload file without namespace declaration"))))))
 
 (defn exit []
   (System/exit 0))
