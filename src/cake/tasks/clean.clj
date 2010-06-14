@@ -3,7 +3,9 @@
   (:import (org.apache.tools.ant.taskdefs Delete Mkdir)))
 
 (deftask clean
-  (bake [] (System/exit 0))
+  (println "cleaning...")
+  (when cake/bake-port
+    (bake [] (System/exit 0)))
   (let [files ["pom.xml" "classes" "lib"]]
     (doseq [file (map file (concat files (:clean project)))]
       (if (.isDirectory file)
