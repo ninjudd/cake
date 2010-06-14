@@ -1,6 +1,5 @@
 (ns cake.tasks.clean
   (:use cake cake.ant)
-  (:require [clojure.java.io :as io])
   (:import (org.apache.tools.ant.taskdefs Delete Mkdir)))
 
 (deftask clean
