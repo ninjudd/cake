@@ -256,11 +256,13 @@ private
 end
 
 class Cake < JVM
+  attr_accessor :bakeport
+
   def files
     super.concat ["project.clj", "build.clj", ".cake/swank"]
   end
 
-  def send_command(command, bakeport, *args)
+  def send_command(command, *args)
     with_socket do |socket|
       socket.write("(#{command} [#{args.join(' ')}] #{bakeport})\n")
       while(line = socket.gets)
@@ -405,7 +407,12 @@ if $command != :deps and File.exists?('project.clj')
 end
 
 if $command == :repl
-  bake.repl
+  if File.exists?('project.clj')
+    bake.repl
+  else
+    log(:repl, "cannot start repl without project.clj")
+  end
 elsif not [:start, :reload, :restart].include?($command)
-  cake.send_command($command, bake.port, ARGV)
+  cake.bakeport = bake.port
+  cake.send_command($command, ARGV)
 end
