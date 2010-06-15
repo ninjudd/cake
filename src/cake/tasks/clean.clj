@@ -3,7 +3,6 @@
   (:import (org.apache.tools.ant.taskdefs Delete Mkdir)))
 
 (deftask clean
-  (println "cleaning...")
   (when cake/bake-port
     (bake [] (System/exit 0)))
   (let [files ["pom.xml" "classes" "lib"]]

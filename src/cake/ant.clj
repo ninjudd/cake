@@ -58,15 +58,13 @@
 (defn get-reference [ref-id]
   (.getReference ant-project ref-id))
 
-(defmacro add-fileset [task attrs & forms]
+(defn add-fileset [task attrs]
   (let [attrs (merge {:error-on-missing-dir false} attrs)]
-    `(.addFileset ~task
-       (make FileSet ~attrs ~@forms))))
+    (.addFileset task (make FileSet attrs))))
 
-(defmacro add-zipfileset [task attrs & forms]
+(defn add-zipfileset [task attrs]
   (let [attrs (merge {:error-on-missing-dir false} attrs)]
-    `(.addFileset ~task
-       (make ZipFileSet ~attrs ~@forms))))
+    (.addFileset task (make ZipFileSet attrs))))
 
 (defn add-manifest [task attrs]
   (let [manifest (Manifest.)]

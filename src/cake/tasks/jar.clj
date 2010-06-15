@@ -19,6 +19,22 @@
           "Build-Jdk"  (System/getProperty "java.version")
           "Main-Class" (absorb (:main project) (.replaceAll "-" "_"))}))
 
+(defn add-file-mappings [task mappings]
+  (doseq [mapping mappings]
+    (cond (vector? mapping)
+          (add-zipfileset task {:file (first mapping) :fullpath (second mapping)})
+
+          (string? mapping)
+          (let [file   (File. mapping)    ;;more complex than it should be to allow mappings to jar/war root
+                name   (.getName file)
+                parent (.getParent file)
+                dir    (or parent ".")
+                parent (or parent "")]
+            (add-zipfileset task {:dir dir :prefix parent :includes name}))
+
+          (map? mapping)
+          (add-zipfileset task mapping))))
+
 (defn jar [project]
   (let [maven (format "META-INF/maven/%s/%s" (:group-id project) (:artifact-id project))
         cake  (format "META-INF/cake/%s/%s"  (:group-id project) (:artifact-id project))]
@@ -27,7 +43,8 @@
          (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
          (add-fileset    {:dir (file "classes")})
-         (add-fileset    {:dir (file "src")}))))
+         (add-fileset    {:dir (file "src")})
+         (add-file-mappings (:jar-files project)))))
 
 (deftask jar => compile
   "Build a jar file containing project source and class files."
@@ -68,7 +85,8 @@
          (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})
          (add-zipfileset {:dir (file "classes")   :prefix classes :includes "*.class"})
          (add-zipfileset {:dir (file "resources") :prefix classes :includes "*"})
-         (add-fileset    {:dir (file "src" "html")}))))
+         (add-fileset    {:dir (file "src" "html")})
+         (add-file-mappings (:war-files project)))))
 
 (deftask war => compile
   "Create a web archive containing project source and class files."
