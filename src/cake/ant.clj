@@ -3,7 +3,7 @@
   (:require cake)
   (:import [org.apache.tools.ant Project NoBannerLogger]
            [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]
-           [org.apache.tools.ant.taskdefs Echo Manifest Manifest$Attribute]
+           [org.apache.tools.ant.taskdefs Echo Javac Manifest Manifest$Attribute]
            [java.beans Introspector]))
 
 (def ant-project nil)
@@ -30,10 +30,14 @@
             (.invoke setter instance (into-array [(coerce type val)]))))
         (throw (Exception. (str "property not found for " key)))))))
 
+(def defaults
+  {Javac {:includeantruntime false}})
+
 (defn make*
   ([class attrs]
-     (doto (make* class)
-       (set-attributes! attrs)))
+     (let [attrs (merge (defaults class) attrs)]
+       (doto (make* class)
+         (set-attributes! attrs))))
   ([class]
      (let [signature (into-array Class [Project])]
        (try (.newInstance (.getConstructor class signature)
@@ -75,9 +79,10 @@
 (defn path [& paths]
   (let [path (Path. ant-project)]
     (doseq [p paths]
-      (if (.endsWith p "*")
-        (add-fileset path {:includes "*.jar" :dir (subs p 0 (dec (count p)))})
-        (.. path createPathElement (setPath p))))
+      (let [p (if (instance? java.io.File p) (.getPath p) p)]
+        (if (.endsWith p "*")
+          (add-fileset path {:includes "*.jar" :dir (subs p 0 (dec (count p)))})
+          (.. path createPathElement (setPath p)))))
     path))
 
 (defn classpath [project & paths]
@@ -108,7 +113,7 @@
                   :error-print-stream   outs})))))
 
 (defn log [& message]
-  (ant Echo {:message (apply str message)}))
+  (ant Echo {:message (apply str (interpose " " message))}))
 
 (defmethod coerce [java.io.File String] [_ str] (java.io.File. str))
 (defmethod coerce :default [type val]
