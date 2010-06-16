@@ -19,6 +19,8 @@
           "Build-Jdk"  (System/getProperty "java.version")
           "Main-Class" (absorb (:main project) (.replaceAll "-" "_"))}))
 
+
+
 (defn add-file-mappings [task mappings]
   (doseq [mapping mappings]
     (cond (vector? mapping)
@@ -42,7 +44,7 @@
          (add-manifest (manifest project))
          (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
-         (add-fileset    {:dir (file "classes")})
+         (add-fileset    {:dir (file "classes") :includes "**/*.clj"})
          (add-fileset    {:dir (file "src")})
          (add-file-mappings (:jar-files project)))))
 
@@ -83,7 +85,7 @@
         classes (str web "/classes")]
     (ant War {:dest-file (warfile project)}
          (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})
-         (add-zipfileset {:dir (file "classes")   :prefix classes :includes "*.class"})
+         (add-zipfileset {:dir (file "classes")   :prefix classes :includes "**/*.class"})
          (add-zipfileset {:dir (file "resources") :prefix classes :includes "*"})
          (add-fileset    {:dir (file "src" "html")})
          (add-file-mappings (:war-files project)))))
