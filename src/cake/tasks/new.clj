@@ -20,5 +20,5 @@
     (spit (str name "/project.clj") (project-contents project))
     (log "Created file: project.clj")
     (spit (str name "/.gitignore")
-          (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes"] (repeat "\n"))))
+          (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build"] (repeat "\n"))))
     (log "Created file: .gitignore")))

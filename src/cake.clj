@@ -42,7 +42,10 @@
          (undeftask ~@(:exclude task-opts)))))
 
 (defn file-name [& path]
-  (apply str (interpose "/" (cons (:root project) path))))
+  (let [path (if (instance? File (first path))
+               (cons (.getName (first path)) (rest path))
+               (cons (:root project) path))]
+    (apply str (interpose (File/separator) path))))
 
 (defn file [& path]
   (File. (apply file-name path)))
@@ -156,6 +159,8 @@
               opts (parse-opts (keyword task) (map str args))
               bake-port port
               run? {}]
+      (doseq [dir ["lib" "classes" "build"]]
+        (.mkdirs (file dir)))
       (run-task (symbol (or task 'default))))))
 
 (defn task-file? [file]

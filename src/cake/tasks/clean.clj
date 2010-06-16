@@ -5,10 +5,8 @@
 (deftask clean
   (when cake/bake-port
     (bake [] (System/exit 0)))
-  (let [files ["pom.xml" "classes" "lib"]]
+  (let [files ["pom.xml" "classes" "lib" "build"]]
     (doseq [file (map file (concat files (:clean project)))]
       (if (.isDirectory file)
-        (do (ant Delete {:dir file})
-            (ant Mkdir {:dir file}))
+        (ant Delete {:dir file})
         (ant Delete {:file file})))))
-
