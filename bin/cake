@@ -328,7 +328,7 @@ private
   def complete?(input)
     return true if input.empty?
     with_socket do |socket|
-      socket.write(":validate #{input.join("\n")}")
+      socket.write(":validate #{input.join("\n").strip}")
       socket.close_write # send eof
       socket.gets != "incomplete\n"
     end
@@ -340,8 +340,8 @@ private
     while line = Readline.readline(prompt)
       input << line
       if complete?(input)
-        Readline::HISTORY.push(input.join(' '))
-        return input.join("\n")
+        Readline::HISTORY.push(input.join(' ').strip)
+        return input.join("\n").strip
       end
       prompt[-2] = ?*
     end
