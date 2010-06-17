@@ -5,11 +5,13 @@
   (:import [org.apache.tools.ant.taskdefs Javac Java]))
 
 (defn compile-java [project]
-  (ant Javac {:destdir     (file "classes")
-              :classpath   (classpath project)
-              :srcdir      (path (file "src" "jvm"))
-              :fork        true
-              :failonerror true}))
+  (let [src (file "src" "jvm")]
+    (when (.exists src)
+      (ant Javac {:destdir     (file "classes")
+                  :classpath   (classpath project)
+                  :srcdir      (path src)
+                  :fork        true
+                  :failonerror true}))))
 
 (defn stale? [sourcefile classfile]
   (> (.lastModified sourcefile) (.lastModified classfile)))
