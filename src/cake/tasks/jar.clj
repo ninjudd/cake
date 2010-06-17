@@ -7,6 +7,7 @@
            [org.codehaus.plexus.logging.console ConsoleLogger]
            [org.apache.maven.plugins.shade DefaultShader]
            [org.apache.maven.plugins.shade.resource ComponentsXmlResourceTransformer]
+           [org.apache.maven.artifact.ant InstallTask Pom]
            [java.io File]))
 
 (defn jarfile [project]
@@ -99,6 +100,12 @@
 (deftask uberwar => war
   "Create a web archive containing all project dependencies."
   (uberwar project))
+
+(deftask install => jar
+  "Install jar to local repository."
+  (let [refid "cake.pom"]
+    (ant Pom {:file "pom.xml" :id refid})
+    (ant InstallTask {:file (jarfile project) :pom-ref-id refid})))
 
 (defn keyfile [files]
   (let [sshdir (File. (System/getProperty "user.home") ".ssh")]

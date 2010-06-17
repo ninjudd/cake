@@ -247,12 +247,13 @@ private
     return unless port
     socket = TCPSocket.new("localhost", port)
     result = yield(socket)
-    socket.close
     result
   rescue Errno::ECONNREFUSED => e
     sleep 1
     retry if (retries -= 1) >= 0
     exit
+  ensure
+    socket.close if socket
   end
 end
 
