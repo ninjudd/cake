@@ -21,6 +21,7 @@
 
 (defn add-file-mappings [task mappings]
   (doseq [mapping mappings]
+    (println "mapping:" mapping)
     (cond (vector? mapping)
           (add-zipfileset task {:file (first mapping) :fullpath (second mapping)})
 
@@ -29,8 +30,9 @@
                 name   (.getName file)
                 parent (.getParent file)
                 dir    (or parent ".")
-                parent (or parent "")]
-            (add-zipfileset task {:dir dir :prefix parent :includes name}))
+                parent (or parent "")
+                file   (if (.isDirectory file) (str mapping "/**/*") file)]
+            (add-zipfileset task {:dir dir :prefix parent :includes file}))
 
           (map? mapping)
           (add-zipfileset task mapping))))
