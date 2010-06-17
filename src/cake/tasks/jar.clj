@@ -19,28 +19,23 @@
           "Build-Jdk"  (System/getProperty "java.version")
           "Main-Class" (absorb (:main project) (.replaceAll "-" "_"))}))
 
+(defn- file-mapping [from to]
+  (let [from (file from)]
+    (when (.exists from)
+      (if (.isDirectory from)
+        {:dir from :prefix to :includes "**/*"}
+        {:file from :fullpath to}))))
+
 (defn add-file-mappings [task mappings]
-  (doseq [mapping mappings]
-    (println "mapping:" mapping)
-    (cond (vector? mapping)
-          (add-zipfileset task {:file (first mapping) :fullpath (second mapping)})
-
-          (string? mapping)
-          (let [file   (File. mapping)    ;;more complex than it should be to allow mappings to jar/war root
-                name   (.getName file)
-                parent (.getParent file)
-                dir    (or parent ".")
-                parent (or parent "")
-                file   (if (.isDirectory file) (str mapping "/**/*") file)]
-            (add-zipfileset task {:dir dir :prefix parent :includes file}))
-
-          (map? mapping)
-          (add-zipfileset task mapping))))
+  (doseq [m mappings]
+    (cond (map?    m) (add-zipfileset task m)
+          (string? m) (add-zipfileset task (file-mapping m m))
+          (vector? m) (add-zipfileset task (apply file-mapping m)))))
 
 (defn jar [project]
   (let [maven (format "META-INF/maven/%s/%s" (:group-id project) (:artifact-id project))
         cake  (format "META-INF/cake/%s/%s"  (:group-id project) (:artifact-id project))
-        src   (file "src" "clj") 
+        src   (file "src" "clj")
         src   (if (.exists src) src (file "src"))]
     (ant Jar {:dest-file (jarfile project)}
          (add-manifest (manifest project))
