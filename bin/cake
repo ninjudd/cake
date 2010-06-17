@@ -234,6 +234,7 @@ private
   end
 
   def daemon(cmd)
+    puts cmd if debug?
     pid = fork do
       Process.setsid
       exec(cmd)
@@ -395,7 +396,6 @@ elsif restart?
 end
 
 cake.init
-#if $command != :deps and File.exists?('project.clj')
 if not [:deps, :clean].include?($command) and File.exists?('project.clj')
   if newer?('project.clj', 'pom.xml')
     deps = cake.send_command(:deps)

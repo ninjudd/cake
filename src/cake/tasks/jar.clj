@@ -19,8 +19,6 @@
           "Build-Jdk"  (System/getProperty "java.version")
           "Main-Class" (absorb (:main project) (.replaceAll "-" "_"))}))
 
-
-
 (defn add-file-mappings [task mappings]
   (doseq [mapping mappings]
     (cond (vector? mapping)
@@ -39,13 +37,16 @@
 
 (defn jar [project]
   (let [maven (format "META-INF/maven/%s/%s" (:group-id project) (:artifact-id project))
-        cake  (format "META-INF/cake/%s/%s"  (:group-id project) (:artifact-id project))]
+        cake  (format "META-INF/cake/%s/%s"  (:group-id project) (:artifact-id project))
+        src   (file "src/clj") 
+        src   (if (.exists src) src (file "src"))]
     (ant Jar {:dest-file (jarfile project)}
          (add-manifest (manifest project))
          (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
-         (add-fileset    {:dir (file "classes") :includes "**/*.clj"})
-         (add-fileset    {:dir (file "src")})
+         (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
+         (add-fileset    {:dir src                  :includes "**/*.clj"})
+         (add-fileset    {:dir "src/jvm"            :includes "**/*.java"})
          (add-file-mappings (:jar-files project)))))
 
 (deftask jar => compile

@@ -38,7 +38,10 @@
                (assoc-or :name ~artifact)))
          ; @cake-project must be set before we include the tasks for bake to work.
          (require 'cake.tasks.defaults)
-         ~@(for [ns tasks] `(require '~ns))
+         ~@(for [ns tasks]
+             `(try (require '~ns)
+                   (catch java.io.FileNotFoundException e#
+                     (println "warning: could not load" '~ns))))
          (undeftask ~@(:exclude task-opts)))))
 
 (defn file-name [& path]
