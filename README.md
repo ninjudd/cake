@@ -55,3 +55,33 @@ Cake provides default tasks for most of the things you probably do on a regular 
     cake uberjar  ;; Create a standalone jar containing all project dependencies.
     cake uberwar  ;; Create a web archive containing all project dependencies.
     cake war      ;; Create a web archive containing project source and class files.
+
+## Custom Tasks
+
+You can also create your own tasks. Like many build tools, cake uses a dependency-based
+programming style. This means you specify the tasks your task depends on and cake will run
+those tasks before running your task, ensuring that each task is only run once.
+
+For more details, check out Martin Fowler's
+[excellent article](http://martinfowler.com/articles/rake.html#DependencyBasedProgramming) on Rake.
+Here is the example from that article using cake syntax:
+
+    (deftask code-gen
+      "This task generates code. It has no dependencies."
+      (println "generating code...")
+      ...)
+
+    (deftask compile => code-gen
+      "This task does the compilation. It depends on code-gen."
+      (println "compiling...")
+      ...)
+
+    (deftask data-load => code-gen
+      "This task loads the test data. It depends on code-gen."
+      (println "loading test data...")
+      ...)
+
+    (deftask test => compile, data-load
+      "This task runs the tests. It depends on compile and data-load."
+      (println "running tests...")
+      ...)
