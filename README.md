@@ -44,25 +44,25 @@ If you don't yet have a project.clj file, creating one is simple. Here's an exam
 
 Cake provides default tasks for most of the things you probably do on a regular basis.
 
+    cake help     ;; Print tasks with documentation. Use 'cake help TASK' for more details.
+    cake test     ;; Run project tests.
     cake compile  ;; Compile all clojure and java source files.
     cake deps     ;; Fetch dependencies and create pom.xml.
-    cake help     ;; Print tasks with documentation (use -a for all tasks).
-    cake install  ;; Install jar to local repository.
     cake jar      ;; Build a jar file containing project source and class files.
-    cake release  ;; Release project jar to clojars and gem package to rubygems.
-    cake repl     ;; Start an interactive shell.
-    cake swank    ;; Report status of swank server and start it if not running.
-    cake test     ;; Run project tests.
+    cake release  ;; Release project jar to clojars.
+    cake install  ;; Install jar to local repository.
+    cake war      ;; Create a web archive containing project source and class files.
     cake uberjar  ;; Create a standalone jar containing all project dependencies.
     cake uberwar  ;; Create a web archive containing all project dependencies.
-    cake war      ;; Create a web archive containing project source and class files.
+    cake repl     ;; Start an interactive shell.
+    cake swank    ;; Report status of swank server and start it if not running.
 
 ## Custom Tasks
 
-You can also create your own custom tasks using the `deftask` macro. You can add your
-tasks directly to project.clj or build.clj, or if you put your tasks in a namespace within
-your src directory they can be used by both your project and other projects. In this case,
-you just need to add the enclosing namespace to the `:tasks` vector in project.clj.
+You can also create your own custom tasks using the `deftask` macro. Just add your tasks
+directly to project.clj or build.clj, or if you put your tasks in a namespace within your
+src directory they can be used by both your project and other projects. In this case, you
+just need to add the enclosing namespace to the `:tasks` vector in project.clj.
 
 Like many build tools, cake uses a dependency-based programming style. This means you
 specify the tasks your task depends on and cake will run those tasks before running your
@@ -89,3 +89,48 @@ on Rake. Here is the example from that article using cake syntax:
       "This task runs the tests. It depends on compile and data-load."
       (println "running tests...")
       ...)
+
+## Advanced Techniques
+
+### Extending tasks
+
+Like Rake, Cake allows you to add actions, dependencies and even documentation to existing
+tasks. For example:
+
+    (deftask compile => compile-native
+      "Native C code will be compiled before compiling Clojure and Java code.")
+
+    (deftask test
+      (println "Running integration tests...")
+      ...)
+
+Actions and dependencies will be run in the order they are defined, so if you extend Cake
+default tasks, your code will be run after the default code.
+
+### Redefining a task
+
+Sometimes you need to redefine a default task completely. In this case, you can use `undeftask`.
+
+    (undeftask release)
+    (deftask release
+      "Release code to production servers."
+      (println "Releasing to production...")
+      ...)
+
+You can also use the :exclude option with the :tasks attribute in project.clj to prevent
+tasks from being defined in the first place.
+
+### Manually calling a task
+
+If you have a conditional dependency or need to dynamically execute a task within another
+task for some other reason, you can use the `run-task` function.
+
+    (deftask primary
+       (println "Executing primary task...")
+       (when (:secondary opts)
+          (run-task 'secondary))
+       ...)
+
+    (deftask secondary
+       (println "Executing secondary task...")
+       ...)
