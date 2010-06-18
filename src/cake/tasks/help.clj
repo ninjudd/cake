@@ -31,7 +31,8 @@
       (println (format taskdoc name doc)))))
 
 (deftask help
-  "Print tasks with documentation (use -a for all tasks)."
+  "Print tasks with documentation. Use 'cake help TASK' for more details."
+  "You can use 'cake help -a' to list all tasks, including those without documentation."
   (if-let [names (:help opts)]
     (apply task-doc (map symbol names))
     (list-all-tasks)))
