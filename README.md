@@ -33,6 +33,7 @@ If you don't yet have a project.clj file, creating one is simple. Here's an exam
     (defproject jiraph "0.2.7"
       :description "Embedded graph db library for Clojure."
       :url "http://jiraph.org"
+      :tasks [protobuf.tasks]
       :dependencies [[clojure "1.2.0-master-SNAPSHOT"]
                      [clojure-contrib "1.2.0-SNAPSHOT"]
                      [clojure-useful "0.2.1"]
@@ -58,13 +59,16 @@ Cake provides default tasks for most of the things you probably do on a regular 
 
 ## Custom Tasks
 
-You can also create your own tasks. Like many build tools, cake uses a dependency-based
-programming style. This means you specify the tasks your task depends on and cake will run
-those tasks before running your task, ensuring that each task is only run once.
+You can also create your own custom tasks using the `deftask` macro. You can add your
+tasks directly to project.clj or build.clj, or if you put your tasks in a namespace within
+your src directory they can be used by both your project and other projects. In this case,
+you just need to add the enclosing namespace to the `:tasks` vector in project.clj.
 
-For more details, check out Martin Fowler's
-[excellent article](http://martinfowler.com/articles/rake.html#DependencyBasedProgramming) on Rake.
-Here is the example from that article using cake syntax:
+Like many build tools, cake uses a dependency-based programming style. This means you
+specify the tasks your task depends on and cake will run those tasks before running your
+task, ensuring that each task is only run once. For more details, check out Martin Fowler's
+[excellent article](http://martinfowler.com/articles/rake.html#DependencyBasedProgramming)
+on Rake. Here is the example from that article using cake syntax:
 
     (deftask code-gen
       "This task generates code. It has no dependencies."
