@@ -10,7 +10,7 @@ you're new, that's what we recommend.
 
 ### Using gem
 
-    gem install cake
+1. `gem install cake`
 
 ### Standalone script
 
