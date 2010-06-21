@@ -33,7 +33,7 @@
           (string? m) (add-zipfileset task (file-mapping m m))
           (vector? m) (add-zipfileset task (apply file-mapping m)))))
 
-(defn jar [project]
+(defn build-jar [project]
   (let [maven (format "META-INF/maven/%s/%s" (:group-id project) (:artifact-id project))
         cake  (format "META-INF/cake/%s/%s"  (:group-id project) (:artifact-id project))
         src   (file "src" "clj")
@@ -47,9 +47,9 @@
          (add-fileset    {:dir (file "src" "jvm")   :includes "**/*.java"})
          (add-file-mappings (:jar-files project)))))
 
-(deftask jar => compile
+(deftask jar #{compile}
   "Build a jar file containing project source and class files."
-  (jar project))
+  (build-jar project))
 
 (defn uberjarfile [project]
   (file (format "%s-%s-standalone.jar" (:artifact-id project) (:version project))))
@@ -63,7 +63,7 @@
   (let [last-mod (.lastModified jarfile)]
     (some #(< last-mod (.lastModified %)) jars)))
 
-(defn uberjar [project]
+(defn build-uberjar [project]
   (let [jars     (jars project)
         jarfile  (uberjarfile project)]
     (when (rebuild-uberjar? jarfile jars)
@@ -72,14 +72,14 @@
         (.enableLogging (ConsoleLogger. ConsoleLogger/LEVEL_WARN "uberjar"))
         (.shade jars jarfile [] [] [(ComponentsXmlResourceTransformer.)])))))
 
-(deftask uberjar => jar
+(deftask uberjar #{jar}
   "Create a standalone jar containing all project dependencies."
-  (uberjar project))
+  (build-uberjar project))
 
 (defn warfile [project]
   (file (format "%s-%s.war" (:artifact-id project) (:version project))))
 
-(defn war [project]
+(defn build-war [project]
   (let [web     "WEB-INF"
         classes (str web "/classes")]
     (ant War {:dest-file (warfile project)}
@@ -89,19 +89,19 @@
          (add-fileset    {:dir (file "src" "html")})
          (add-file-mappings (:war-files project)))))
 
-(deftask war => compile
+(deftask war #{compile}
   "Create a web archive containing project source and class files."
-  (war project))
+  (build-war project))
 
-(defn uberwar [project]
+(defn build-uberwar [project]
   (ant War {:dest-file (warfile project) :update true}
        (add-zipfileset {:dir (file "lib") :prefix "WEB-INF/lib" :includes "*.jar"})))
 
-(deftask uberwar => war
+(deftask uberwar #{war}
   "Create a web archive containing all project dependencies."
-  (uberwar project))
+  (build-uberwar project))
 
-(deftask install => jar
+(deftask install #{jar}
   "Install jar to local repository."
   (let [refid "cake.pom"]
     (ant Pom {:file "pom.xml" :id refid})
@@ -113,12 +113,12 @@
       (filter #(.exists %)
         (map #(File. sshdir %) files)))))
 
-(defn release [jar]
+(defn release-to-clojars [jar]
   (log "Releasing to clojars: " jar)
   (ant Scp {:todir "clojars@clojars.org:" :trust true :keyfile (keyfile ["id_rsa" "id_dsa" "identity"])}
        (add-fileset {:file (file "pom.xml")})
        (add-fileset {:file jar})))
 
-(deftask release => jar
+(deftask release #{jar}
   "Release project jar to clojars."
-  (release (jarfile project)))
+  (release-to-clojars (jarfile project)))

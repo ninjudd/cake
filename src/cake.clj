@@ -53,14 +53,9 @@
 (defn file [& path]
   (File. (apply file-name path)))
 
-(defn dependency? [form]
-  (or (symbol? form)
-      (and (seq? form)
-           (include? (first form) ['fn* 'fn]))))
-
 (defn update-task [task deps doc actions]
-  {:pre [(every? dependency? deps) (every? fn? actions)]}
-  (let [task (or task {:actions [] :deps [] :doc []})]
+  {:pre [(every? symbol? deps) (every? fn? actions)]}
+  (let [task (or task {:actions [] :deps #{} :doc []})]
     (-> task
         (update :deps    into deps)
         (update :doc     into doc)
@@ -79,15 +74,15 @@
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
    be broken up among multiple deftask calls and even multiple files:
-   (deftask foo => bar, baz ; => followed by prerequisites for this task
+   (deftask foo #{bar baz} ; a set of prerequisites for this task
      \"Documentation for task.\"
      (do-something)
      (do-something-else))"
   [name & body]
   (verify (not (implicit-tasks name)) (format "Cannot redefine %s task" name))
-  (let [[deps body] (if (= '=> (first body))
-                      (split-with dependency? (rest body))
-                      [() body])
+  (let [[deps body] (if (set? (first body))
+                      [(first body) (rest body)]
+                      [#{} body])
         [doc actions] (split-with string? body)
         actions (vec (map #(list 'fn [] %) actions))]
     `(swap! tasks update '~name update-task '~deps '~doc ~actions)))
@@ -98,16 +93,17 @@
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
   [form]
-  (if (list? form)
-    (binding [project @cake-project] ((eval form))) ; excute anonymous dependency
-    (let [name form, task (@tasks name)]
-      (if (nil? task)
-        (println "unknown task:" name)
-        (when-not (run? task)
-          (doseq [dep (:deps task)] (run-task dep))
-          (binding [current-task name]
-            (doseq [action (:actions task)] (action)))
-          (set! run? (assoc run? name true)))))))
+  (let [name form, task (@tasks name)]
+    (if (nil? task)
+      (println "unknown task:" name)
+      (when-not (run? name)
+        (doseq [dep (:deps task)] (run-task dep))
+        (binding [current-task name]
+          (doseq [action (:actions task)] (action)))
+        (set! run? (assoc run? name true))))))
+
+(defmacro invoke [name]
+  `(run-task '~name))
 
 (def bake-port nil)
 

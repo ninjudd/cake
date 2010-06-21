@@ -15,7 +15,7 @@
     (or (some swank? (:dependencies project))
         (some swank? (:dev-dependencies project)))))
 
-(deftask deps => swank-deps)
+(deftask deps #{swank-deps})
 (deftask swank-deps
   (when-let [swank (:swank project)]
     (when-not (existing-swank-dep? project)

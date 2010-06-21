@@ -1,11 +1,10 @@
-Cake is a build tool for Clojure that is as easy to use as it sounds.
-
-Cake is inspired by many fond memories of Rake and countless hours of singeing my hair
-with other Java and Clojure build tools.
+Cake is a build tool for Clojure that is as easy to use as it sounds, inspired by many
+fond memories of Rake and countless hours of singeing my hair with other Java and Clojure
+build tools.
 
 ## Installation
 
-There are three easy ways to get cake. The simplest method is just to install the gem. If
+There are three easy ways to get Cake. The simplest method is just to install the gem. If
 you're new, that's what we recommend.
 
 ### Using gem
@@ -25,7 +24,7 @@ you're new, that's what we recommend.
 ## Getting Started
 
 Cake is compatible with Leiningen project.clj files, so if you already have a project.clj,
-you're ready to go. Just install cake and then type `cake` in your project root for a list
+you're ready to go. Just install Cake and then type `cake` in your project root for a list
 of tasks.
 
 If you don't yet have a project.clj file, creating one is simple. Here's an example:
@@ -64,31 +63,67 @@ directly to project.clj or build.clj, or if you put your tasks in a namespace wi
 src directory they can be used by both your project and other projects. In this case, you
 just need to add the enclosing namespace to the `:tasks` vector in project.clj.
 
-Like many build tools, cake uses a dependency-based programming style. This means you
-specify the tasks your task depends on and cake will run those tasks before running your
+Like many build tools, Cake uses a dependency-based programming style. This means you
+specify the tasks your task depends on and Cake will run those tasks before running your
 task, ensuring that each task is only run once. For more details, check out Martin Fowler's
 [excellent article](http://martinfowler.com/articles/rake.html#DependencyBasedProgramming)
-on Rake. Here is the example from that article using cake syntax:
+on Rake. Here is the example from that article using Cake syntax:
 
     (deftask code-gen
       "This task generates code. It has no dependencies."
       (println "generating code...")
       ...)
 
-    (deftask compile => code-gen
+    (deftask compile #{code-gen}
       "This task does the compilation. It depends on code-gen."
       (println "compiling...")
       ...)
 
-    (deftask data-load => code-gen
+    (deftask data-load #{code-gen}
       "This task loads the test data. It depends on code-gen."
       (println "loading test data...")
       ...)
 
-    (deftask test => compile, data-load
+    (deftask test #{compile data-load}
       "This task runs the tests. It depends on compile and data-load."
       (println "running tests...")
       ...)
+
+Dependencies are specified as a set to indicate that they can be run in any order. This
+means that in the `test` task above, you can't be sure that `compile` will run before
+`data-load`. If `data-load` depends on `compile`, you have to add the dependency
+explicitly. This gives us greater flexibility in the future to optimize performance by
+running tasks in parallel.
+
+## Command-line Arguments
+
+There is no way to pass parameters from one task to another, however, Cake does parse all
+command-line arguments and make them available to all tasks as a var called `opts` which
+contains a map of keys to vectors of repeated values. Named args begin with `--keyname`
+and are mapped to `:keyname`. Unnamed arguments are mapped to `:taskname`. Repeated named
+values can be specified by repeating a key or by using commas in the value.  Single and
+double dashes are both supported though a single dash followed by word characters without
+internal dashes or an equal sign is assumed to be single character argument flags and are
+split accordingly.
+
+Here are some example Cake commands followed be the corresponding opts:
+
+    cake help compile
+    {:help ["compile"]}
+
+    cake test :unit :functional foo.test.login-controller
+    {:test [":unit" ":functional" "foo.test.login-controller"]}
+
+    cake compile --compile-native=x86,debug --verbose
+    {:compile-native ["x86", "debug"] :verbose [""]}
+
+    cake foo -vD -no-wrap -color=blue,green --style=baroque -color=red
+    {:style ["baroque"], :color ["blue" "green" "red"], :no-wrap [""], :D [""], :v [""]}
+
+In the first two examples, you can see that unnamed arguments are placed under the task
+name in the opts map. This means you can pass "unnamed" arguments to a task that is a
+dependency of the one you are running by adding the task name before the arguments and
+separating them with commas, as in the third example.
 
 ## Advanced Techniques
 
@@ -97,15 +132,16 @@ on Rake. Here is the example from that article using cake syntax:
 Like Rake, Cake allows you to add actions, dependencies and even documentation to existing
 tasks. For example:
 
-    (deftask compile => compile-native
+    (deftask compile #{compile-native}
       "Native C code will be compiled before compiling Clojure and Java code.")
 
     (deftask test
       (println "Running integration tests...")
       ...)
 
-Actions and dependencies will be run in the order they are defined, so if you extend Cake
-default tasks, your code will be run after the default code.
+Actions will be run in the order they are added, so if you extend Cake default tasks, your
+code will be run after the default code. All dependencies will be run before all actions,
+but there are no other guarantees about the order dependecies will be run.
 
 ### Redefining a task
 
@@ -123,12 +159,12 @@ tasks from being defined in the first place.
 ### Manually calling a task
 
 If you have a conditional dependency or need to dynamically execute a task within another
-task for some other reason, you can use the `run-task` function.
+task for some other reason, you can use `invoke`.
 
     (deftask primary
        (println "Executing primary task...")
        (when (:secondary opts)
-          (run-task 'secondary))
+          (invoke secondary))
        ...)
 
     (deftask secondary
