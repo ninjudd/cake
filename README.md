@@ -39,6 +39,21 @@ If you don't yet have a project.clj file, creating one is simple. Here's an exam
                      [clojure-protobuf "0.3.0"]
                      [tokyocabinet "1.2.3"]])
 
+## A Persistent JVM
+
+If you've used the JVM for much time at all, you know that one of the worst things about
+it is the incredibly slow start-up time. This is even more apparent when you are running a
+build tool. Cake solves this problem by using persistent JVMs (one for Cake itself, and
+one for your project). When you run the `cake` script, it first makes sure the JVM is
+running, then it connects using a socket and sends your command. This makes interacting
+with your Clojure project blazingly fast. This also makes it really easy to open multiple
+REPL threads that all share a single JVM which is great for testing parallel code.
+
+Cake tries to keep the persistent JVMs running as long as possible by reloading Clojure
+files that have changed. However, when .java, .class and .jar files change, Cake has to
+restart the project JVM. If you have existing REPL or Swank connections though, Cake will
+refuse to close the JVM, printing a warning instead.
+
 ## Default Tasks
 
 Cake provides default tasks for most of the things you probably do on a regular basis.
