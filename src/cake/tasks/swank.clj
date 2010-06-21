@@ -26,7 +26,7 @@
   (bake (:require [cake.swank :as swank])
         [opts (swank-opts project opts)]
         (if (not (swank/installed?))
-          (do (println "swank-clojure not installed.")
+          (do (println "swank-clojure is not in your library path.")
               (println "add swank-clojure as a dependency in project.clj or touch .cake/swank to enable"))
           (if (swank/running?)
             (let [num (swank/num-connections), s (if (= 1 num) "" "s")]
