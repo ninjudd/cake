@@ -18,9 +18,10 @@
     (symbol str)))
 
 (defn group-opts [coll]
-  (group-by #(cond (and (namespace %) (name %)) :fn
-                   (keyword? %) :tag
-                   :else :ns)
+  (group-by #(cond (and (namespace %)
+                        (name %))     :fn
+                   (keyword? %)       :tag
+                   :else              :ns)
             coll))
 
 (defn get-grouped-tests [namespaces opts]
