@@ -2,7 +2,7 @@
   (:use cake)
   (:import [java.io File]))
 
-(deftask test
+(deftask test #{compile}
   "Run project tests."
   (bake (:use bake.test) []
     (let [start (System/nanoTime)
