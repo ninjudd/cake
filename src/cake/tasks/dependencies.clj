@@ -38,15 +38,19 @@
           :version     version
           :exclusions  (map exclusion (:exclusions opts))})))))
 
-(defn fetch-deps [dependencies dest]
-  (when (seq dependencies)
-    (ant DependenciesTask {:fileset-id "cake.dep.fileset" :path-id (:name project)}
-         (add-repositories repositories)
-         (add-dependencies dependencies))
-    (.mkdirs dest)
-    (ant Delete {} (add-fileset {:dir dest :includes "*.jar"}))
-    (ant Copy {:todir dest :flatten true}
-         (.addFileset (get-reference "cake.dep.fileset")))))
+(defn fetch-deps
+  ([dependencies dest delete?]
+     (when (seq dependencies)
+       (ant DependenciesTask {:fileset-id "cake.dep.fileset" :path-id (:name project)}
+            (add-repositories repositories)
+            (add-dependencies dependencies))
+       (.mkdirs dest)
+       (when delete?
+         (ant Delete {} (add-fileset {:dir dest :includes "*.jar"})))
+       (ant Copy {:todir dest :flatten true}
+            (.addFileset (get-reference "cake.dep.fileset")))))
+  ([dependencies dest]
+     (fetch-deps dependencies dest true)))
 
 (defn pom [project]
   (let [refid "cake.pom"
@@ -61,4 +65,5 @@
   (println "Fetching dependencies...")
   (fetch-deps (:dependencies project) (file "lib"))
   (fetch-deps (:dev-dependencies project) (file "lib/dev"))
-  (pom project))
+  (pom project)
+  (invoke swank-deps))

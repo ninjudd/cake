@@ -15,11 +15,10 @@
     (or (some swank? (:dependencies project))
         (some swank? (:dev-dependencies project)))))
 
-(deftask deps #{swank-deps})
 (deftask swank-deps
   (when-let [swank (:swank project)]
     (when-not (existing-swank-dep? project)
-      (fetch-deps [(:library swank)] (file "lib/dev")))))
+      (fetch-deps [(:library swank)] (file "lib/dev") false))))
 
 (deftask swank
   "Report status of swank server and start it if not running."

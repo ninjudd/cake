@@ -400,9 +400,8 @@ cake.init
 if not [:deps, :clean].include?($command) and File.exists?('project.clj')
   if newer?('project.clj', 'pom.xml')
     deps = cake.send_command(:deps)
-    if File.exist?('.cake/swank')
-      deps = cake.send_command(:"swank-deps")
-    end
+  elsif File.exist?('.cake/swank')
+    deps = cake.send_command(:"swank-deps")
   end
 
   bake.init
