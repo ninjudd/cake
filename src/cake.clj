@@ -41,10 +41,6 @@
          ~@(for [ns tasks]
              `(try (require '~ns)
                    (catch java.io.FileNotFoundException e#
-                     (println "classpath:")
-                     (println (seq (.getURLs (java.lang.ClassLoader/getSystemClassLoader))))
-                     (println "e:")
-                     (println e#)
                      (println "warning: could not load" '~ns))))
          (undeftask ~@(:exclude task-opts)))))
 
