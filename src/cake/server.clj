@@ -14,6 +14,9 @@
 (defn num-connections []
   (reduce + (map #(count @(:connections %)) @servers)))
 
+(defn print-stacktrace [e]
+  (.printStackTrace e (PrintStream. *outs*)))
+
 (defn validate-form []
   (println
    (try (read)
@@ -35,7 +38,9 @@
         (println "cannot reload non-clojure file:" file)
         (if-let [ns (second (read-file-ns-decl (java.io.File. file)))]
           (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
-            (load-file file))
+            (try (load-file file)
+                 (catch Exception e
+                   (print-stacktrace e))))
           (println "cannot reload file without namespace declaration:" file))))))
 
 (defn exit []
@@ -69,7 +74,7 @@
                   (command))
                 (f form))
               (catch Exception e
-                (.printStackTrace e (PrintStream. outs)))))))
+                (print-stacktrace e))))))
       0 (InetAddress/getByName "localhost"))))
 
 (defn create [port f & commands]
