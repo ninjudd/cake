@@ -6,7 +6,7 @@
 (def project nil)
 
 (ns cake
-  (:use clojure.useful
+  (:use useful
         [cake.project :only [init]])
   (:require [cake.server :as server]
             [cake.swank :as swank]

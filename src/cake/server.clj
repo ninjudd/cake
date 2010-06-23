@@ -1,6 +1,7 @@
 (ns cake.server
   (:use [cake.contrib.find-namespaces :only [read-file-ns-decl]])
-  (:require [cake.contrib.server-socket :as server-socket])
+  (:require [cake.contrib.server-socket :as server-socket]
+            complete)
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream]
            [clojure.lang LineNumberingPushbackReader]
            [java.net InetAddress]))
@@ -22,6 +23,11 @@
             "incomplete"
             "invalid")))))
 
+(defn completions []
+  (let [[prefix ns] (read)]
+    (doseq [completion (complete/completions prefix ns)]
+      (println completion))))
+
 (defn reload-files []
   (let [files (read)]
     (doseq [file files]
@@ -41,10 +47,11 @@
     (println "refusing to quit because there are active connections")))
 
 (def default-commands
-  {:validate   validate-form
-   :reload     reload-files
-   :force-quit exit
-   :quit       quit})
+  {:validate    validate-form
+   :completions completions
+   :reload      reload-files
+   :force-quit  exit
+   :quit        quit})
 
 (defn- create* [port f commands]
   (let [commands (apply hash-map commands)]

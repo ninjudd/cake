@@ -1,6 +1,6 @@
 (ns cake.tasks.jar
   (:use cake cake.ant
-        [clojure.useful :only [absorb]])
+        [useful :only [absorb]])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy]
            [org.apache.tools.ant.taskdefs.optional.ssh Scp]
            [org.apache.tools.ant.types FileSet ZipFileSet]
@@ -67,7 +67,7 @@
   (let [jars     (jars project)
         jarfile  (uberjarfile project)]
     (when (rebuild-uberjar? jarfile jars)
-      (log "Building jar: " jarfile)
+      (log "Building jar:" jarfile)
       (doto (DefaultShader.)
         (.enableLogging (ConsoleLogger. ConsoleLogger/LEVEL_WARN "uberjar"))
         (.shade jars jarfile [] [] [(ComponentsXmlResourceTransformer.)])))))

@@ -276,12 +276,12 @@ class Cake < JVM
 end
 
 class Bake < JVM
-  MARKER = rand.to_s
+  MARKER = "=#{rand.to_s}="
   PROMPT = /^(.*)#{MARKER}$/
   START_REPL = <<-END
     (clojure.main/repl
       :init   #(in-ns 'user)
-      :prompt #(printf "%s=> #{MARKER}\n" (ns-name *ns*)))
+      :prompt #(printf "%s#{MARKER}\n" (ns-name *ns*)))
   END
 
   def repl
@@ -291,8 +291,8 @@ class Bake < JVM
         socket.write START_REPL
         socket.gets # burn extra prompt
 
-        while prompt = read_until_prompt(socket)
-          line = readline(prompt)
+        while @ns = read_until_prompt(socket)
+          line = readline
           return unless line
           socket.write(line + "\n")
         end
@@ -336,9 +336,12 @@ private
     end
   end
 
-  def readline(initial_prompt)
+  Readline.completer_word_break_characters = " \t\n\"'`~@;#&{}()[]"
+
+  def readline
     input = []
-    prompt = initial_prompt.clone
+    prompt = "#{@ns}=> "
+    Readline.completion_proc = method(:completions)
     while line = Readline.readline(prompt)
       input << line
       if complete?(input)
@@ -352,6 +355,18 @@ private
     Readline::HISTORY.push(input)
     retry
   end
+
+  def completions(prefix)
+    return [] if prefix.empty?
+    with_socket do |socket|
+      socket.write(":completions [\"#{prefix}\" #{@ns}]\n")
+      completions = []
+      while line = socket.gets
+        completions << line.chomp
+      end
+      completions
+    end
+  end
 end
 
 # Bootstrap cake dependencies.
@@ -362,8 +377,8 @@ if File.exists?("#{$cakedir}/.gitignore")
     version = IO.read("#{$cakedir}/project.clj").first.match(/defproject cake \"(.*)\"/)[1]
     get_cake(version, lib)
   end
-  cakepath = "#{$cakedir}/src:#{lib}/*"
-  bakepath = "#{$cakedir}/bake"
+  cakepath = "#{$cakedir}/src:#{lib}/*:#{lib}/dev/*"
+  bakepath = "#{$cakedir}/bake:#{lib}/dev/*"
 else
   cakejar = "#{lib}/cake.jar"
   bakejar = "#{lib}/bake.jar"
