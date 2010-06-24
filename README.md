@@ -173,8 +173,8 @@ task for some other reason, you can use `invoke`.
 
 ### Native Library Dependencies
 
-Cake will automatically extract precompiled native libraries for your OS and architecture
-from dependency jars and put them in `lib/native` and `lib/dev/native`. Native libraries
+Cake will automatically extract precompiled native libraries for your os and architecture
+from dependency jars and put them in `lib/native/` and `lib/dev/native/`. Native libraries
 must be located in `native/os-name/os-arch/` within the jar.
 
 Where `os-name` can be one of: `linux` `macosx` `solaris` `windows`
