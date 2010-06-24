@@ -171,6 +171,24 @@ task for some other reason, you can use `invoke`.
        (println "Executing secondary task...")
        ...)
 
+### Native Library Dependencies
+
+Cake will automatically extract precompiled native libraries for your OS and architecture
+from dependency jars and put them in `lib/native` and `lib/dev/native`. Native libraries
+must be located in `native/[os-name]/[os-arch]` within the jar.
+
+Where `[os-name]` can be one of:
+- `linux`
+- `macosx`
+- `solaris`
+- `windows`
+
+And `[os-arch]` can be one of:
+- `x86_64`
+- `x86`
+- `arm`
+- `sparc`
+
 ## A Persistent JVM
 
 If you've used the JVM for much time at all, you know that one of the worst things about

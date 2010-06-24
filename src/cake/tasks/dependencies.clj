@@ -65,6 +65,7 @@
          (ant Delete {} (add-fileset {:dir dest :includes "*.jar"})))
        (ant Copy {:todir dest :flatten true}
             (.addFileset (get-reference "cake.dep.fileset")))
+       ;; extract native libraries
        (doseq [jar (fileset-seq (get-reference "cake.dep.fileset"))]
          (ant Copy {:todir (str dest "/native") :flatten true}
               (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))})))))
