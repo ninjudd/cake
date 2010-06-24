@@ -54,6 +54,16 @@ files that have changed. However, when .java, .class and .jar files change, Cake
 restart the project JVM. If you have existing REPL or Swank connections though, Cake will
 refuse to close the JVM, printing a warning instead.
 
+### Custom JVM Options
+
+If you need custom command-line options for your JVMs, you can use the `JAVA_OPTS`
+environment variable for the project JVM and `CAKE_JAVA_OPTS` for the cake JVM. You can
+also define specific options for each project by adding the Java properties
+`cake.java_opts` or `project.java_opts` to .cake/config. For example:
+
+    project.java_opts = -Xms1024M -Xmx2048M -Dfoo=bar
+    cake.java_opts    = -Xms128M -Xmx128M -Dfoo=baz
+
 ## Default Tasks
 
 Cake provides default tasks for most of the things you probably do on a regular basis.
