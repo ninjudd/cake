@@ -177,19 +177,9 @@ Cake will automatically extract precompiled native libraries for your OS and arc
 from dependency jars and put them in `lib/native` and `lib/dev/native`. Native libraries
 must be located in `native/[os-name]/[os-arch]` within the jar.
 
-Where `[os-name]` can be one of:
+Where `[os-name]` can be one of: `linux` `macosx` `solaris` `windows`
 
-- `linux`
-- `macosx`
-- `solaris`
-- `windows`
-
-And `[os-arch]` can be one of:
-
-- `x86_64`
-- `x86`
-- `arm`
-- `sparc`
+And `[os-arch]` can be one of: `x86_64` `x86` `arm` `sparc`
 
 ## A Persistent JVM
 
