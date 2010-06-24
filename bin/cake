@@ -95,8 +95,12 @@ def verbose?
   debug? or $opts[:v] or $opts[:verbose]
 end
 
+def config_updated?
+  newer?(".cake/config", ".cake/cake.pid") or newer?(".cake/config", ".cake/bake.pid")
+end
+
 def restart?
-  $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command)
+  $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command) or config_updated?
 end
 
 def admin_command?
@@ -108,6 +112,21 @@ def log(command, *message)
     printf("%11s %s\n", "[#{command}]", line)
   end
 end
+
+CONFIG_FILE = ".cake/config"
+def config
+  if @config.nil?
+    @config = {}
+    File.open(CONFIG_FILE, 'r') do |file|
+      file.each do |line|
+        key, value = line.split('=', 2)
+        @config[key.strip] = value.strip
+      end
+    end if File.exists?(CONFIG_FILE)
+  end
+  @config
+end
+pp config
 
 class JVM
   attr_reader :type, :classpath, :port, :pid, :pidfile, :start_time
@@ -170,7 +189,7 @@ class JVM
     return if running?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
     log(:start, "starting #{type} jvm on port #{port}") if debug?
-    @pid = daemon %{ java -d32 -cp #{classpath} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
+    @pid = daemon %{ java -d32 -cp #{classpath} #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
     log(:start, "#{type} jvm started") if verbose?
   rescue Errno::EADDRNOTAVAIL => e
@@ -273,6 +292,10 @@ class Cake < JVM
       command
     end
   end
+
+  def java_opts
+    [ENV['CAKE_JAVA_OPTS'], config['cake.java_opts']].compact.join(' ')
+  end
 end
 
 class Bake < JVM
@@ -300,6 +323,10 @@ class Bake < JVM
     end
   ensure
     save_history
+  end
+
+  def java_opts
+    [ENV['JAVA_OPTS'], config['project.java_opts']].compact.join(' ')
   end
 
 private
