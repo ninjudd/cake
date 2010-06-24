@@ -38,6 +38,22 @@
           :version     version
           :exclusions  (map exclusion (:exclusions opts))})))))
 
+(defn os-name []
+  (let [name (System/getProperty "os.name")]
+    (condp #(.startsWith %2 %1) name
+      "Linux"    "linux"
+      "Mac OS X" "macosx"
+      "SunOS"    "solaris"
+      "Windows"  "windows"
+      "unknown")))
+
+(defn os-arch []
+  (let [arch (System/getProperty "os.arch")]
+    (condp = arch
+      "amd64" "x86_64"
+      "i386"  "x86"
+      arch)))
+
 (defn fetch-deps
   ([dependencies dest delete?]
      (when (seq dependencies)
@@ -48,7 +64,11 @@
        (when delete?
          (ant Delete {} (add-fileset {:dir dest :includes "*.jar"})))
        (ant Copy {:todir dest :flatten true}
-            (.addFileset (get-reference "cake.dep.fileset")))))
+            (.addFileset (get-reference "cake.dep.fileset")))
+       (doseq [jar (fileset-seq (get-reference "cake.dep.fileset"))]
+         (ant Copy {:todir (str dest "/native") :flatten true}
+              (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))})))))
+
   ([dependencies dest]
      (fetch-deps dependencies dest true)))
 

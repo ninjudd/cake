@@ -9,7 +9,7 @@
   (file (format "bake-%s.jar" (:version project))))
 
 (defn add-dev-jars [task]
-  (doseq [jar (.listFiles (file "lib/dev")) :when (.endsWith (.getName jar) ".jar")]
+  (doseq [jar (fileset-seq {:dir "lib/dev" :includes "*.jar"})]
     (add-zipfileset task {:src jar :includes "**/*.clj" :excludes "META-INF/**/project.clj"})))
 
 (deftask uberjar

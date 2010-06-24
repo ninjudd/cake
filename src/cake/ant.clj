@@ -70,6 +70,11 @@
   (let [attrs (merge {:error-on-missing-dir false} attrs)]
     (.addFileset task (make ZipFileSet attrs))))
 
+(defn fileset-seq [fileset]
+  (if (map? fileset)
+    (fileset-seq (make FileSet fileset))
+    (map #(.getFile %) (iterator-seq (.iterator fileset)))))
+
 (defn add-manifest [task attrs]
   (let [manifest (Manifest.)]
     (doseq [[key val] attrs :when (seq val)]
