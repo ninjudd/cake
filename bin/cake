@@ -129,11 +129,12 @@ def config
 end
 
 class JVM
-  attr_reader :type, :classpath, :port, :pid, :pidfile, :start_time
+  attr_reader :type, :classpath, :libpath, :port, :pid, :pidfile, :start_time
 
-  def initialize(classpath)
+  def initialize(classpath, libpath = nil)
     @type       = self.class.name.downcase
     @classpath  = classpath
+    @libpath    = libpath
     @pidfile    = "#{$confdir}/#{type}.pid"
     @start_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
 
@@ -300,10 +301,6 @@ class Cake < JVM
   def java_opts
     [ENV['CAKE_JAVA_OPTS'], config['cake.java_opts'], super].compact.join(' ')
   end
-
-  def libpath
-    ["#{$bakedir}/lib/dev/native", config['cake.library.path']].compact.join(':')
-  end
 end
 
 class Bake < JVM
@@ -335,10 +332,6 @@ class Bake < JVM
 
   def java_opts
     [ENV['JAVA_OPTS'], config['project.java_opts'], super].compact.join(' ')
-  end
-
-  def libpath
-    ["#{$bakedir}/lib/native", "#{$bakedir}/lib/dev/native", config['project.library.path']].compact.join(':')
   end
 
 private
@@ -436,8 +429,14 @@ end
 
 srcpath = "#{$bakedir}/src:#{$bakedir}/src/clj"
 
-cake = Cake.new("#{cakepath}:#{srcpath}:#{$bakedir}/lib/dev/*")
-bake = Bake.new("#{bakepath}:#{srcpath}:#{$bakedir}/classes:#{$bakedir}/test:#{$bakedir}/lib/*:#{$bakedir}/lib/dev/*")
+cake = Cake.new(
+  "#{cakepath}:#{srcpath}:#{$bakedir}/lib/dev/*",
+  "#{$bakedir}/lib/dev/native"
+)
+bake = Bake.new(
+  "#{bakepath}:#{srcpath}:#{$bakedir}/classes:#{$bakedir}/test:#{$bakedir}/lib/*:#{$bakedir}/lib/dev/*",
+  "#{$bakedir}/lib/native:#{$bakedir}/lib/dev/native"
+)
 
 if $command == :kill
   cake.kill
