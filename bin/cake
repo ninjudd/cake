@@ -114,18 +114,29 @@ def log(command, *message)
   end
 end
 
-CONFIG_FILE = ".cake/config"
-def config
-  if @config.nil?
-    @config = {}
-    File.open(CONFIG_FILE, 'r') do |file|
+class Config < Hash
+  def initialize(path)
+    File.open(path, 'r') do |file|
       file.each do |line|
+        next if line.start_with?('#') or line.start_with?('!')
         key, value = line.split('=', 2)
-        @config[key.strip] = value.strip
+        next unless key and value
+        self[key.strip] = value.strip
       end
-    end if File.exists?(CONFIG_FILE)
+    end if File.exists?(path)
   end
-  @config
+
+  def [](key)
+    if key.kind_of?(Regexp)
+      clone.delete_if {|k,v| not key.match(k)}
+    else
+      super
+    end
+  end
+end
+
+def config
+  @config ||= Config.new(".cake/config")
 end
 
 class JVM

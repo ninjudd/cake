@@ -11,8 +11,9 @@
   (:require [cake.server :as server]
             [cake.swank :as swank]
             [cake.ant :as ant])
-  (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader]
-           [java.net Socket ConnectException]))
+  (:import [java.io File FileReader FileInputStream InputStreamReader OutputStreamWriter BufferedReader]
+           [java.net Socket ConnectException]
+           [java.util Properties]))
 
 (defn verbose? [opts]
   (or (:v opts) (:verbose opts)))
@@ -149,13 +150,21 @@
         bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
-(def opts nil)
+(def opts   nil)
+(def config nil)
+
+(defn read-config []
+  (let [file (File. ".cake/config")]
+    (when (.exists file)
+      (with-open [f (FileInputStream. file)]
+        (into {} (doto (Properties.) (.load f)))))))
 
 (defn process-command [form]
   (let [[task args port] form]
     (binding [project @cake-project
               ant/ant-project (ant/init-project project server/*outs*)
-              opts (parse-opts (keyword task) (map str args))
+              opts   (parse-opts (keyword task) (map str args))
+              config (read-config)
               bake-port port
               run? {}]
       (doseq [dir ["lib" "classes" "build"]]
