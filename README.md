@@ -1,10 +1,10 @@
-Cake is a build tool for Clojure that is as easy to use as it sounds, inspired by many
-fond memories of Rake and countless hours of singeing my hair with other Java and Clojure
-build tools.
+Cake is a build tool for Clojure that is as easy to use as it sounds, inspired by fond
+memories of Rake and countless hours of singeing my hair with other Java and Clojure build
+tools.
 
 ## Installation
 
-There are three easy ways to get Cake. The simplest method is just to install the gem. If
+There are three ways to get Cake. The simplest method is just to install the gem. If
 you're new, that's what we recommend.
 
 ### Using gem
@@ -197,9 +197,10 @@ git checkout to `.cake/config`, like this:
 Now instead of fetching these projects from clojars, `cake deps` will run `cake jar` in
 each project checkout and copy the resulting jar along with all deps into your main
 project's `lib` directory. You still have to run `cake deps` for subproject changes to
-show up in your main project. If you want changes to clojure source files to show up
-immediately, you can also add the subproject `src` directory to your project classpath
-like this:
+show up in your main project, but this is probably best in most cases.
+
+If you really do want changes to clojure source files to show up immediately, you can
+always add the subproject `src` directory to your project classpath like this:
 
     project.classpath = /Users/justin/projects/useful/src
 
