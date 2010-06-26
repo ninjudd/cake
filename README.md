@@ -199,8 +199,8 @@ each project checkout and copy the resulting jar along with all deps into your m
 project's `lib` directory. You still have to run `cake deps` for subproject changes to
 show up in your main project, but this is probably best in most cases.
 
-If you really do want changes to clojure source files to show up immediately, you can
-always add the subproject `src` directory to your project classpath like this:
+If you really do want changes to clojure source files to show up immediately, you can always
+add the subproject `src` directory to your project classpath in `.cake/config` like this:
 
     project.classpath = /Users/justin/projects/useful/src
 
