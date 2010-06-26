@@ -182,14 +182,14 @@ must be located in `native/<os-name>/<os-arch>/` within the jar.
 
 Cake also adds these directories to `java.library.path` when starting the JVM. If you want
 to add additional paths to `java.library.path`, you can add Java properties called
-`cake.library.path` and `project.library.path` to .cake/config.
+`cake.library.path` and `project.library.path` to `.cake/config`.
 
 ### Subproject Dependencies
 
 Sometimes one or more of your dependencies are other projects you are working on,
 and you want to track changes to those projects without having to release them to
 clojars. To do this, simply add Java properties named `subproject.<project-name>` or
-`subproject.dev.<project-name>` with the path to the git checkout to .cake/config, like
+`subproject.dev.<project-name>` with the path to the git checkout to `.cake/config`, like
 this:
 
     subproject.clojure-useful       = /Users/justin/projects/useful
@@ -221,7 +221,7 @@ refuse to close the JVM, printing a warning instead.
 If you need custom command-line options for your JVMs, you can use the `JAVA_OPTS`
 environment variable for the project JVM and `CAKE_JAVA_OPTS` for the Cake JVM. You can
 also specify options for an individual project by adding the Java properties
-`cake.java_opts` and `project.java_opts` to .cake/config. For example:
+`cake.java_opts` and `project.java_opts` to `.cake/config`. For example:
 
     project.java_opts = -Xms1024M -Xmx2048M -Dfoo=bar
     cake.java_opts    = -Xms128M -Xmx128M -Dfoo=baz
