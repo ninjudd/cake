@@ -7,3 +7,8 @@
                  [swank-clojure "1.2.1"]
                  [tokyocabinet "1.23-SNAPSHOT"]]
   :dev-dependencies [[clojure-complete "0.1.0" :exclusions [clojure]]])
+
+(deftask bar
+  (bake (:use useful) []
+        (println "bar!")
+        (verify true "true is false!")))

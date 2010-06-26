@@ -175,10 +175,26 @@ task for some other reason, you can use `invoke`.
 
 Cake will automatically extract precompiled native libraries for your os and architecture
 from dependency jars and put them in `lib/native/` and `lib/dev/native/`. Native libraries
-must be located in `native/os-name/os-arch/` within the jar.
+must be located in `native/<os-name>/<os-arch>/` within the jar.
 
     os-name -> linux | macosx | solaris | windows
     os-arch -> x86_64 | x86 | arm | sparc
+
+### Subproject Dependencies
+
+Sometimes one or more of your dependencies are other projects you are working on,
+and you want to track changes to those projects without having to release them to
+clojars. To do this, simply add Java properties named `subproject.<project-name>` or
+`subproject.dev.<project-name>` with the path to the git checkout to .cake/config, like
+this:
+
+    subproject.clojure-useful       = /Users/justin/projects/useful
+    subproject.clojure-complete     = /Users/justin/projects/complete
+    subproject.dev.clojure-protobuf = /Users/justin/projects/protobuf
+
+This will prevent `cake deps` from fetching these projects and add them to your
+classpath. Note: you must manually run `cake compile` in each subproject if you have
+ahead-of-time compiled namespaces that need to be updated.
 
 ## A Persistent JVM
 

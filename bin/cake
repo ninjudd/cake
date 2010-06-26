@@ -10,11 +10,12 @@ require 'readline'
 require 'fileutils'
 require 'pp'
 
+PATH_SEP = ':'
 file     = File.readlink(__FILE__) rescue __FILE__
 $bakedir = Dir.getwd
 $cakedir = File.dirname(File.dirname(file))
-$confdir = ".cake"
 $repo    = "http://clojars.org/repo/cake/cake"
+$confdir = ".cake"
 File.makedirs($confdir)
 
 def get_cake(version, dest)
@@ -126,9 +127,10 @@ class Config < Hash
     end if File.exists?(path)
   end
 
-  def [](key)
-    if key.kind_of?(Regexp)
-      clone.delete_if {|k,v| not key.match(k)}
+  def [](*keys)
+    if keys.first.kind_of?(Symbol)
+      key = keys.join('.') + '.'
+      clone.delete_if {|k,v| not k.start_with?(key)}
     else
       super
     end
@@ -144,8 +146,8 @@ class JVM
 
   def initialize(classpath, libpath = nil)
     @type       = self.class.name.downcase
-    @classpath  = classpath
-    @libpath    = libpath
+    @classpath  = classpath.join(PATH_SEP)
+    @libpath    = libpath.join(PATH_SEP)
     @pidfile    = "#{$confdir}/#{type}.pid"
     @start_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
 
@@ -238,7 +240,7 @@ class JVM
 
   def files
     files = []
-    classpath.split(':').uniq.each do |path|
+    classpath.split(PATH_SEP).uniq.each do |path|
       if path =~ /(.*)\/\*$/
         files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
       else
@@ -420,8 +422,8 @@ if File.exists?("#{$cakedir}/.gitignore")
     version = IO.read("#{$cakedir}/project.clj").first.match(/defproject cake \"(.*)\"/)[1]
     get_cake(version, lib)
   end
-  cakepath = "#{$cakedir}/src:#{lib}/*:#{lib}/dev/*"
-  bakepath = "#{$cakedir}/bake:#{lib}/dev/*"
+  cakepath = ["#{$cakedir}/src", "#{lib}/*:#{lib}/dev/*"].join(PATH_SEP)
+  bakepath = ["#{$cakedir}/bake", "#{lib}/dev/*"].join(PATH_SEP)
 else
   cakejar = "#{lib}/cake.jar"
   bakejar = "#{lib}/bake.jar"
@@ -438,15 +440,21 @@ else
   end
 end
 
-srcpath = "#{$bakedir}/src:#{$bakedir}/src/clj"
+def project_path(path)
+  ["#{path}/src", "#{path}/src/clj", "#{path}/classes", "#{path}/lib/*"].join(PATH_SEP)
+end
+
+def subprojects(*keys)
+  config[:subproject, *keys].collect {|k,v| project_path(v)}.join(PATH_SEP)
+end
 
 cake = Cake.new(
-  "#{cakepath}:#{srcpath}:#{$bakedir}/lib/dev/*",
-  "#{$bakedir}/lib/dev/native"
+  [cakepath, "#{$bakedir}/src", "#{$bakedir}/src/clj", "#{$bakedir}/lib/dev/*", subprojects(:dev)],
+  ["#{$bakedir}/lib/dev/native"]
 )
 bake = Bake.new(
-  "#{bakepath}:#{srcpath}:#{$bakedir}/classes:#{$bakedir}/test:#{$bakedir}/lib/*:#{$bakedir}/lib/dev/*",
-  "#{$bakedir}/lib/native:#{$bakedir}/lib/dev/native"
+  [bakepath, project_path($bakedir), "#{$bakedir}/test", "#{$bakedir}/lib/dev/*", subprojects],
+  ["#{$bakedir}/lib/native", "#{$bakedir}/lib/dev/native"]
 )
 
 if $command == :kill
