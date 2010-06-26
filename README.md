@@ -180,6 +180,10 @@ must be located in `native/<os-name>/<os-arch>/` within the jar.
     os-name -> linux | macosx | solaris | windows
     os-arch -> x86_64 | x86 | arm | sparc
 
+Cake also adds these directories to `java.library.path` when starting the JVM. If you want
+to add additional paths to `java.library.path`, you can add Java properties called
+`cake.library.path` and `project.library.path` to .cake/config.
+
 ### Subproject Dependencies
 
 Sometimes one or more of your dependencies are other projects you are working on,
@@ -192,9 +196,10 @@ this:
     subproject.clojure-complete     = /Users/justin/projects/complete
     subproject.dev.clojure-protobuf = /Users/justin/projects/protobuf
 
-This will prevent `cake deps` from fetching these projects and add them to your
-classpath. Note: you must manually run `cake compile` in each subproject if you have
-ahead-of-time compiled namespaces that need to be updated.
+This will prevent `cake deps` from fetching these projects and add them to your classpath.
+
+Note: you must manually run `cake compile` in each subproject if you have ahead-of-time
+compiled namespaces that need to be updated.
 
 ## A Persistent JVM
 

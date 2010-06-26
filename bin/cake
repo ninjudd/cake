@@ -146,8 +146,8 @@ class JVM
 
   def initialize(classpath, libpath = nil)
     @type       = self.class.name.downcase
-    @classpath  = classpath.join(PATH_SEP)
-    @libpath    = libpath.join(PATH_SEP)
+    @classpath  = classpath.flatten.compact.join(PATH_SEP)
+    @libpath    = libpath.flatten.compact.join(PATH_SEP)
     @pidfile    = "#{$confdir}/#{type}.pid"
     @start_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
 
@@ -441,20 +441,20 @@ else
 end
 
 def project_path(path)
-  ["#{path}/src", "#{path}/src/clj", "#{path}/classes", "#{path}/lib/*"].join(PATH_SEP)
+  ["#{path}/src", "#{path}/src/clj", "#{path}/classes", "#{path}/lib/*"]
 end
 
 def subprojects(*keys)
-  config[:subproject, *keys].collect {|k,v| project_path(v)}.join(PATH_SEP)
+  config[:subproject, *keys].collect {|k,v| project_path(v)}
 end
 
 cake = Cake.new(
   [cakepath, "#{$bakedir}/src", "#{$bakedir}/src/clj", "#{$bakedir}/lib/dev/*", subprojects(:dev)],
-  ["#{$bakedir}/lib/dev/native"]
+  [config['cake.library.path'], "#{$bakedir}/lib/dev/native"]
 )
 bake = Bake.new(
   [bakepath, project_path($bakedir), "#{$bakedir}/test", "#{$bakedir}/lib/dev/*", subprojects],
-  ["#{$bakedir}/lib/native", "#{$bakedir}/lib/dev/native"]
+  [config['project.library.path'], "#{$bakedir}/lib/native", "#{$bakedir}/lib/dev/native"]
 )
 
 if $command == :kill
