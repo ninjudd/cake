@@ -186,20 +186,22 @@ to add additional paths to `java.library.path`, you can add Java properties call
 
 ### Subproject Dependencies
 
-Sometimes one or more of your dependencies are other projects you are working on,
-and you want to track changes to those projects without having to release them to
-clojars. To do this, simply add Java properties named `subproject.<project-name>` or
-`subproject.dev.<project-name>` with the path to the git checkout to `.cake/config`, like
-this:
+Sometimes one or more of your dependencies are other projects you are working on, and you
+want to track changes to those projects without having to release them to clojars. To do
+this, simply add a Java property named `subproject.<project-name>` with the path to the
+git checkout to `.cake/config`, like this:
 
-    subproject.clojure-useful       = /Users/justin/projects/useful
-    subproject.clojure-complete     = /Users/justin/projects/complete
-    subproject.dev.clojure-protobuf = /Users/justin/projects/protobuf
+    subproject.clojure-useful   = /Users/justin/projects/useful
+    subproject.clojure-complete = /Users/justin/projects/complete
 
-This will prevent `cake deps` from fetching these projects and add them to your classpath.
+Now instead of fetching these projects from clojars, `cake deps` will run `cake jar` in
+each project checkout and copy the resulting jar along with all deps into your main
+project's `lib` directory. You still have to run `cake deps` for subproject changes to
+show up in your main project. If you want changes to clojure source files to show up
+immediately, you can also add the subproject `src` directory to your project classpath
+like this:
 
-Note: you must manually run `cake compile` in each subproject if you have ahead-of-time
-compiled namespaces that need to be updated.
+    project.classpath = /Users/justin/projects/useful/src
 
 ## A Persistent JVM
 

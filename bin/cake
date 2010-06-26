@@ -59,9 +59,12 @@ def snapshot(version)
   end
 end
 
-def extract(jar, file)
-  dest = File.dirname(jar)
-  system %{ jar xf #{jar} -C #{dest} #{file} }
+def extract(jar, file, dest = File.dirname(jar))
+  log(:deps, "extracting #{file} from #{jar}") if verbose?
+  system %{ jar xf #{jar} #{file} }
+
+  File.makedirs(dest)
+  File.move(file, dest)
   "#{dest}/#{file}"
 end
 
@@ -144,10 +147,10 @@ end
 class JVM
   attr_reader :type, :classpath, :libpath, :port, :pid, :pidfile, :start_time
 
-  def initialize(classpath, libpath = nil)
+  def initialize(classpath, libpath)
     @type       = self.class.name.downcase
-    @classpath  = classpath.flatten.compact.join(PATH_SEP)
-    @libpath    = libpath.flatten.compact.join(PATH_SEP)
+    @classpath  = make_path(classpath)
+    @libpath    = make_path(libpath)
     @pidfile    = "#{$confdir}/#{type}.pid"
     @start_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
 
@@ -253,6 +256,12 @@ class JVM
   end
 
 private
+
+  def make_path(paths)
+    paths.flatten.compact.collect do |path|
+      path.start_with?('/') ? path : "#{$bakedir}/#{path}"
+    end.join(PATH_SEP)
+  end
 
   def inspect(socket)
     while line = socket.gets
@@ -420,7 +429,8 @@ if File.exists?("#{$cakedir}/.gitignore")
   if Dir["#{lib}/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
     version = IO.read("#{$cakedir}/project.clj").first.match(/defproject cake \"(.*)\"/)[1]
-    get_cake(version, lib)
+    cakejar = get_cake(version, lib)
+    extract(cakejar, "bake-#{version}.jar", "#{lib}/dev")
   end
   cakepath = ["#{$cakedir}/src", "#{lib}/*:#{lib}/dev/*"].join(PATH_SEP)
   bakepath = ["#{$cakedir}/bake", "#{lib}/dev/*"].join(PATH_SEP)
@@ -436,25 +446,17 @@ else
     version  = current_version
     dest     = "~/.m2/repository/cake/cake/#{version}"
     cakepath = get_cake(version, dest)
-    bakepath = extract(classpath, "bake-#{version}.jar")
+    bakepath = extract(cakepath, "bake-#{version}.jar")
   end
 end
 
-def project_path(path)
-  ["#{path}/src", "#{path}/src/clj", "#{path}/classes", "#{path}/lib/*"]
-end
-
-def subprojects(*keys)
-  config[:subproject, *keys].collect {|k,v| project_path(v)}
-end
-
 cake = Cake.new(
-  [cakepath, "#{$bakedir}/src", "#{$bakedir}/src/clj", "#{$bakedir}/lib/dev/*", subprojects(:dev)],
-  [config['cake.library.path'], "#{$bakedir}/lib/dev/native"]
+  [cakepath, "src", "src/clj", config['cake.classpath'], "lib/dev/*"],
+  [config['cake.library.path'], "lib/dev/native"]
 )
 bake = Bake.new(
-  [bakepath, project_path($bakedir), "#{$bakedir}/test", "#{$bakedir}/lib/dev/*", subprojects],
-  [config['project.library.path'], "#{$bakedir}/lib/native", "#{$bakedir}/lib/dev/native"]
+  [bakepath, "src", "src/clj", "classes", "test", config['project.classpath'], "lib/*", "lib/dev/*"],
+  [config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 
 if $command == :kill

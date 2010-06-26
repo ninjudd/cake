@@ -55,12 +55,34 @@
          :version     version
          :exclusions  (map exclusion (:exclusions opts))}))))
 
-(defn subproject? [[dep version & opts]]
+(defn subproject-path [dep]
   (when config
-    (let [path (config (str "subproject." (name dep)))]
-      (if (and path (= "cake" (:artifact-id project)))
-        (println "warning: subprojects not supported for cake itself:" dep "->" path)
-        (not (nil? path))))))
+    (config (str "subproject." (name dep)))))
+
+(defn subproject? [[dep version & opts]]
+  (not (nil? (subproject-path dep))))
+
+(defn add-jarset [task path exclusions]
+  (let [exclusions (map #(re-pattern (str % "-\\d.*")) exclusions)]
+    (doseq [jar (fileset-seq {:dir path :includes "*.jar"}) :let [name (.getName jar)]]
+      (when (not-any? #(re-matches % name) exclusions)
+        (add-fileset task {:file jar})))))
+
+(defn glob [dir pattern]
+  (let [pattern (re-pattern pattern)
+        match?  #(re-matches pattern (.getName %))]
+    (filter match? (.listFiles (File. dir)))))
+
+(defn fetch-subprojects [deps dest]
+  (doseq [[dep _ & opts] deps :let [opts (apply array-map opts)]]
+    (when-let [path (subproject-path dep)]
+      (ant ExecTask {:executable "cake" :dir path :failonerror true} (args ["jar" "--clean"]))
+      (let [jar (first (glob path (str (name dep) "-.*jar")))]
+        (when-not (.exists jar)
+          (throw (Exception. (str "unable to locate subproject jar: " (.getPath jar)))))
+        (ant Copy {:todir dest}
+             (add-fileset {:file jar})
+             (add-jarset (File. path "lib") (:exclusions opts)))))))
 
 (defn extract-native [jars dest]
   (doseq [jar jars]
@@ -69,15 +91,16 @@
 
 (defn fetch-deps [deps dest]
   (let [ref-id (str "cake.deps.fileset." (.getName dest))]
+    (fetch-subprojects deps dest)
     (when-let [deps (seq (remove subproject? deps))]
       (ant DependenciesTask {:fileset-id ref-id :path-id (:name project)}
            (add-repositories repositories)
            (add-dependencies deps))
-      (.mkdirs dest)
-      (ant Delete {:dir dest :includes "*.jar,native"})
       (ant Copy {:todir dest :flatten true}
            (.addFileset (get-reference ref-id)))
-      (extract-native (fileset-seq (get-reference ref-id)) (str dest "/native")))))
+      (extract-native
+       (fileset-seq (get-reference ref-id))
+       (str dest "/native")))))
 
 (defn pom [project]
   (let [refid "cake.pom"
@@ -90,6 +113,8 @@
 
 (deftask deps "Fetch dependencies and create pom.xml."
   (println "Fetching dependencies...")
-  (fetch-deps (:dependencies project) (file "lib"))
-  (fetch-deps (:dev-dependencies project) (file "lib/dev"))
+  (fetch-deps (:dependencies project) (file "build/lib"))
+  (fetch-deps (:dev-dependencies project) (file "build/lib/dev"))
+  (ant Delete {:dir "lib"})
+  (ant Move {:file "build/lib" :tofile "lib" :verbose true})
   (pom project))

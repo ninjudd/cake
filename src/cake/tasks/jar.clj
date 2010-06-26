@@ -1,7 +1,7 @@
 (ns cake.tasks.jar
   (:use cake cake.ant
         [useful :only [absorb]])
-  (:import [org.apache.tools.ant.taskdefs Jar War Copy]
+  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete]
            [org.apache.tools.ant.taskdefs.optional.ssh Scp]
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]
@@ -47,8 +47,13 @@
          (add-fileset    {:dir (file "src" "jvm")   :includes "**/*.java"})
          (add-file-mappings (:jar-files project)))))
 
+(defn clean [pattern]
+  (when (:clean opts)
+    (ant Delete {:dir (file) :includes pattern})))
+
 (deftask jar #{compile}
   "Build a jar file containing project source and class files."
+  (clean "*.jar")
   (build-jar project))
 
 (defn uberjarfile [project]
@@ -83,14 +88,16 @@
   (let [web     "WEB-INF"
         classes (str web "/classes")]
     (ant War {:dest-file (warfile project)}
+         (add-manifest (manifest project))
          (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})
          (add-zipfileset {:dir (file "classes")   :prefix classes :includes "**/*.class"})
          (add-zipfileset {:dir (file "resources") :prefix classes :includes "*"})
          (add-fileset    {:dir (file "src" "html")})
          (add-file-mappings (:war-files project)))))
 
-(deftask war #{compile}
+(deftask war #{compile clean-war}
   "Create a web archive containing project source and class files."
+  (clean "*.war")
   (build-war project))
 
 (defn build-uberwar [project]
