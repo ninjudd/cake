@@ -248,6 +248,7 @@ class JVM
         files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
       else
         Find.find(path) do |f|
+          Find.prune if f == "#{$bakedir}/src/jvm"
           files << f if File.exists?(f) and not File.directory?(f)
         end
       end
