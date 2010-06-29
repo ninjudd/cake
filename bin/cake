@@ -122,7 +122,7 @@ class Config < Hash
   def initialize(path)
     File.open(path, 'r') do |file|
       file.each do |line|
-        next if line.start_with?('#') or line.start_with?('!')
+        next if ['#', '!'].include?(line[0,1])
         key, value = line.split('=', 2)
         next unless key and value
         self[key.strip] = value.strip
@@ -133,7 +133,7 @@ class Config < Hash
   def [](*keys)
     if keys.first.kind_of?(Symbol)
       key = keys.join('.') + '.'
-      clone.delete_if {|k,v| not k.start_with?(key)}
+      clone.delete_if {|k,v| not k.index(key) == 0}
     else
       super
     end
@@ -165,8 +165,12 @@ class JVM
     not pid.nil?
   end
 
+  def enabled?
+    true
+  end
+
   def init
-    reload_stale_files if running?
+    reload_stale_files if enabled? and running?
     start
   end
 
@@ -207,7 +211,7 @@ class JVM
   MAX_PORT = 2**16
 
   def start
-    return if running?
+    return if not enabled? or running?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
     log(:start, "starting #{type} jvm on port #{port}") if debug?
     @pid = daemon %{ java #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
@@ -260,7 +264,7 @@ private
 
   def make_path(paths)
     paths.flatten.compact.collect do |path|
-      path.start_with?('/') ? path : "#{$bakedir}/#{path}"
+      path[0,1] == '/' ? path : "#{$bakedir}/#{path}"
     end.join(PATH_SEP)
   end
 
@@ -357,6 +361,10 @@ class Bake < JVM
     [ENV['JAVA_OPTS'], config['project.java_opts'], super].compact.join(' ')
   end
 
+  def enabled?
+    Dir["lib/*.jar"].any?
+  end
+
 private
 
   HISTORY_NUM  = 500
@@ -429,7 +437,7 @@ lib = "#{$cakedir}/lib"
 if File.exists?("#{$cakedir}/.gitignore")
   if Dir["#{lib}/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
-    version = IO.read("#{$cakedir}/project.clj").first.match(/defproject cake \"(.*)\"/)[1]
+    version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
     cakejar = get_cake(version, lib)
     extract(cakejar, "bake-#{version}.jar", "#{lib}/dev")
   end
