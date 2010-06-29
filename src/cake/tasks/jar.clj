@@ -20,6 +20,9 @@
           "Build-Jdk"  (System/getProperty "java.version")
           "Main-Class" (absorb (:main project) (-> str (.replaceAll "-" "_")))}))
 
+(defn add-license [task]
+  (add-zipfileset task {:file (file "LICENSE") :fullpath "META-INF/LICENSE"}))
+
 (defn- file-mapping [from to]
   (let [from (file from)]
     (when (.exists from)
@@ -40,11 +43,13 @@
         src   (if (.exists src) src (file "src"))]
     (ant Jar {:dest-file (jarfile project)}
          (add-manifest (manifest project))
+         (add-license)
          (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
          (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
          (add-fileset    {:dir src                  :includes "**/*.clj"})
          (add-fileset    {:dir (file "src" "jvm")   :includes "**/*.java"})
+         (add-zipfileset {:file (file "LICENSE") :fullpath "META-INF/LICENSE"})
          (add-file-mappings (:jar-files project)))))
 
 (defn clean [pattern]
@@ -89,6 +94,7 @@
         classes (str web "/classes")]
     (ant War {:dest-file (warfile project)}
          (add-manifest (manifest project))
+         (add-license)
          (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})
          (add-zipfileset {:dir (file "classes")   :prefix classes :includes "**/*.class"})
          (add-zipfileset {:dir (file "resources") :prefix classes :includes "*"})
