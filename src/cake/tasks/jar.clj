@@ -126,7 +126,7 @@
         (map #(File. sshdir %) files)))))
 
 (defn release-to-clojars [jar]
-  (log "Releasing to clojars: " jar)
+  (log "Releasing to clojars:" jar)
   (ant Scp {:todir "clojars@clojars.org:" :trust true :keyfile (keyfile ["id_rsa" "id_dsa" "identity"])}
        (add-fileset {:file (file "pom.xml")})
        (add-fileset {:file jar})))
