@@ -1,5 +1,5 @@
 (ns cake.tasks.jar
-  (:use cake cake.ant
+  (:use cake cake.ant ordered-set
         [useful :only [absorb]])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete]
            [org.apache.tools.ant.taskdefs.optional.ssh Scp]
@@ -18,7 +18,7 @@
          {"Created-By" "cake"
           "Built-By"   (System/getProperty "user.name")
           "Build-Jdk"  (System/getProperty "java.version")
-          "Main-Class" (absorb (:main project) (.replaceAll "-" "_"))}))
+          "Main-Class" (absorb (:main project) (-> str (.replaceAll "-" "_")))}))
 
 (defn- file-mapping [from to]
   (let [from (file from)]
@@ -60,9 +60,9 @@
   (file (format "%s-%s-standalone.jar" (:artifact-id project) (:version project))))
 
 (defn jars [project]
-  (into #{(jarfile project)}
-    (filter #(.endsWith (.getName %) ".jar")
-      (file-seq (file "lib")))))
+  (let [jar (jarfile project)]
+    (into (ordered-set jar)
+          (fileset-seq {:dir "lib" :includes "*.jar"}))))
 
 (defn rebuild-uberjar? [jarfile jars]
   (let [last-mod (.lastModified jarfile)]
@@ -95,7 +95,7 @@
          (add-fileset    {:dir (file "src" "html")})
          (add-file-mappings (:war-files project)))))
 
-(deftask war #{compile clean-war}
+(deftask war #{compile}
   "Create a web archive containing project source and class files."
   (clean "*.war")
   (build-war project))
