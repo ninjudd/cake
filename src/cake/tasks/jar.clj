@@ -21,7 +21,7 @@
           "Main-Class" (absorb (:main project) (-> str (.replaceAll "-" "_")))}))
 
 (defn add-license [task]
-  (add-zipfileset task {:file (file "LICENSE") :fullpath "META-INF/LICENSE"}))
+  (add-fileset task {:file (file "LICENSE")}))
 
 (defn- file-mapping [from to]
   (let [from (file from)]
@@ -49,7 +49,6 @@
          (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
          (add-fileset    {:dir src                  :includes "**/*.clj"})
          (add-fileset    {:dir (file "src" "jvm")   :includes "**/*.java"})
-         (add-zipfileset {:file (file "LICENSE") :fullpath "META-INF/LICENSE"})
          (add-file-mappings (:jar-files project)))))
 
 (defn clean [pattern]
