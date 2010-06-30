@@ -45,19 +45,19 @@
       (doseq [lib libs]
         (compile lib)))))
 
-(defn add-native-libs [task libs]
+(defn add-native-libs [task dir libs]
   (doseq [lib libs]
     (let [libname (System/mapLibraryName (str lib))
-          libfile (file "build/lib" libname)]
+          libfile (file dir libname)]
       (if (.exists libfile)
         (add-fileset task {:file libfile})
         (when (= "macosx" (os-name))
-          (add-fileset task {:file (file "build/lib" (.replaceAll libname "\\.jnilib" ".dylib"))}))))))
+          (add-fileset task {:file (file dir (.replaceAll libname "\\.jnilib" ".dylib"))}))))))
 
 (defn copy-native [project]
   (when-let [libs (:native-libs project)]
     (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}
-         (add-native-libs libs))))
+         (add-native-libs "build/native/lib" libs))))
 
 (deftask compile #{compile-native}
   "Compile all clojure and java source files."
