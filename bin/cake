@@ -204,7 +204,7 @@ class JVM
   end
 
   def java_opts
-    opts = "-cp #{classpath} -Djava.library.path=#{libpath}"
+    opts = "-cp #{classpath} -Dcake.project.path=#{$bakedir} -Djava.library.path=#{libpath}"
     opts << " -Djava.home=#{ENV['JAVA_HOME']}" if ENV['JAVA_HOME']
     opts
   end
