@@ -116,5 +116,5 @@
   (fetch-deps (:dependencies project) (file "build/lib"))
   (fetch-deps (:dev-dependencies project) (file "build/lib/dev"))
   (ant Delete {:dir "lib"})
-  (ant Move {:file "build/lib" :tofile "lib" :verbose true})
+  (ant Move {:file "build/lib" :tofile "lib" :verbose true :fail-on-error false})
   (pom project))

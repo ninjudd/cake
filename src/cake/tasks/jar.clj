@@ -49,6 +49,7 @@
          (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
          (add-fileset    {:dir src                  :includes "**/*.clj"})
          (add-fileset    {:dir (file "src" "jvm")   :includes "**/*.java"})
+         (add-zipfileset {:dir (file "native") :prefix "native"})
          (add-file-mappings (:jar-files project)))))
 
 (defn clean [pattern]

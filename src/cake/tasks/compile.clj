@@ -1,8 +1,9 @@
 (ns cake.tasks.compile
   (:use cake cake.ant
         [useful :only [include?]]
+        [cake.tasks.dependencies :only [os-name os-arch]]
         [cake.contrib.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]])
-  (:import [org.apache.tools.ant.taskdefs Javac Java]))
+  (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
 (defn compile-java [project]
   (let [src (file "src" "jvm")]
@@ -39,11 +40,31 @@
             namespace))))))
 
 (defn compile-clojure [project]
-  (bake [namespaces (stale-namespaces project)]
-    (doseq [lib namespaces]
-      (compile lib))))
+  (when-let [stale (seq (stale-namespaces project))]
+    (bake [libs stale]
+      (doseq [lib libs]
+        (compile lib)))))
 
-(deftask compile
+(defn add-native-libs [task libs]
+  (doseq [lib libs]
+    (let [libname (System/mapLibraryName (str lib))
+          libfile (file "build/lib" libname)]
+      (if (.exists libfile)
+        (add-fileset task {:file libfile})
+        (when (= "macosx" (os-name))
+          (add-fileset task {:file (file "build/lib" (.replaceAll libname "\\.jnilib" ".dylib"))}))))))
+
+(defn copy-native [project]
+  (when-let [libs (:native-libs project)]
+    (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}
+         (add-native-libs libs))))
+
+(deftask compile #{compile-native}
   "Compile all clojure and java source files."
+  (copy-native project)
   (compile-java project)
   (compile-clojure project))
+
+;; add actions to compile-native if you need to compile native libraries
+;; see http://github.com/lancepantz/tokyocabinet for an example
+(deftask compile-native)
