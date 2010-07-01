@@ -204,7 +204,7 @@ class JVM
   end
 
   def java_opts
-    opts = "-cp #{classpath} -Dcake.project.path=#{$bakedir} -Djava.library.path=#{libpath}"
+    opts = "-cp #{classpath} -Djava.library.path=#{libpath}"
     opts << " -Djava.home=#{ENV['JAVA_HOME']}" if ENV['JAVA_HOME']
     opts
   end
@@ -216,7 +216,7 @@ class JVM
     return if not enabled? or running?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
     log(:start, "starting #{type} jvm on port #{port}") if debug?
-    @pid = daemon %{ java #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
+    @pid = daemon %{ java -Dcake.project=#{$bakedir} #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
     log(:start, "#{type} jvm started") if verbose?
   rescue Errno::EADDRNOTAVAIL => e
@@ -471,9 +471,18 @@ bake = Bake.new(
 )
 
 if $command == :kill
-  cake.kill
-  bake.kill
+  if $opts[:all]
+    `jps -v | grep cake.project`.split("\n").each do |line|
+      pid = line.split(' ').first.to_i
+      Process.kill($opts[:"9"] ? "KILL" : "TERM", pid)
+    end
+  else
+    cake.kill
+    bake.kill
+  end
   exit
+elsif $command == :ps
+  exec "jps -v | grep cake.project"
 elsif restart?
   cake.stop
   bake.stop

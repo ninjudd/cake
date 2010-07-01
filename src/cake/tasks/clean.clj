@@ -3,6 +3,7 @@
   (:import (org.apache.tools.ant.taskdefs Delete Mkdir)))
 
 (deftask clean
+  "Remove cake build artifacts."
   (when cake/bake-port
     (bake [] (System/exit 0)))
   (let [files ["pom.xml" "classes" "lib" "build"]]

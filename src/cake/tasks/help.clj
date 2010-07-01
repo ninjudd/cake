@@ -17,14 +17,14 @@
         (print-task sym [] [doc])
         (println "unknown task:" sym)))))
 
-(defn taskdocs [all?]
-  (into implicit-tasks
-        (for [[sym task] @tasks :when (and (not= 'default sym) (or all? (seq (:doc task))))]
+(defn taskdocs []
+  (into (if (or (:s opts) (:a opts)) implicit-tasks {})
+        (for [[sym task] @tasks :when (and (not= 'default sym) (or (:a opts) (seq (:doc task))))]
           [sym (str (first (:doc task)))])))
 
 (defn list-all-tasks []
   (println line)
-  (let [taskdocs (taskdocs (:a opts))
+  (let [taskdocs (taskdocs)
         width    (apply max (map #(count (name (first %))) taskdocs))
         taskdoc  (str "cake %-" width "s  ;; %s")]
     (doseq [[name doc] (sort-by first taskdocs)]
@@ -32,7 +32,7 @@
 
 (deftask help
   "Print tasks with documentation. Use 'cake help TASK' for more details."
-  "You can use 'cake help -a' to list all tasks, including those without documentation."
+  "Use -s to list implicit system tasks and -a to list all tasks, including those without documentation."
   (if-let [names (:help opts)]
     (apply task-doc (map symbol names))
     (list-all-tasks)))

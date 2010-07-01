@@ -67,10 +67,12 @@
 
 (def implicit-tasks
   {'repl    "Start an interactive shell."
-   'stop    "Stop cake and project jvm processes."
-   'start   "Start cake and project jvm processes."
-   'restart "Restart cake and project jvm processes."
-   'reload  "Reload any .clj files that have changed or restart."})
+   'stop    "Stop cake jvm processes."
+   'start   "Start cake jvm processes."
+   'restart "Restart cake jvm processes."
+   'reload  "Reload any .clj files that have changed or restart."
+   'ps      "List running cake jvm processes for all projects."
+   'kill    "Kill running cake jvm processes. Use -9 to force or --all for all projects."})
 
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
