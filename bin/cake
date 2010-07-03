@@ -6,9 +6,22 @@ require 'open-uri'
 require 'rexml/document'
 require 'socket'
 require 'timeout'
-require 'readline'
 require 'fileutils'
-require 'pp'
+
+begin
+  require 'readline'
+rescue LoadError => e
+  module Readline
+    HISTORY = []
+    attr_accessor :completer_word_break_characters, :completion_proc
+    def readline(prompt)
+      $stdout.print prompt
+      $stdout.flush
+      $stdin.gets
+    end
+    extend Readline
+  end
+end
 
 PATH_SEP = ':'
 file     = File.readlink(__FILE__) rescue __FILE__
