@@ -82,10 +82,9 @@ def extract(jar, file, dest = File.dirname(jar))
     log(:deps, "extracting #{file} from #{jar}") if verbose?
     ret = system %{ jar xf #{jar} #{file} }
     raise "cannot find jar command" unless ret
+    File.makedirs(dest)
+    File.move(file, dest)
   end
-
-  File.makedirs(dest)
-  File.move(file, dest)
   "#{dest}/#{file}"
 end
 

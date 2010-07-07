@@ -19,7 +19,8 @@
          (add-fileset {:dir "bake"})
          (add-dev-jars))
     (ant Jar {:dest-file jarfile :update true}
-         (add-fileset {:file bakejar}))))
+         (add-fileset {:file bakejar})
+         (add-dev-jars))))
 
 (defn snapshot? [project]
   (.endsWith (:version project) "SNAPSHOT"))
