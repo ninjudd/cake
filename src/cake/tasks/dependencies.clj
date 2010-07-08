@@ -7,10 +7,10 @@
            [java.io File]))
 
 (def repositories
-  {"central"           "http://repo1.maven.org/maven2"
-   "clojure"           "http://build.clojure.org/releases"
-   "clojure-snapshots" "http://build.clojure.org/snapshots"
-   "clojars"           "http://clojars.org/repo/"})
+  [["central"           "http://repo1.maven.org/maven2"]
+   ["clojure"           "http://build.clojure.org/releases"]
+   ["clojure-snapshots" "http://build.clojure.org/snapshots"]
+   ["clojars"           "http://clojars.org/repo/"]])
 
 (defn os-name []
   (let [name (System/getProperty "os.name")]
@@ -94,7 +94,7 @@
     (fetch-subprojects deps dest)
     (when-let [deps (seq (remove subproject? deps))]
       (ant DependenciesTask {:fileset-id ref-id :path-id (:name project)}
-           (add-repositories repositories)
+           (add-repositories (into repositories (:repositories project)))
            (add-dependencies deps))
       (ant Copy {:todir dest :flatten true}
            (.addFileset (get-reference ref-id)))
