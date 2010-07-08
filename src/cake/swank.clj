@@ -21,7 +21,9 @@
   "Try to load a namespace reference. If sucessful, evaluate then-form otherwise evaluate else-form."
   `(try (ns ~(.getName *ns*) ~ns-reference)
         (eval '~then-form)
-        (catch java.io.FileNotFoundException e#
+        (catch Exception e#
+          (when (not (instance? java.io.FileNotFoundException e#))
+            (println "Error loading swank:" (.getMessage e#)))
           (eval '~else-form))))
 
 (if-ns (:use [swank.swank :only [start-repl]]
