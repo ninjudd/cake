@@ -72,7 +72,7 @@
 
 (defn fileset-seq [fileset]
   (if (map? fileset)
-    (fileset-seq (make FileSet fileset))
+    (fileset-seq (make FileSet (merge fileset {:error-on-missing-dir false})))
     (map #(.getFile %) (iterator-seq (.iterator fileset)))))
 
 (defn add-manifest [task attrs]
