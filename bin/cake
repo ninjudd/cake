@@ -502,7 +502,8 @@ if $command == :kill
   end
   exit
 elsif $command == :ps
-  exec "jps -v | grep cake.project"
+  puts `jps -v | grep cake.project`.sort.reverse
+  exit
 elsif restart?
   cake.stop
   bake.stop
