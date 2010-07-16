@@ -51,12 +51,19 @@
     (exit)
     (println "refusing to quit because there are active connections")))
 
+(defn repl []
+  (let [marker (read)]
+    (clojure.main/repl
+     :init   #(in-ns 'user)
+     :prompt #(println (str marker (ns-name *ns*))))))
+
 (def default-commands
   {:validate    validate-form
    :completions completions
    :reload      reload-files
    :force-quit  exit
-   :quit        quit})
+   :quit        quit
+   :repl        repl})
 
 (defn- create* [port f commands]
   (let [commands (apply hash-map commands)]

@@ -66,7 +66,7 @@
 (def run? nil)
 
 (def implicit-tasks
-  {'repl    "Start an interactive shell."
+  {'repl    "Start an interactive shell"
    'stop    "Stop cake jvm processes."
    'start   "Start cake jvm processes."
    'restart "Restart cake jvm processes."
@@ -161,14 +161,17 @@
       (with-open [f (FileInputStream. file)]
         (into {} (doto (Properties.) (.load f)))))))
 
+(def readline-marker nil)
+
 (defn process-command [form]
   (let [[task args port] form]
-    (binding [project @cake-project
+    (binding [project         @cake-project
               ant/ant-project (ant/init-project project server/*outs*)
-              opts   (parse-opts (keyword task) (map str args))
-              config (read-config)
-              bake-port port
-              run? {}]
+              opts            (parse-opts (keyword task) (map str args))
+              config          (read-config)
+              bake-port       port
+              run?            {}
+              readline-marker (read)]
       (doseq [dir ["lib" "classes" "build"]]
         (.mkdirs (file dir)))
       (run-task (symbol (or task 'default))))))
@@ -190,7 +193,7 @@
 (defn prompt-read [prompt & opts]
   (let [opts (apply hash-map opts)
         echo (if (false? (:echo opts)) "@" "")]
-    (println (format "%s__READLINE__%s" echo prompt))
+    (println (str echo readline-marker prompt))
     (read-line)))
 
 (defn start-server [port]

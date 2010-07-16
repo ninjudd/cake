@@ -15,7 +15,7 @@
          pw  (prompt-read "enter password" :echo false)]
         (println "foo:" foo)
         (println "bar:" bar)
-        (println "password is" (count pw) "characters")
+        (println "password is" (count pw) "characters long")
         (println "baz!")
         (Thread/sleep 2000)
         (println "done sleeping!")

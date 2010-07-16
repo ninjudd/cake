@@ -283,6 +283,24 @@ class JVM
     files
   end
 
+  REPL_PROMPT = "REPL_PROMPT__#{rand}"
+  def repl
+    load_history
+    loop do
+      with_socket do |socket|
+        socket.write %{:repl "#{REPL_PROMPT}"}
+
+        while @ns = read_until_prompt(socket)
+          line = readline
+          return unless line
+          socket.write(line + "\n")
+        end
+      end
+    end
+  ensure
+    save_history
+  end
+
 private
 
   def make_path(paths)
@@ -329,95 +347,9 @@ private
   ensure
     socket.close if socket
   end
-end
-
-class Cake < JVM
-  attr_accessor :bakeport
-
-  def files
-    super.concat ["project.clj", "build.clj", ".cake/swank"]
-  end
-
-  READLINE        = /^__READLINE__(.*)$/
-  READLINE_NOECHO = /^\@__READLINE__(.*)$/
-
-  def send_command(command, *args)
-    with_socket do |socket|
-      socket.write("(#{command} [#{args.join(' ')}] #{bakeport})")
-      socket.flush
-      while (line = socket.gets)
-        if line =~ READLINE
-          socket.write(prompt($1))
-        elsif line =~ READLINE_NOECHO
-          socket.write(prompt($1, :echo => false))
-        else
-          puts line
-        end
-      end
-    end
-  end
-
-  def java_opts
-    [ENV['CAKE_JAVA_OPTS'], config['cake.java_opts'], super].compact.join(' ')
-  end
-
-private
-
-  def prompt(prompt, opts = {})
-    if opts[:echo] == false
-      echo_off = system("ssstty -echo 2&> /dev/null")
-      prompt << " (WARNING, input will be visible on console!)" unless echo_off
-    end
-    input = Readline.readline(prompt + ": ") || ''
-    input + "\n"
-  ensure
-    if echo_off
-      system("stty echo 2&> /dev/null")
-      puts
-    end
-  end
-end
-
-class Bake < JVM
-  MARKER = "=#{rand.to_s}="
-  PROMPT = /^(.*)#{MARKER}$/
-  START_REPL = <<-END
-    (clojure.main/repl
-      :init   #(in-ns 'user)
-      :prompt #(printf "%s#{MARKER}\n" (ns-name *ns*)))
-  END
-
-  def repl
-    load_history
-    loop do
-      with_socket do |socket|
-        socket.write START_REPL
-        socket.gets # burn extra prompt
-
-        while @ns = read_until_prompt(socket)
-          line = readline
-          return unless line
-          socket.write(line + "\n")
-        end
-      end
-    end
-  ensure
-    save_history
-  end
-
-  def java_opts
-    [ENV['JAVA_OPTS'], config['project.java_opts'], super].compact.join(' ')
-  end
-
-  def enabled?
-    Dir["lib/*.jar"].any?
-  end
-
-private
 
   HISTORY_NUM  = 500
   HISTORY_FILE = ".cake/history"
-
   def load_history
     open(HISTORY_FILE) do |file|
       file.each {|line| Readline::HISTORY << line.chomp}
@@ -433,7 +365,7 @@ private
 
   def read_until_prompt(socket)
     while line = socket.gets
-      return $1 if line =~ PROMPT
+      return $1 if line =~ /^#{REPL_PROMPT}(.*)$/
       puts line
     end
   end
@@ -448,7 +380,6 @@ private
   end
 
   Readline.completer_word_break_characters = " \t\n\"'`~@;#&{}()[]"
-
   def readline
     input = []
     prompt = "#{@ns}=> "
@@ -477,6 +408,60 @@ private
       end
       completions
     end
+  end
+end
+
+class Cake < JVM
+  attr_accessor :bakeport
+
+  READLINE = "READLINE__#{rand}"
+  def send_command(command, *args)
+    with_socket do |socket|
+      socket.write %{(#{command} [#{args.join(' ')}] #{bakeport}) "#{READLINE}"}
+      while (line = socket.gets)
+        if line =~ /^#{READLINE}(.*)$/
+          socket.write(prompt($1))
+        elsif line =~ /^@#{READLINE}(.*)$/
+          socket.write(prompt($1, :echo => false))
+        else
+          puts line
+        end
+      end
+    end
+  end
+
+  def files
+    super.concat ["project.clj", "build.clj", ".cake/swank"]
+  end
+
+  def java_opts
+    [ENV['CAKE_JAVA_OPTS'], config['cake.java_opts'], super].compact.join(' ')
+  end
+
+private
+
+  def prompt(prompt, opts = {})
+    if opts[:echo] == false
+      echo_off = system("stty -echo 2&> /dev/null")
+      prompt << " (WARNING, input will be visible on console!)" unless echo_off
+    end
+    input = Readline.readline(prompt + ": ") || ''
+    input + "\n"
+  ensure
+    if echo_off
+      system("stty echo 2&> /dev/null")
+      puts
+    end
+  end
+end
+
+class Bake < JVM
+  def java_opts
+    [ENV['JAVA_OPTS'], config['project.java_opts'], super].compact.join(' ')
+  end
+
+  def enabled?
+    Dir["lib/*.jar"].any?
   end
 end
 
@@ -550,10 +535,10 @@ if not [:deps, :clean].include?($command) and File.exists?('project.clj')
 end
 
 if $command == :repl
-  if File.exists?('project.clj')
+  if File.exists?('project.clj') and not $opts[:cake]
     bake.repl
   else
-    log(:repl, "cannot start repl without project.clj")
+    cake.repl
   end
 elsif not [:start, :reload, :restart].include?($command)
   cake.bakeport = bake.port
