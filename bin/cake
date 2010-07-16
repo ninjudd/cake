@@ -24,12 +24,21 @@ rescue LoadError => e
   end
 end
 
+def project_dir(dir)
+  while dir != "/"
+    return dir if [".cake", "project.clj", "build.clj"].any? {|file| File.exists?("#{dir}/#{file}")}
+    dir = File.dirname(dir)
+  end
+  File.expand_path("~")
+end
+
 PATH_SEP = ':'
 file     = File.readlink(__FILE__) rescue __FILE__
-$bakedir = Dir.getwd
+$bakedir = project_dir(Dir.getwd)
 $cakedir = File.dirname(File.dirname(file))
 $repo    = "http://clojars.org/repo/cake/cake"
 $confdir = ".cake"
+Dir.chdir($bakedir)
 File.makedirs($confdir)
 
 def get_cake(version, dest = nil)
@@ -122,7 +131,7 @@ def verbose?
 end
 
 def config_updated?
-  newer?(".cake/config", ".cake/cake.pid") or newer?(".cake/config", ".cake/bake.pid")
+  newer?(".cake/config", ".cake/cake.pid") or (File.exists?(".cake/bake.pid") and newer?(".cake/config", ".cake/bake.pid"))
 end
 
 def restart?
