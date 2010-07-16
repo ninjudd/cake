@@ -9,6 +9,14 @@
   :dev-dependencies [[clojure-complete "0.1.0" :exclusions [clojure]]])
 
 (deftask bar
-  (bake (:use useful) []
-        (println "bar!")
+  (bake (:use useful)
+        [foo (prompt-read "enter foo")
+         bar (prompt-read "enter bar")
+         pw  (prompt-read "enter password" :echo false)]
+        (println "foo:" foo)
+        (println "bar:" bar)
+        (println "password is" (count pw) "characters")
+        (println "baz!")
+        (Thread/sleep 2000)
+        (println "done sleeping!")
         (verify true "true is false!")))

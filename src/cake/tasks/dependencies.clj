@@ -76,6 +76,7 @@
 (defn fetch-subprojects [deps dest]
   (doseq [[dep _ & opts] deps :let [opts (apply array-map opts)]]
     (when-let [path (subproject-path dep)]
+      (ant ExecTask {:executable "cake" :dir path :failonerror true} (args ["deps"]))
       (ant ExecTask {:executable "cake" :dir path :failonerror true} (args ["jar" "--clean"]))
       (let [jar (first (glob path (str (name dep) "-.*jar")))]
         (when-not (.exists jar)

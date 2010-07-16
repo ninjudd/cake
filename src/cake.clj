@@ -187,6 +187,12 @@
   (binding [clojure.core/load-file (skip-task-files load-file)]
     (server/reload-files)))
 
+(defn prompt-read [prompt & opts]
+  (let [opts (apply hash-map opts)
+        echo (if (false? (:echo opts)) "@" "")]
+    (println (format "%s__READLINE__%s" echo prompt))
+    (read-line)))
+
 (defn start-server [port]
   (init)
   (server/create port process-command :reload reload-files)
