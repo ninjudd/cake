@@ -91,17 +91,17 @@
          (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))))
 
 (defn fetch-deps [deps dest]
-  (let [ref-id (str "cake.deps.fileset." (.getName dest))]
-    (fetch-subprojects deps dest)
-    (when-let [deps (seq (remove subproject? deps))]
+  (fetch-subprojects deps dest)  
+  (when-let [deps (seq (remove subproject? deps))]
+    (let [ref-id (str "cake.deps.fileset." (.getName dest))]
       (ant DependenciesTask {:fileset-id ref-id :path-id (:name project)}
            (add-repositories (into repositories (:repositories project)))
            (add-dependencies deps))
       (ant Copy {:todir dest :flatten true}
-           (.addFileset (get-reference ref-id)))
-      (extract-native
-       (fileset-seq (get-reference ref-id))
-       (str dest "/native")))))
+           (.addFileset (get-reference ref-id)))))
+  (extract-native
+   (fileset-seq {:dir dest :includes "*.jar"})
+   (str dest "/native")))
 
 (defn pom [project]
   (let [refid "cake.pom"
