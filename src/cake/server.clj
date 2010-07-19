@@ -65,6 +65,10 @@
    :quit        quit
    :repl        repl})
 
+(defn fatal? [e]
+  (and (instance? clojure.lang.Compiler$CompilerException e)
+       (instance? UnsatisfiedLinkError (.getCause e))))
+
 (defn- create* [port f commands]
   (let [commands (apply hash-map commands)]
     (server-socket/create-server port
@@ -81,7 +85,8 @@
                   (command))
                 (f form))
               (catch Exception e
-                (print-stacktrace e))))))
+                (print-stacktrace e)
+                (when (fatal? e) (System/exit 1)))))))
       0 (InetAddress/getByName "localhost"))))
 
 (defn create [port f & commands]
