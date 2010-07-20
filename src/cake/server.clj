@@ -1,5 +1,6 @@
 (ns cake.server
-  (:use [cake.contrib.find-namespaces :only [read-file-ns-decl]])
+  (:use [clojure.stacktrace :only [print-stack-trace]]
+        [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.contrib.server-socket :as server-socket]
             complete)
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream]
@@ -13,9 +14,6 @@
 
 (defn num-connections []
   (reduce + (map #(count @(:connections %)) @servers)))
-
-(defn print-stacktrace [e]
-  (.printStackTrace e (PrintStream. *outs*)))
 
 (defn validate-form []
   (println
@@ -40,7 +38,7 @@
           (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
             (try (load-file file)
                  (catch Exception e
-                   (print-stacktrace e))))
+                   (print-stack-trace e))))
           (println "cannot reload file without namespace declaration:" file))))))
 
 (defn exit []
@@ -57,13 +55,17 @@
      :init   #(in-ns 'user)
      :prompt #(println (str marker (ns-name *ns*))))))
 
+(defn ping []
+  (println "pong"))
+
 (def default-commands
   {:validate    validate-form
    :completions completions
    :reload      reload-files
    :force-quit  exit
    :quit        quit
-   :repl        repl})
+   :repl        repl
+   :ping        ping})
 
 (defn fatal? [e]
   (and (instance? clojure.lang.Compiler$CompilerException e)
@@ -85,7 +87,7 @@
                   (command))
                 (f form))
               (catch Exception e
-                (print-stacktrace e)
+                (print-stack-trace e)
                 (when (fatal? e) (System/exit 1)))))))
       0 (InetAddress/getByName "localhost"))))
 

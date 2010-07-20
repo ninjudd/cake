@@ -1,5 +1,6 @@
 (ns cake.tasks.dependencies
   (:use cake cake.ant
+        [cake.project :only [group]]
         [clojure.java.shell :only [sh]])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
            [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move]

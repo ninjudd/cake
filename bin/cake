@@ -279,7 +279,7 @@ class JVM
   end
 
   def files
-    files = []
+    files = ["project.clj"]
     classpath.split(PATH_SEP).uniq.each do |path|
       if path =~ /(.*)\/\*$/
         files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
@@ -293,13 +293,20 @@ class JVM
     files
   end
 
+  def ping
+    return unless enabled?
+    with_socket(10) do |socket|
+      socket.write ":ping\n"
+      log($command, "#{type} jvm not running") unless socket.gets == "pong\n"
+    end
+  end
+
   REPL_PROMPT = "REPL_PROMPT__#{rand}"
   def repl
     load_history
     loop do
       with_socket do |socket|
         socket.write %{:repl "#{REPL_PROMPT}"}
-
         while @ns = read_until_prompt(socket)
           line = readline
           return unless line
@@ -442,7 +449,7 @@ class Cake < JVM
   end
 
   def files
-    super.concat ["project.clj", "build.clj", ".cake/swank"]
+    super.concat ["build.clj", ".cake/swank"]
   end
 
   def java_opts
@@ -551,7 +558,14 @@ if $command == :repl
   else
     cake.repl
   end
-elsif not [:start, :reload, :restart].include?($command)
+elsif [:start, :reload, :restart].include?($command)
+  if $opts[:l] or $opts[:log]
+    system("tail -f .cake/bake.log")
+  else
+    cake.ping
+    bake.ping
+  end
+else
   cake.bakeport = bake.port
   cake.send_command($command, ARGV)
 end

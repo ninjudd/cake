@@ -6,11 +6,9 @@
 (def project nil)
 
 (ns cake
-  (:use useful
-        [cake.project :only [init]])
-  (:require [cake.server :as server]
-            [cake.swank :as swank]
-            [cake.ant :as ant])
+  (:use useful cake.project)
+  (:require [cake.ant :as ant]
+            [cake.server :as server])
   (:import [java.io File FileReader FileInputStream InputStreamReader OutputStreamWriter BufferedReader]
            [java.net Socket ConnectException]
            [java.util Properties]))
@@ -18,25 +16,11 @@
 (defn verbose? [opts]
   (or (:v opts) (:verbose opts)))
 
-(defn group [project]
-  (if (or (= project 'clojure) (= project 'clojure-contrib))
-    "org.clojure"
-    (or (namespace project) (name project))))
-
-(defmacro defproject [project-name version & args]
-  (let [root (.getParent (File. *file*))
-        artifact (name project-name)
-        opts (apply hash-map args)
+(defmacro defproject [name version & args]
+  (let [opts (apply hash-map args)
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (apply hash-map task-opts)]
-    `(do (compare-and-set! cake-project nil
-           (-> '~opts
-               (assoc :artifact-id ~artifact
-                      :group-id    ~(group project-name)
-                      :root        ~root
-                      :version     ~version
-                      :swank      '~(swank/config))
-               (assoc-or :name ~artifact)))
+    `(do (compare-and-set! cake-project nil (create-project '~name ~version '~opts))
          ; @cake-project must be set before we include the tasks for bake to work.
          (require 'cake.tasks.defaults)
          ~@(for [ns tasks]
@@ -149,7 +133,7 @@
   {:arglists '([ns-forms* bindings body*])}
   [& forms]
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)
-        bindings (into ['opts 'cake/opts, 'project 'cake/project] bindings)]
+        bindings (into ['opts 'cake/opts] bindings)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
 (def opts   nil)
@@ -197,6 +181,7 @@
     (read-line)))
 
 (defn start-server [port]
-  (init)
+  (init "project.clj" "build.clj")
+  (when-not @cake/cake-project (require '[cake.tasks help new]))
   (server/create port process-command :reload reload-files)
   nil)
