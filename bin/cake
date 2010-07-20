@@ -14,7 +14,7 @@ begin
 rescue LoadError => e
   module Readline
     HISTORY = []
-    attr_accessor :completer_word_break_characters, :completion_proc
+    attr_accessor :basic_word_break_characters, :completion_proc
     def readline(prompt)
       $stdout.print prompt
       $stdout.flush
@@ -99,6 +99,7 @@ def extract(jar, file, dest = File.dirname(jar))
 end
 
 def newer?(file1, file2)
+  return false unless File.exists?(file1)
   not File.exists?(file2) or test(?>, file1, file2)
 end
 
@@ -388,7 +389,7 @@ private
     end
   end
 
-  Readline.completer_word_break_characters = " \t\n\"'`~@;#&{}()[]"
+  Readline.basic_word_break_characters = " \t\n\"'`~@;#&{}()[]"
   def readline
     input = []
     prompt = "#{@ns}=> "
