@@ -1,10 +1,6 @@
 Cake is a build tool for Clojure that is as easy to use as it sounds, inspired by fond
 memories of Rake and countless hours of singeing my hair with other build tools.
 
-> You are what makes Clojure great - find some cake and celebrate!
->
-> -- [quote from Rich Hickey](http://clojure.blogspot.com/2009/10/clojure-is-two.html) (taken totally out of context)
-
 ## Installation
 
 There are three ways to get Cake. The simplest method is just to install the gem. If
@@ -231,3 +227,9 @@ also specify options for an individual project by adding the Java properties
 
     project.java_opts = -Xms1024M -Xmx2048M -Dfoo=bar
     cake.java_opts    = -Xms128M -Xmx128M -Dfoo=baz
+
+### Inspirational Quote
+
+> You are what makes Clojure great - find some cake and celebrate!
+>
+> &mdash; [quote from Rich Hickey](http://clojure.blogspot.com/2009/10/clojure-is-two.html) (taken totally out of context)
