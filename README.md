@@ -228,7 +228,7 @@ also specify options for an individual project by adding the Java properties
     project.java_opts = -Xms1024M -Xmx2048M -Dfoo=bar
     cake.java_opts    = -Xms128M -Xmx128M -Dfoo=baz
 
-### Inspirational Quote
+## Inspirational Quote
 
 > You are what makes Clojure great - find some cake and celebrate!
 >
