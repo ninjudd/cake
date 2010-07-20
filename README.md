@@ -232,4 +232,4 @@ also specify options for an individual project by adding the Java properties
 
 > You are what makes Clojure great - find some cake and celebrate!
 >
-> &mdash; [quote from Rich Hickey](http://clojure.blogspot.com/2009/10/clojure-is-two.html) (taken totally out of context)
+> &mdash; [Rich Hickey](http://clojure.blogspot.com/2009/10/clojure-is-two.html) (taken totally out of context)
