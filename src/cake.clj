@@ -50,7 +50,7 @@
 (def run? nil)
 
 (def implicit-tasks
-  {'repl    "Start an interactive shell"
+  {'repl    "Start an interactive shell with history and tab completion."
    'stop    "Stop cake jvm processes."
    'start   "Start cake jvm processes."
    'restart "Restart cake jvm processes."

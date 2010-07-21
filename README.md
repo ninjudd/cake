@@ -54,7 +54,7 @@ Cake provides default tasks for most of the things you probably do on a regular 
     cake war      ;; Create a web archive containing project source and class files.
     cake uberjar  ;; Create a standalone jar containing all project dependencies.
     cake uberwar  ;; Create a web archive containing all project dependencies.
-    cake repl     ;; Start an interactive shell.
+    cake repl     ;; Start an interactive shell with history and tab completion.
     cake swank    ;; Report status of swank server and start it if not running.
 
 ## Custom Tasks
