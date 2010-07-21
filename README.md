@@ -1,3 +1,5 @@
+### Save your fork, there's cake!
+
 Cake is a build tool for Clojure that is as easy to use as it sounds, inspired by fond
 memories of Rake and countless hours of singeing my hair with other build tools.
 
