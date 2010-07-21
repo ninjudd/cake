@@ -19,10 +19,10 @@
 (defmacro defproject [name version & args]
   (let [opts (apply hash-map args)
         [tasks task-opts] (split-with symbol? (:tasks opts))
-        task-opts (apply hash-map task-opts)]
+        task-opts (apply hash-map task-opts)]    
     `(do (compare-and-set! cake-project nil (create-project '~name ~version '~opts))
          ; @cake-project must be set before we include the tasks for bake to work.
-         (require 'cake.tasks.defaults)
+         (require '~'[cake.tasks help jar test compile dependencies swank clean])
          ~@(for [ns tasks]
              `(try (require '~ns)
                    (catch java.io.FileNotFoundException e#

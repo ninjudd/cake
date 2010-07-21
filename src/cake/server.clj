@@ -55,9 +55,6 @@
      :init   #(in-ns 'user)
      :prompt #(println (str marker (ns-name *ns*))))))
 
-(defn ping []
-  (println "pong"))
-
 (def default-commands
   {:validate    validate-form
    :completions completions
@@ -65,7 +62,7 @@
    :force-quit  exit
    :quit        quit
    :repl        repl
-   :ping        ping})
+   :ping        #(println "pong")})
 
 (defn fatal? [e]
   (and (instance? clojure.lang.Compiler$CompilerException e)

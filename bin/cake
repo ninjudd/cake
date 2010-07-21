@@ -136,7 +136,7 @@ def config_updated?
 end
 
 def restart?
-  $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command) or config_updated?
+  $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command)
 end
 
 def admin_command?
@@ -244,12 +244,16 @@ class JVM
   MAX_PORT = 2**16
 
   def start
-    return if not enabled? or running?
-    @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    log(:start, "starting #{type} jvm on port #{port}") if debug?
-    @pid = daemon %{ java -Dcake.project=#{$bakedir} #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
-    File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
-    log(:start, "#{type} jvm started") if verbose?
+    return unless enabled?
+    if running?
+      log(:start, "#{type} jvm already running") if $command == :start
+      return
+    else
+      log(:start, "starting #{type} jvm") if verbose? or $command == :start
+      @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
+      @pid = daemon %{ java -Dcake.project=#{$bakedir} #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
+      File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
+    end
   rescue Errno::EADDRNOTAVAIL => e
     retry
   end
@@ -260,7 +264,7 @@ class JVM
       log(mode, "sending #{action} to #{type} jvm on port #{port}") if debug?
       socket.write(":#{action}\n")
       if socket.eof?
-        log(mode, "#{type} jvm stopped") if verbose?
+        log(mode, "#{type} jvm stopped") if restart?
         reset!
       else
         inspect(socket) if debug?
@@ -271,7 +275,7 @@ class JVM
           log(mode, "         close active connections or use 'cake stop' to force quit")
         end
       end
-    end || (log(mode, "#{type} jvm not running") if verbose?)
+    end || (log(mode, "#{type} jvm not running") if $command == :stop)
   end
 
   def kill
@@ -533,7 +537,7 @@ if $command == :kill
 elsif $command == :ps
   puts `jps -v | grep cake.project`.sort.reverse
   exit
-elsif restart?
+elsif restart? or config_updated?
   cake.stop
   bake.stop
   exit if $command == :stop
