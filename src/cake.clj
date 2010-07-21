@@ -29,11 +29,15 @@
                      (println "warning: could not load" '~ns))))
          (undeftask ~@(:exclude task-opts)))))
 
+(defn expand-path [& path]
+  (cond (instance? File (first path))  (cons (.getName (first path)) (rest path))
+        (.startsWith (first path) "~") (apply list (System/getProperty "user.home")
+                                              (.substring (first path) 1)
+                                              (rest path))
+        :else (cons (:root project) path)))
+
 (defn file-name [& path]
-  (let [path (if (instance? File (first path))
-               (cons (.getName (first path)) (rest path))
-               (cons (:root project) path))]
-    (apply str (interpose (File/separator) path))))
+  (apply str (interpose (File/separator) (apply expand-path path))))
 
 (defn file [& path]
   (File. (apply file-name path)))
@@ -152,7 +156,7 @@
   (let [[task args port] form]
     (binding [project         @cake-project
               ant/ant-project (ant/init-project project server/*outs*)
-              opts            (parse-opts (keyword task) (map str args))
+              opts            (parse-opts (keyword task) args)
               config          (read-config)
               bake-port       port
               run?            {}
