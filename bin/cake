@@ -439,7 +439,9 @@ class Cake < JVM
   def send_command(command, args = [])
     with_socket do |socket|
       args = args.collect{|arg| '"' + arg.gsub('"', '\"').gsub("\n", "\\n") + '"'}
-      socket.write %{(#{command} [#{args.join(' ')}] #{bakeport}) "#{READLINE}"}
+      cmd  = %{(#{command} [#{args.join(' ')}] #{bakeport}) "#{READLINE}"}
+      log(command, cmd) if debug?
+      socket.write(cmd)
       while (line = socket.gets)
         if line =~ /^#{READLINE}(.*)$/
           socket.write(prompt($1))

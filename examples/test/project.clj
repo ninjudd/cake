@@ -13,6 +13,7 @@
         [foo (prompt-read "enter foo")
          bar (prompt-read "enter bar")
          pw  (prompt-read "enter password" :echo false)]
+        (println project)
         (println "foo:" foo)
         (println "bar:" bar)
         (println "password is" (count pw) "characters long")

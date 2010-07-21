@@ -119,6 +119,7 @@
           socket (bake-connect (int bake-port))
           reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (OutputStreamWriter. (.getOutputStream socket))]
+      (println (prn-str forms))
       (doto writer
         (.write (prn-str forms))
         (.flush))
@@ -133,7 +134,7 @@
   {:arglists '([ns-forms* bindings body*])}
   [& forms]
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)
-        bindings (into ['opts 'cake/opts] bindings)]
+        bindings (into ['opts 'cake/opts 'project 'cake/project] bindings)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
 (def opts   nil)
