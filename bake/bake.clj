@@ -1,6 +1,5 @@
 (ns bake
-  (:use cake.project
-        [clojure.stacktrace :only [print-stack-trace]])
+  (:use cake.project)
   (:require clojure.main            
             [cake.swank :as swank]
             [cake.server :as server])
@@ -18,8 +17,8 @@
   [name & body])
 
 (defn eval-multi [form]
-  (binding [project @bake-project]
-    (clojure.main/with-bindings
+  (clojure.main/with-bindings
+    (binding [project @bake-project]
       (if (vector? form)
         (doseq [f form] (eval f))
         (eval form)))))
@@ -36,7 +35,7 @@
            (require ns))
          (eval (:startup project))
          (catch Exception e
-           (print-stack-trace e)))))
+           (server/print-stacktrace e)))))
 
 (defn start-server [port]
   (init "project.clj")

@@ -1,7 +1,7 @@
 (ns cake.server
-  (:use [clojure.stacktrace :only [print-stack-trace]]
-        [cake.contrib.find-namespaces :only [read-file-ns-decl]])
+  (:use [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.contrib.server-socket :as server-socket]
+            [clojure.stacktrace :as stacktrace]
             complete)
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream]
            [clojure.lang LineNumberingPushbackReader]
@@ -11,6 +11,10 @@
 (def *outs* nil)
 
 (defonce servers (atom []))
+
+(defn print-stacktrace [e]
+  (stacktrace/print-stack-trace e)
+  (.flush *out*))
 
 (defn num-connections []
   (reduce + (map #(count @(:connections %)) @servers)))
@@ -38,7 +42,7 @@
           (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
             (try (load-file file)
                  (catch Exception e
-                   (print-stack-trace e))))
+                   (print-stacktrace e))))
           (println "cannot reload file without namespace declaration:" file))))))
 
 (defn exit []
@@ -76,16 +80,16 @@
                   *out*  (OutputStreamWriter. outs)
                   *err*  (PrintWriter. #^OutputStream outs true)
                   *ins*  ins
-                  *outs* outs]
-          (let [form (read)]
-            (try
+                  *outs* outs]          
+          (try
+            (let [form (read)]
               (if (keyword? form)
                 (when-let [command (or (commands form) (default-commands form))]
                   (command))
-                (f form))
-              (catch Exception e
-                (print-stack-trace e)
-                (when (fatal? e) (System/exit 1)))))))
+                (f form)))
+            (catch Exception e
+              (print-stacktrace e)
+              (when (fatal? e) (System/exit 1))))))
       0 (InetAddress/getByName "localhost"))))
 
 (defn create [port f & commands]

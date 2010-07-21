@@ -115,11 +115,11 @@
   (if (nil? bake-port)
     (println "bake not supported. perhaps you don't have a project.clj")
     (let [ns     (symbol (str "bake.task." (name current-task)))
-          forms `[(~'ns ~ns ~@ns-forms) (~'let ~(quote-if odd? bindings) ~@body)]
+          forms `[(~'ns ~ns (:use ~'[bake :only [project]]) ~@ns-forms)
+                  (~'let ~(quote-if odd? bindings) ~@body)]
           socket (bake-connect (int bake-port))
           reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (OutputStreamWriter. (.getOutputStream socket))]
-      (println (prn-str forms))
       (doto writer
         (.write (prn-str forms))
         (.flush))
@@ -134,7 +134,7 @@
   {:arglists '([ns-forms* bindings body*])}
   [& forms]
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)
-        bindings (into ['opts 'cake/opts 'project 'cake/project] bindings)]
+        bindings (into ['opts 'cake/opts] bindings)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
 (def opts   nil)
