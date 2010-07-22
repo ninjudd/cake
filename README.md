@@ -57,6 +57,8 @@ Cake provides default tasks for most of the things you probably do on a regular 
     cake repl     ;; Start an interactive shell with history and tab completion.
     cake swank    ;; Report status of swank server and start it if not running.
 
+[Default Task Documentation](http://wiki.github.com/ninjudd/cake/default-tasks)
+
 ## Custom Tasks
 
 You can also create your own custom tasks using the `deftask` macro. Just add your tasks
