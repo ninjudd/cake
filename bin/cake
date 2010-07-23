@@ -7,7 +7,6 @@ require 'rexml/document'
 require 'socket'
 require 'timeout'
 require 'fileutils'
-require 'pp'
 
 begin
   require 'readline'
@@ -441,7 +440,7 @@ class Cake < JVM
     with_socket do |socket|
       args = args.collect{|arg| '"' + arg.gsub('"', '\"').gsub("\n", "\\n") + '"'}
       cmd  = %{(#{command} [#{args.join(' ')}] #{bakeport}) "#{READLINE}"}
-      log(command, cmd) if debug?
+      log(command, "sending: " + cmd) if debug?
       socket.write(cmd)
       while (line = socket.gets)
         if line =~ /^#{READLINE}(.*)$/

@@ -30,16 +30,22 @@
          (undeftask ~@(:exclude task-opts)))))
 
 (defn expand-path [& path]
-  (cond (instance? File (first path))  (cons (.getName (first path)) (rest path))
-        (.startsWith (first path) "~") (apply list (System/getProperty "user.home")
-                                              (.substring (first path) 1)
-                                              (rest path))
+  (cond (instance? File (first path))
+        (cons (.getName (first path)) (rest path))
+        
+        (when-let [fp (first path)] (.startsWith fp "~"))
+        (apply list (System/getProperty "user.home")
+               (.substring (first path) 1)
+               (rest path))
+
         :else (cons (:root project) path)))
 
 (defn file-name [& path]
   (apply str (interpose (File/separator) (apply expand-path path))))
 
-(defn file [& path]
+(defn file
+  "Create a File object from a string or seq"
+  [& path]
   (File. (apply file-name path)))
 
 (defn update-task [task deps doc actions]
