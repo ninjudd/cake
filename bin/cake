@@ -175,18 +175,15 @@ def config
 end
 
 class JVM
-  attr_reader :type, :classpath, :libpath, :port, :pid, :pidfile, :start_time
+  attr_reader :type, :classpath, :libpath, :port, :pid, :pidfile, :load_time
 
   def initialize(classpath, libpath)
     @type       = self.class.name.downcase
     @classpath  = make_path(classpath)
     @libpath    = make_path(libpath)
     @pidfile    = "#{$confdir}/#{type}.pid"
-    @start_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
-
-    @pid, @port = IO.read(pidfile).map {|l| l.to_i}
-    Process.kill(0, @pid) # make sure pid is valid
-    TCPSocket.new("localhost", @port) if @port # make sure jvm is running on port
+    @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
+    refresh
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED => e
     log(:start, "defunct #{type} jvm") if debug? and e.kind_of?(Errno::ECONNREFUSED)
     reset! # no pidfile or invalid pid or connection refused
@@ -201,8 +198,20 @@ class JVM
   end
 
   def init
-    reload_stale_files if enabled? and running?
+    stale = reload_stale_files if enabled? and running?
     start
+    stale
+  end
+
+  def refresh
+    @pid, @port = IO.read(pidfile).map {|l| l.to_i}
+    Process.kill(0, @pid) # make sure pid is valid
+    TCPSocket.new("localhost", @port) if @port # make sure jvm is running on port
+  end
+
+  def reload
+    refresh
+    init
   end
 
   def reload_stale_files
@@ -210,6 +219,7 @@ class JVM
 
     if stale_files.empty?
       log(:reload, "no stale #{type} files found") if verbose? and admin_command?
+      false
     else
       log(:reload, "the following #{type} files have changed: #{stale_files.join(', ')}") if debug?
 
@@ -223,7 +233,7 @@ class JVM
           socket.write ":reload [#{stale_files.join(" ")}]\n"
           if socket.eof?
             FileUtils.touch(pidfile)
-            @start_time = Time.now
+            @load_time = Time.now
           else
             inspect(socket) if debug?
             log(:reload, "unable to reload all #{type} files, restarting") if verbose?
@@ -231,6 +241,7 @@ class JVM
           end
         end
       end
+      true
     end
   end
 
@@ -339,11 +350,11 @@ private
   def reset!
     File.unlink(pidfile) if File.exists?(pidfile)
     @pid, @port = []
-    @start_time = Time.now
+    @load_time = Time.now
   end
 
   def stale?(file)
-    File.exists?(file) and File.mtime(file) > start_time
+    File.exists?(file) and File.mtime(file) > load_time
   end
 
   def daemon(cmd)
@@ -517,7 +528,7 @@ else
 end
 
 cake = Cake.new(
-  [cakepath, "src", "src/clj", config['cake.classpath'], "lib/dev/*"],
+  [cakepath, "src", "src/clj", config['cake.claspath'], "lib/dev/*"],
   [config['cake.library.path'], "lib/dev/native"]
 )
 bake = Bake.new(
@@ -573,5 +584,17 @@ elsif [:start, :reload, :restart].include?($command)
   end
 else
   cake.bakeport = bake.port
-  cake.send_command($command, ARGV)
+  if $command == :test and $opts[:auto]
+    interval = $opts[:auto].last.to_i 
+    interval = config['test.auto.interval'].to_i if config['test.auto.interval'] || 1 if interval == 0
+    run_tests = true
+    while true
+      cake.send_command($command, ARGV) if run_tests
+      run_tests = bake.reload
+      cake.reload
+      sleep(interval)
+    end
+  else
+    cake.send_command($command, ARGV)
+  end
 end
