@@ -1,6 +1,6 @@
-(ns cake.tasks.dependencies
-  (:use cake cake.ant
-        [cake.project :only [group]]
+(ns bake.tasks.dependencies
+  (:use bake bake.ant
+        [bake.project :only [group]]
         [clojure.java.shell :only [sh]])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
            [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move]
@@ -77,8 +77,8 @@
 (defn fetch-subprojects [deps dest]
   (doseq [[dep _ & opts] deps :let [opts (apply array-map opts)]]
     (when-let [path (subproject-path dep)]
-      (ant ExecTask {:executable "cake" :dir path :failonerror true} (args ["deps"]))
-      (ant ExecTask {:executable "cake" :dir path :failonerror true} (args ["jar" "--clean"]))
+      (ant ExecTask {:executable "bake" :dir path :failonerror true} (args ["deps"]))
+      (ant ExecTask {:executable "bake" :dir path :failonerror true} (args ["jar" "--clean"]))
       (let [jar (first (glob path (str (name dep) "-.*jar")))]
         (when-not (.exists jar)
           (throw (Exception. (str "unable to locate subproject jar: " (.getPath jar)))))
@@ -94,7 +94,7 @@
 (defn fetch-deps [deps dest]
   (fetch-subprojects deps dest)  
   (when-let [deps (seq (remove subproject? deps))]
-    (let [ref-id (str "cake.deps.fileset." (.getName dest))]
+    (let [ref-id (str "bake.deps.fileset." (.getName dest))]
       (ant DependenciesTask {:fileset-id ref-id :path-id (:name project)}
            (add-repositories (into repositories (:repositories project)))
            (add-dependencies deps))
@@ -105,7 +105,7 @@
    (str dest "/native")))
 
 (defn pom [project]
-  (let [refid "cake.pom"
+  (let [refid "bake.pom"
         file  (file "pom.xml")
         attrs (select-keys project [:artifact-id :group-id :version :name :description])]
     (ant Pom (assoc attrs :id refid)

@@ -1,6 +1,6 @@
-(ns cake.tasks.new
-  (:use cake cake.ant
-        [cake.project :only [group]]
+(ns bake.tasks.new
+  (:use bake bake.ant
+        [bake.project :only [group]]
         [useful.io :only [extract-resource]])
   (:import [org.apache.tools.ant.taskdefs Mkdir]))
 
@@ -22,7 +22,7 @@
     (spit (str name "/project.clj") (project-contents project))
     (log "Created file: project.clj")
     (spit (str name "/.gitignore")
-          (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build"] (repeat "\n"))))
+          (apply str (interleave [".bake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build"] (repeat "\n"))))
     (log "Created file: .gitignore")
     (extract-resource "LICENSE" name)
     (log "Created default LICENSE file (Eclipse Public License)")))

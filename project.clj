@@ -1,5 +1,5 @@
-(defproject cake "0.3.1"
-  :description "Save your fork, there's cake!"
+(defproject bake "0.3.1"
+  :description "Save your fork, there's bake!"
   :dependencies [[clojure "1.2.0-beta1"]
                  [ordered-set "0.1.0"]
                  [org.apache.ant/ant "1.8.1"]

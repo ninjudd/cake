@@ -1,5 +1,5 @@
 (ns bake.test
-  (:use [cake.contrib.find-namespaces :only [find-namespaces-in-dir]])
+  (:use [bake.contrib.find-namespaces :only [find-namespaces-in-dir]])
   (:require clojure.test))
 
 (defn map-tags [nses]

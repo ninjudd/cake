@@ -1,5 +1,5 @@
-(ns cake.tasks.jar
-  (:use cake cake.ant ordered-set
+(ns bake.tasks.jar
+  (:use bake bake.ant ordered-set
         [useful :only [absorb]])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete]
            [org.apache.tools.ant.taskdefs.optional.ssh Scp]
@@ -15,7 +15,7 @@
 
 (defn manifest [project]
   (merge (:manifest project)
-         {"Created-By" "cake"
+         {"Created-By" "bake"
           "Built-By"   (System/getProperty "user.name")
           "Build-Jdk"  (System/getProperty "java.version")
           "Main-Class" (absorb (:main project) (-> str (.replaceAll "-" "_")))}))
@@ -38,14 +38,14 @@
 
 (defn build-jar [project]
   (let [maven (format "META-INF/maven/%s/%s" (:group-id project) (:artifact-id project))
-        cake  (format "META-INF/cake/%s/%s"  (:group-id project) (:artifact-id project))
+        bake  (format "META-INF/bake/%s/%s"  (:group-id project) (:artifact-id project))
         src   (file "src" "clj")
         src   (if (.exists src) src (file "src"))]
     (ant Jar {:dest-file (jarfile project)}
          (add-manifest (manifest project))
          (add-license)
          (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
-         (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
+         (add-zipfileset {:dir (file) :prefix bake  :includes "*.clj"})
          (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
          (add-fileset    {:dir src                  :includes "**/*.clj"})
          (add-fileset    {:dir (file "src" "jvm")   :includes "**/*.java"})
@@ -116,7 +116,7 @@
 
 (deftask install #{jar}
   "Install jar to local repository."
-  (let [refid "cake.pom"]
+  (let [refid "bake.pom"]
     (ant Pom {:file "pom.xml" :id refid})
     (ant InstallTask {:file (jarfile project) :pom-ref-id refid})))
 

@@ -1,11 +1,11 @@
 (ns foo
-  (:use cake))
+  (:use bake))
 
 (defn bar [project]
   [(count project) (keys project)])
 
 (deftask foo
-  (bake
+  (cake
     (:use clojure.test)
     [a (bar project)]
       (is true)

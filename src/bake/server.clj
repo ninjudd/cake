@@ -1,6 +1,6 @@
-(ns cake.server
-  (:use [cake.contrib.find-namespaces :only [read-file-ns-decl]])
-  (:require [cake.contrib.server-socket :as server-socket]
+(ns bake.server
+  (:use [bake.contrib.find-namespaces :only [read-file-ns-decl]])
+  (:require [bake.contrib.server-socket :as server-socket]
             [clojure.stacktrace :as stacktrace]
             complete)
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream]

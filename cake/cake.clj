@@ -1,24 +1,24 @@
-(ns bake
-  (:use cake.project)
+(ns cake
+  (:use bake.project)
   (:require clojure.main            
-            [cake.swank :as swank]
-            [cake.server :as server])
+            [bake.swank :as swank]
+            [bake.server :as server])
   (:import [java.io FileOutputStream PrintStream PrintWriter]))
 
-(defonce bake-project (atom nil))
+(defonce cake-project (atom nil))
 (def project nil)
 
-(defmacro defproject "Just save project hash in bake."
+(defmacro defproject "Just save project hash in cake."
   [name version & args]
   (let [opts (apply hash-map args)]
-    `(do (compare-and-set! bake-project nil (create-project '~name ~version '~opts)))))
+    `(do (compare-and-set! cake-project nil (create-project '~name ~version '~opts)))))
 
-(defmacro deftask "Just ignore deftask calls in bake."
+(defmacro deftask "Just ignore deftask calls in cake."
   [name & body])
 
 (defn eval-multi [form]
   (clojure.main/with-bindings
-    (binding [project @bake-project]
+    (binding [project @cake-project]
       (if (vector? form)
         (doseq [f form] (eval f))
         (eval form)))))
@@ -29,7 +29,7 @@
     (println "refusing to quit because there are active swank connections")))
 
 (defn startup [project]
-  (System/setErr (PrintStream. (FileOutputStream. ".cake/bake.log")))
+  (System/setErr (PrintStream. (FileOutputStream. ".bake/cake.log")))
   (binding [*err* (PrintWriter. System/err true)]
     (try (doseq [ns (:require project)]
            (require ns))
@@ -39,7 +39,7 @@
 
 (defn start-server [port]
   (init "project.clj")
-  (startup @bake-project)  
+  (startup @cake-project)  
   (server/create port eval-multi :quit quit)
   (when-let [opts (swank/config)]
     (when-not (= false (:auto-start opts))

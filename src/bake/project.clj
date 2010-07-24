@@ -1,6 +1,6 @@
-(ns cake.project
+(ns bake.project
   (:use [useful :only [assoc-or]])
-  (:require [cake.swank :as swank])
+  (:require [bake.swank :as swank])
   (:import [java.io File]))
 
 (defn group [project]

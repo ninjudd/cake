@@ -1,16 +1,16 @@
-(ns cake.swank
+(ns bake.swank
   (:import [java.io File StringWriter PrintWriter]))
 
 (def defaults {:host "localhost" :port 4005 :library ['swank-clojure "1.2.1"]})
 
 (defn config []
-  (let [file (File. ".cake/swank")]
+  (let [file (File. ".bake/swank")]
     (when (.exists file)
       (try (let [string (slurp file)]
              (merge defaults
                     (if (empty? string) {} (read-string string))))
            (catch Exception e
-             (println "error reading .cake/swank:")
+             (println "error reading .bake/swank:")
              (println (.getMessage e)))))))
 
 (defonce *port* (atom nil))

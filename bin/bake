@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-# Save your fork, there's cake!"
+# Save your fork, there's bake!"
 require 'ftools'
 require 'find'
 require 'open-uri'
@@ -25,7 +25,7 @@ end
 
 def project_dir(dir)
   while dir != "/"
-    return dir if [".cake", "project.clj", "build.clj"].any? {|file| File.exists?("#{dir}/#{file}")}
+    return dir if [".bake", "project.clj", "build.clj"].any? {|file| File.exists?("#{dir}/#{file}")}
     dir = File.dirname(dir)
   end
   File.expand_path("~")
@@ -33,20 +33,20 @@ end
 
 PATH_SEP = ':'
 file     = File.readlink(__FILE__) rescue __FILE__
-$bakedir = project_dir(Dir.getwd)
-$cakedir = File.dirname(File.dirname(file))
-$repo    = "http://clojars.org/repo/cake/cake"
-$confdir = ".cake"
-Dir.chdir($bakedir)
+$cakedir = project_dir(Dir.getwd)
+$bakedir = File.dirname(File.dirname(file))
+$repo    = "http://clojars.org/repo/bake/bake"
+$confdir = ".bake"
+Dir.chdir($cakedir)
 File.makedirs($confdir)
 
-def get_cake(version, dest = nil)
-  jar  = version =~ /(.*)-SNAPSHOT/ ? "cake-#{$1}-#{snapshot(version)}.jar" : "cake-#{version}.jar"
-  repo = File.expand_path("~/.m2/repository/cake/cake/#{version}")
+def get_bake(version, dest = nil)
+  jar  = version =~ /(.*)-SNAPSHOT/ ? "bake-#{$1}-#{snapshot(version)}.jar" : "bake-#{version}.jar"
+  repo = File.expand_path("~/.m2/repository/bake/bake/#{version}")
   path = "#{repo}/#{jar}"
 
   if not File.exists?(path)
-    log(:deps, "fetching cake libraries. this may take a moment...")
+    log(:deps, "fetching bake libraries. this may take a moment...")
     url = "#{$repo}/#{version}/#{jar}"
     File.makedirs(repo)
     open(url) do |jarfile|
@@ -64,8 +64,8 @@ def get_cake(version, dest = nil)
   File.copy(path, dest)
   "#{dest}/#{jar}"
 rescue OpenURI::HTTPError => e
-  log(:deps, "unable to find cake version #{version} on clojars.")
-  log(:deps, "please check http://github.com/ninjudd/cake for latest install instructions.")
+  log(:deps, "unable to find bake version #{version} on clojars.")
+  log(:deps, "please check http://github.com/ninjudd/bake for latest install instructions.")
   exit
 end
 
@@ -123,7 +123,7 @@ end
 parse_opts!
 
 def debug?
-  ENV['CAKE_DEBUG'] or $opts[:d] or $opts[:debug]
+  ENV['BAKE_DEBUG'] or $opts[:d] or $opts[:debug]
 end
 
 def verbose?
@@ -131,7 +131,7 @@ def verbose?
 end
 
 def config_updated?
-  newer?(".cake/config", ".cake/cake.pid") or (File.exists?(".cake/bake.pid") and newer?(".cake/config", ".cake/bake.pid"))
+  newer?(".bake/config", ".bake/bake.pid") or (File.exists?(".bake/cake.pid") and newer?(".bake/config", ".bake/cake.pid"))
 end
 
 def restart?
@@ -171,7 +171,7 @@ class Config < Hash
 end
 
 def config
-  @config ||= Config.new(".cake/config")
+  @config ||= Config.new(".bake/config")
 end
 
 class JVM
@@ -262,7 +262,7 @@ class JVM
     else
       log(:start, "starting #{type} jvm") if verbose? or $command == :start
       @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-      @pid = daemon %{ java -Dcake.project=#{$bakedir} #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
+      @pid = daemon %{ java -Dbake.project=#{$cakedir} #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
       File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
     end
   rescue Errno::EADDRNOTAVAIL => e
@@ -280,10 +280,10 @@ class JVM
       else
         inspect(socket) if debug?
         if mode == :stop
-          log(mode, "error stopping #{type} jvm, try 'cake kill' or 'cake kill -9'")
+          log(mode, "error stopping #{type} jvm, try 'bake kill' or 'bake kill -9'")
         else
           log(mode, "warning: classes have changed but can't restart #{type} jvm with active connections")
-          log(mode, "         close active connections or use 'cake stop' to force quit")
+          log(mode, "         close active connections or use 'bake stop' to force quit")
         end
       end
     end || (log(mode, "#{type} jvm not running") if $command == :stop)
@@ -300,7 +300,7 @@ class JVM
         files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
       else
         Find.find(path) do |f|
-          Find.prune if f == "#{$bakedir}/src/jvm"
+          Find.prune if f == "#{$cakedir}/src/jvm"
           files << f if File.exists?(f) and not File.directory?(f)
         end
       end
@@ -337,7 +337,7 @@ private
 
   def make_path(paths)
     paths.flatten.compact.collect do |path|
-      path[0,1] == '/' ? path : "#{$bakedir}/#{path}"
+      path[0,1] == '/' ? path : "#{$cakedir}/#{path}"
     end.join(PATH_SEP)
   end
 
@@ -381,7 +381,7 @@ private
   end
 
   HISTORY_NUM  = 500
-  HISTORY_FILE = ".cake/history"
+  HISTORY_FILE = ".bake/history"
   def load_history
     open(HISTORY_FILE) do |file|
       file.each {|line| Readline::HISTORY << line.chomp}
@@ -443,14 +443,14 @@ private
   end
 end
 
-class Cake < JVM
-  attr_accessor :bakeport
+class Bake < JVM
+  attr_accessor :cakeport
 
   READLINE = "READLINE__#{rand}"
   def send_command(command, args = [])
     with_socket do |socket|
       args = args.collect{|arg| '"' + arg.gsub('"', '\"').gsub("\n", "\\n") + '"'}
-      cmd  = %{(#{command} [#{args.join(' ')}] #{bakeport}) "#{READLINE}"}
+      cmd  = %{(#{command} [#{args.join(' ')}] #{cakeport}) "#{READLINE}"}
       log(command, "sending: " + cmd) if debug?
       socket.write(cmd)
       while (line = socket.gets)
@@ -466,11 +466,11 @@ class Cake < JVM
   end
 
   def files
-    super.concat ["build.clj", ".cake/swank"]
+    super.concat ["build.clj", ".bake/swank"]
   end
 
   def java_opts
-    [ENV['CAKE_JAVA_OPTS'], config['cake.java_opts'], super].compact.join(' ')
+    [ENV['BAKE_JAVA_OPTS'], config['bake.java_opts'], super].compact.join(' ')
   end
 
 private
@@ -490,7 +490,7 @@ private
   end
 end
 
-class Bake < JVM
+class Cake < JVM
   def java_opts
     [ENV['JAVA_OPTS'], config['project.java_opts'], super].compact.join(' ')
   end
@@ -500,101 +500,101 @@ class Bake < JVM
   end
 end
 
-# Bootstrap cake dependencies.
-lib = "#{$cakedir}/lib"
-if File.exists?("#{$cakedir}/.gitignore")
+# Bootstrap bake dependencies.
+lib = "#{$bakedir}/lib"
+if File.exists?("#{$bakedir}/.gitignore")
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
-    version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
-    cakejar = get_cake(version, lib)
-    extract(cakejar, "bake-#{version}.jar", "#{lib}/dev")
+    version = IO.read("#{$bakedir}/project.clj").split("\n").first.match(/defproject bake \"(.*)\"/)[1]
+    bakejar = get_bake(version, lib)
+    extract(bakejar, "cake-#{version}.jar", "#{lib}/dev")
   end
 
-  cakepath = ["#{$cakedir}/src", "#{lib}/*:#{lib}/dev/*"].join(PATH_SEP)
-  bakepath = ["#{$cakedir}/bake", "#{lib}/dev/*"].join(PATH_SEP)
+  bakepath = ["#{$bakedir}/src", "#{lib}/*:#{lib}/dev/*"].join(PATH_SEP)
+  cakepath = ["#{$bakedir}/cake", "#{lib}/dev/*"].join(PATH_SEP)
 else
-  cakejar = "#{lib}/cake.jar"
   bakejar = "#{lib}/bake.jar"
-  if File.exists?(cakejar) and File.exists?(bakejar)
+  cakejar = "#{lib}/cake.jar"
+  if File.exists?(bakejar) and File.exists?(cakejar)
     # Inside a gem install.
-    cakepath = cakejar
     bakepath = bakejar
+    cakepath = cakejar
   else
     # Naked script.
     version  = current_version
-    cakepath = get_cake(version)
-    bakepath = extract(cakepath, "bake-#{version}.jar")
+    bakepath = get_bake(version)
+    cakepath = extract(bakepath, "cake-#{version}.jar")
   end
 end
 
-cake = Cake.new(
-  [cakepath, "src", "src/clj", config['cake.claspath'], "lib/dev/*"],
-  [config['cake.library.path'], "lib/dev/native"]
-)
 bake = Bake.new(
-  [bakepath, "src", "src/clj", "classes", "test", config['project.classpath'], "lib/*", "lib/dev/*"],
+  [bakepath, "src", "src/clj", config['bake.claspath'], "lib/dev/*"],
+  [config['bake.library.path'], "lib/dev/native"]
+)
+cake = Cake.new(
+  [cakepath, "src", "src/clj", "classes", "test", config['project.classpath'], "lib/*", "lib/dev/*"],
   [config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 
 if $command == :kill
   if $opts[:all]
-    `jps -v | grep cake.project`.split("\n").each do |line|
+    `jps -v | grep bake.project`.split("\n").each do |line|
       pid = line.split(' ').first.to_i
       Process.kill($opts[:"9"] ? "KILL" : "TERM", pid)
     end
   else
-    cake.kill
     bake.kill
+    cake.kill
   end
   exit
 elsif $command == :ps
-  puts `jps -v | grep cake.project`.sort.reverse
+  puts `jps -v | grep bake.project`.sort.reverse
   exit
 elsif restart? or config_updated?
-  cake.stop
   bake.stop
+  cake.stop
   exit if $command == :stop
 end
 
-cake.init
+bake.init
 if not [:deps, :clean].include?($command) and File.exists?('project.clj')
   if newer?('project.clj', 'pom.xml')
-    cake.send_command(:deps) 
-    cake.init
-  elsif File.exist?('.cake/swank')    
-    cake.send_command(:"swank-deps")
-    cake.init
+    bake.send_command(:deps) 
+    bake.init
+  elsif File.exist?('.bake/swank')    
+    bake.send_command(:"swank-deps")
+    bake.init
   end
 
-  bake.init
+  cake.init
 end
 
 if $command == :repl
-  if File.exists?('project.clj') and not $opts[:cake]
-    bake.repl
-  else
+  if File.exists?('project.clj') and not $opts[:bake]
     cake.repl
+  else
+    bake.repl
   end
 elsif [:start, :reload, :restart].include?($command)
   if $opts[:l] or $opts[:log]
-    system("tail -f .cake/bake.log")
+    system("tail -f .bake/cake.log")
   else
-    cake.ping
     bake.ping
+    cake.ping
   end
 else
-  cake.bakeport = bake.port
+  bake.cakeport = cake.port
   if $command == :test and $opts[:auto]
     interval = $opts[:auto].last.to_i 
     interval = (config['test.auto.interval'].to_i if config['test.auto.interval']) || (1 if interval == 0)
     run_tests = true
     while true
-      cake.send_command($command, ARGV) if run_tests
-      run_tests = bake.reload
-      cake.reload
+      bake.send_command($command, ARGV) if run_tests
+      run_tests = cake.reload
+      bake.reload
       sleep(interval)
     end
   else
-    cake.send_command($command, ARGV)
+    bake.send_command($command, ARGV)
   end
 end

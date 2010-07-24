@@ -1,31 +1,30 @@
-*Save your fork, there's cake!*
-
-Cake is a build tool for Clojure that is as easy to use as it sounds, inspired by fond
-memories of Rake and countless hours of singeing our hair with other build tools.
+Bake is a build tool for Clojure that is as mind-alteringly awesome to use as it sounds,
+inspired by fond memories of Rake and countless hours of singeing our hair with other
+build tools.
 
 ## Installation
 
-There are three ways to get Cake. The simplest method is just to install the gem. If
+There are three ways to get Bake. The simplest method is just to install the gem. If
 you're new, that's what we recommend.
 
 ### Using gem
 
-1. `gem install cake`
+1. `gem install bake.clj`
 
 ### Standalone script
 
-1. [Download the script](https://github.com/ninjudd/cake/raw/master/bin/cake)
-2. Put it somewhere in your path and `chmod +x cake` to make it executable
+1. [Download the script](https://github.com/ninjudd/bake/raw/master/bin/bake)
+2. Put it somewhere in your path and `chmod +x bake` to make it executable
 
 ### Git repository
 
-1. `git://github.com/ninjudd/cake.git`
-2. Symlink bin/cake into your path and make it executable
+1. `git://github.com/ninjudd/bake.git`
+2. Symlink bin/bake into your path and make it executable
 
 ## Getting Started
 
-Cake is compatible with Leiningen project.clj files, so if you already have a project.clj,
-you're ready to go. Just install Cake and then type `cake` in your project root for a list
+Bake is compatible with Leiningen project.clj files, so if you already have a project.clj,
+you're ready to go. Just install Bake and then type `bake` in your project root for a list
 of tasks.
 
 If you don't yet have a project.clj file, creating one is simple. Here's an example:
@@ -42,22 +41,22 @@ If you don't yet have a project.clj file, creating one is simple. Here's an exam
 
 ## Default Tasks
 
-Cake provides default tasks for most of the things you probably do on a regular basis.
+Bake provides default tasks for most of the things you probably do on a regular basis.
 
-    cake help     ;; Print tasks with documentation. Use 'cake help TASK' for more details.
-    cake test     ;; Run project tests.
-    cake compile  ;; Compile all clojure and java source files.
-    cake deps     ;; Fetch dependencies and create pom.xml.
-    cake jar      ;; Build a jar file containing project source and class files.
-    cake release  ;; Release project jar to clojars.
-    cake install  ;; Install jar to local repository.
-    cake war      ;; Create a web archive containing project source and class files.
-    cake uberjar  ;; Create a standalone jar containing all project dependencies.
-    cake uberwar  ;; Create a web archive containing all project dependencies.
-    cake repl     ;; Start an interactive shell with history and tab completion.
-    cake swank    ;; Report status of swank server and start it if not running.
+    bake help     ;; Print tasks with documentation. Use 'bake help TASK' for more details.
+    bake test     ;; Run project tests.
+    bake compile  ;; Compile all clojure and java source files.
+    bake deps     ;; Fetch dependencies and create pom.xml.
+    bake jar      ;; Build a jar file containing project source and class files.
+    bake release  ;; Release project jar to clojars.
+    bake install  ;; Install jar to local repository.
+    bake war      ;; Create a web archive containing project source and class files.
+    bake uberjar  ;; Create a standalone jar containing all project dependencies.
+    bake uberwar  ;; Create a web archive containing all project dependencies.
+    bake repl     ;; Start an interactive shell with history and tab completion.
+    bake swank    ;; Report status of swank server and start it if not running.
 
-[Default Task Documentation](http://wiki.github.com/ninjudd/cake/default-tasks)
+[Default Task Documentation](http://wiki.github.com/ninjudd/bake/default-tasks)
 
 ## Custom Tasks
 
@@ -66,11 +65,11 @@ directly to project.clj or build.clj, or if you put your tasks in a namespace wi
 src directory they can be used by both your project and other projects. In this case, you
 just need to add the enclosing namespace to the `:tasks` vector in project.clj.
 
-Like many build tools, Cake uses a dependency-based programming style. This means you
-specify the tasks your task depends on and Cake will run those tasks before running your
+Like many build tools, Bake uses a dependency-based programming style. This means you
+specify the tasks your task depends on and Bake will run those tasks before running your
 task, ensuring that each task is only run once. For more details, check out Martin Fowler's
 [excellent article](http://martinfowler.com/articles/rake.html#DependencyBasedProgramming)
-on Rake. Here is the example from that article using Cake syntax:
+on Rake. Here is the example from that article using Bake syntax:
 
     (deftask code-gen
       "This task generates code. It has no dependencies."
@@ -100,7 +99,7 @@ running tasks in parallel.
 
 ## Command-line Arguments
 
-There is no way to pass parameters from one task to another, however, Cake does parse all
+There is no way to pass parameters from one task to another, however, Bake does parse all
 command-line arguments and make them available to all tasks as a var called `opts` which
 contains a map of keys to vectors of repeated values. Named args begin with `--keyname`
 and are mapped to `:keyname`. Unnamed arguments are mapped to `:taskname`. Repeated named
@@ -109,18 +108,18 @@ double dashes are both supported though a single dash followed by word character
 internal dashes or an equal sign is assumed to be single character argument flags and are
 split accordingly.
 
-Here are some example Cake commands followed be the corresponding opts:
+Here are some example Bake commands followed be the corresponding opts:
 
-    cake help compile
+    bake help compile
     {:help ["compile"]}
 
-    cake test :unit :functional foo.test.login-controller
+    bake test :unit :functional foo.test.login-controller
     {:test [":unit" ":functional" "foo.test.login-controller"]}
 
-    cake compile --compile-native=x86,debug --verbose
+    bake compile --compile-native=x86,debug --verbose
     {:compile-native ["x86", "debug"] :verbose [""]}
 
-    cake foo -vD -no-wrap -color=blue,green --style=baroque -color=red
+    bake foo -vD -no-wrap -color=blue,green --style=baroque -color=red
     {:style ["baroque"], :color ["blue" "green" "red"], :no-wrap [""], :D [""], :v [""]}
 
 In the first two examples, you can see that unnamed arguments are placed under the task
@@ -132,7 +131,7 @@ separating them with commas, as in the third example.
 
 ### Extending tasks
 
-Like Rake, Cake allows you to add actions, dependencies and even documentation to existing
+Like Rake, Bake allows you to add actions, dependencies and even documentation to existing
 tasks. For example:
 
     (deftask compile #{compile-native}
@@ -142,7 +141,7 @@ tasks. For example:
       (println "Running integration tests...")
       ...)
 
-Actions will be run in the order they are added, so if you extend Cake default tasks, your
+Actions will be run in the order they are added, so if you extend Bake default tasks, your
 code will be run after the default code. All dependencies will be run before all actions,
 but there are no other guarantees about the order dependecies will be run.
 
@@ -176,34 +175,34 @@ task for some other reason, you can use `invoke`.
 
 ### Native Library Dependencies
 
-Cake will automatically extract precompiled native libraries for your os and architecture
+Bake will automatically extract precompiled native libraries for your os and architecture
 from dependency jars and put them in `lib/native/` and `lib/dev/native/`. Native libraries
 must be located in `native/<os-name>/<os-arch>/` within the jar.
 
     os-name -> linux | macosx | solaris | windows
     os-arch -> x86_64 | x86 | arm | sparc
 
-Cake also adds these directories to `java.library.path` when starting the JVM. If you want
+Bake also adds these directories to `java.library.path` when starting the JVM. If you want
 to add additional paths to `java.library.path`, you can add Java properties called
-`cake.library.path` and `project.library.path` to `.cake/config`.
+`bake.library.path` and `project.library.path` to `.bake/config`.
 
 ### Subproject Dependencies
 
 Sometimes one or more of your dependencies are other projects you are working on, and you
 want to track changes to those projects without having to release them to clojars. To do
 this, simply add a Java property named `subproject.<project-name>` with the path to the
-git checkout to `.cake/config`, like this:
+git checkout to `.bake/config`, like this:
 
     subproject.clojure-useful   = /Users/justin/projects/useful
     subproject.clojure-complete = /Users/justin/projects/complete
 
-Now instead of fetching these projects from clojars, `cake deps` will run `cake jar` in
+Now instead of fetching these projects from clojars, `bake deps` will run `bake jar` in
 each project checkout and copy the resulting jar along with all deps into your main
-project's `lib` directory. You still have to run `cake deps` for subproject changes to
+project's `lib` directory. You still have to run `bake deps` for subproject changes to
 show up in your main project, but this is probably best in most cases.
 
 If you really do want changes to clojure source files to show up immediately, you can always
-add the subproject `src` directory to your project classpath in `.cake/config` like this:
+add the subproject `src` directory to your project classpath in `.bake/config` like this:
 
     project.classpath = /Users/justin/projects/useful/src
 
@@ -211,29 +210,31 @@ add the subproject `src` directory to your project classpath in `.cake/config` l
 
 If you've used the JVM for much time at all, you know that one of the worst things about
 it is the incredibly slow start-up time. This is even more apparent when you are running a
-build tool. Cake solves this problem by using persistent JVMs (one for Cake itself, and
-one for your project). When you run the `cake` script, it first makes sure the JVM is
+build tool. Bake solves this problem by using persistent JVMs (one for Bake itself, and
+one for your project). When you run the `bake` script, it first makes sure the JVM is
 running, then it connects using a socket and sends your command. This makes interacting
 with your Clojure project blazingly fast. This also makes it really easy to open multiple
 REPL threads that all share a single JVM which is great for testing parallel code.
 
-Cake tries to keep the persistent JVMs running as long as possible by reloading Clojure
-files that have changed. However, when .java, .class and .jar files change, Cake has to
-restart the project JVM. If you have existing REPL or Swank connections though, Cake will
+Bake tries to keep the persistent JVMs running as long as possible by reloading Clojure
+files that have changed. However, when .java, .class and .jar files change, Bake has to
+restart the project JVM. If you have existing REPL or Swank connections though, Bake will
 refuse to close the JVM, printing a warning instead.
 
 ### Custom JVM Options
 
 If you need custom command-line options for your JVMs, you can use the `JAVA_OPTS`
-environment variable for the project JVM and `CAKE_JAVA_OPTS` for the Cake JVM. You can
+environment variable for the project JVM and `BAKE_JAVA_OPTS` for the Bake JVM. You can
 also specify options for an individual project by adding the Java properties
-`cake.java_opts` and `project.java_opts` to `.cake/config`. For example:
+`bake.java_opts` and `project.java_opts` to `.bake/config`. For example:
 
     project.java_opts = -Xms1024M -Xmx2048M -Dfoo=bar
-    cake.java_opts    = -Xms128M -Xmx128M -Dfoo=baz
+    bake.java_opts    = -Xms128M -Xmx128M -Dfoo=baz
 
 ## Inspirational Quote
 
-> You are what makes Clojure great - find some cake and celebrate!
+> You are what makes Clojure great - find some bake and celebrate!
 >
-> &mdash; [Rich Hickey](http://clojure.blogspot.com/2009/10/clojure-is-two.html) (taken totally out of context)
+> &mdash; [Rich Hickey](http://clojure.blogspot.com/2009/10/clojure-is-two.html)
+
+(taken totally out of context and search-and-replaced)
