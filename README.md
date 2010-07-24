@@ -18,7 +18,7 @@ you're new, that's what we recommend.
 
 ### Git repository
 
-1. `git://github.com/ninjudd/bake.git`
+1. `git clone git://github.com/ninjudd/bake.git`
 2. Symlink bin/bake into your path and make it executable
 
 ## Getting Started
