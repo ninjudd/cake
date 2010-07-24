@@ -586,7 +586,7 @@ else
   cake.bakeport = bake.port
   if $command == :test and $opts[:auto]
     interval = $opts[:auto].last.to_i 
-    interval = config['test.auto.interval'].to_i if config['test.auto.interval'] || 1 if interval == 0
+    interval = (config['test.auto.interval'].to_i if config['test.auto.interval']) || (1 if interval == 0)
     run_tests = true
     while true
       cake.send_command($command, ARGV) if run_tests
