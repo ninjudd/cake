@@ -184,9 +184,6 @@ class JVM
     @pidfile    = "#{$confdir}/#{type}.pid"
     @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
     refresh
-  rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED => e
-    log(:start, "defunct #{type} jvm") if debug? and e.kind_of?(Errno::ECONNREFUSED)
-    reset! # no pidfile or invalid pid or connection refused
   end
 
   def running?
@@ -206,7 +203,10 @@ class JVM
   def refresh
     @pid, @port = IO.read(pidfile).map {|l| l.to_i}
     Process.kill(0, @pid) # make sure pid is valid
-    TCPSocket.new("localhost", @port) if @port # make sure jvm is running on port
+    TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
+  rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED => e
+    log(:start, "defunct #{type} jvm") if debug? and e.kind_of?(Errno::ECONNREFUSED)
+    reset! # no pidfile or invalid pid or connection refused
   end
 
   def reload
