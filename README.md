@@ -19,7 +19,7 @@ you're new, that's what we recommend.
 
 ### Git repository
 
-1. `git clone http://github.com/ninjudd/cake`
+1. `git://github.com/ninjudd/cake.git`
 2. Symlink bin/cake into your path and make it executable
 
 ## Getting Started
