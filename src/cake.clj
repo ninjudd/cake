@@ -161,7 +161,7 @@
 (defn process-command [form]
   (let [[task args port] form]
     (binding [project         @cake-project
-              ant/ant-project (ant/init-project project server/*outs*)
+              ant/ant-project (ant/init-project @cake-project server/*outs*)
               opts            (parse-opts (keyword task) args)
               config          (read-config)
               bake-port       port
