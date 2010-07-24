@@ -148,7 +148,7 @@ def log(command, *message)
   end
 end
 
-class Config < Hash
+class Configuration < Hash
   def initialize(path)
     File.open(path, 'r') do |file|
       file.each do |line|
@@ -171,7 +171,7 @@ class Config < Hash
 end
 
 def config
-  @config ||= Config.new(".bake/config")
+  @config ||= Configuration.new(".bake/config")
 end
 
 class JVM
