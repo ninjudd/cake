@@ -1,14 +1,14 @@
-(ns bake)
+(ns cake)
 
 ; must be declared first so other namespaces can access them
 (def current-task nil)
-(defonce bake-project (atom nil))
+(defonce cake-project (atom nil))
 (def project nil)
 
-(ns bake
-  (:use useful bake.project)
-  (:require [bake.ant :as ant]
-            [bake.server :as server])
+(ns cake
+  (:use useful cake.project)
+  (:require [cake.ant :as ant]
+            [cake.server :as server])
   (:import [java.io File FileReader FileInputStream InputStreamReader OutputStreamWriter BufferedReader]
            [java.net Socket ConnectException]
            [java.util Properties]))
@@ -20,9 +20,9 @@
   (let [opts (apply hash-map args)
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (apply hash-map task-opts)]    
-    `(do (compare-and-set! bake-project nil (create-project '~name ~version '~opts))
-         ; @bake-project must be set before we include the tasks for cake to work.
-         (require '~'[bake.tasks help jar test compile dependencies swank clean])
+    `(do (compare-and-set! cake-project nil (create-project '~name ~version '~opts))
+         ; @cake-project must be set before we include the tasks for bake to work.
+         (require '~'[cake.tasks help jar test compile dependencies swank clean])
          ~@(for [ns tasks]
              `(try (require '~ns)
                    (catch java.io.FileNotFoundException e#
@@ -61,15 +61,15 @@
 
 (def implicit-tasks
   {'repl    "Start an interactive shell with history and tab completion."
-   'stop    "Stop bake jvm processes."
-   'start   "Start bake jvm processes."
-   'restart "Restart bake jvm processes."
+   'stop    "Stop cake jvm processes."
+   'start   "Start cake jvm processes."
+   'restart "Restart cake jvm processes."
    'reload  "Reload any .clj files that have changed or restart."
-   'ps      "List running bake jvm processes for all projects."
-   'kill    "Kill running bake jvm processes. Use -9 to force or --all for all projects."})
+   'ps      "List running cake jvm processes for all projects."
+   'kill    "Kill running cake jvm processes. Use -9 to force or --all for all projects."})
 
 (defmacro deftask
-  "Define a bake task. Each part of the body is optional. Task definitions can
+  "Define a cake task. Each part of the body is optional. Task definitions can
    be broken up among multiple deftask calls and even multiple files:
    (deftask foo #{bar baz} ; a set of prerequisites for this task
      \"Documentation for task.\"
@@ -102,17 +102,17 @@
 (defmacro invoke [name]
   `(run-task '~name))
 
-(def cake-port nil)
+(def bake-port nil)
 
-(defn- cake-connect [port]
+(defn- bake-connect [port]
   (loop []
     (if-let [socket (try (Socket. "localhost" (int port)) (catch ConnectException e))]
       socket
       (recur))))
 
 (defn- quote-if
-  "We need to quote the binding keys so they are not evaluated within the cake syntax-quote and the
-   binding values so they are not evaluated in the cake* syntax-quote. This function makes that possible."
+  "We need to quote the binding keys so they are not evaluated within the bake syntax-quote and the
+   binding values so they are not evaluated in the bake* syntax-quote. This function makes that possible."
   [pred bindings]
   (reduce
    (fn [v form]
@@ -122,12 +122,12 @@
    [] bindings))
 
 (defn bake* [ns-forms bindings body]
-  (if (nil? cake-port)
-    (println "bake command not supported. perhaps you don't have a project.clj")
-    (let [ns     (symbol (str "cake.task." (name current-task)))
-          forms `[(~'ns ~ns (:use ~'[cake :only [project]]) ~@ns-forms)
+  (if (nil? bake-port)
+    (println "bake not supported. perhaps you don't have a project.clj")
+    (let [ns     (symbol (str "bake.task." (name current-task)))
+          forms `[(~'ns ~ns (:use ~'[bake :only [project]]) ~@ns-forms)
                   (~'let ~(quote-if odd? bindings) ~@body)]
-          socket (cake-connect (int cake-port))
+          socket (bake-connect (int bake-port))
           reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (OutputStreamWriter. (.getOutputStream socket))]
       (doto writer
@@ -144,14 +144,14 @@
   {:arglists '([ns-forms* bindings body*])}
   [& forms]
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)
-        bindings (into ['opts 'bake/opts] bindings)]
+        bindings (into ['opts 'cake/opts] bindings)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
 (def opts   nil)
 (def config nil)
 
 (defn read-config []
-  (let [file (File. ".bake/config")]
+  (let [file (File. ".cake/config")]
     (when (.exists file)
       (with-open [f (FileInputStream. file)]
         (into {} (doto (Properties.) (.load f)))))))
@@ -160,11 +160,11 @@
 
 (defn process-command [form]
   (let [[task args port] form]
-    (binding [project         @bake-project
-              ant/ant-project (ant/init-project @bake-project server/*outs*)
+    (binding [project         @cake-project
+              ant/ant-project (ant/init-project @cake-project server/*outs*)
               opts            (parse-opts (keyword task) args)
               config          (read-config)
-              cake-port       port
+              bake-port       port
               run?            {}
               readline-marker (read)]
       (doseq [dir ["lib" "classes" "build"]]
@@ -193,6 +193,6 @@
 
 (defn start-server [port]
   (init "project.clj" "build.clj")
-  (when-not @bake/bake-project (require '[bake.tasks help new]))
+  (when-not @cake/cake-project (require '[cake.tasks help new]))
   (server/create port process-command :reload reload-files)
   nil)

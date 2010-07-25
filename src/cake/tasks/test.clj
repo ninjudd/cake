@@ -1,5 +1,5 @@
-(ns bake.tasks.test
-  (:use bake)
+(ns cake.tasks.test
+  (:use cake)
   (:import [java.io File]))
 
 (deftask test #{compile}

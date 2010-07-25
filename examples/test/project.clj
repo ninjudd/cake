@@ -1,5 +1,5 @@
 (defproject test-example "0.1.0-SNAPSHOT"
-  :description "bake example project"
+  :description "cake example project"
   :tasks [foo :exclude [uberjar jar]]
   :dependencies [[clojure "1.2.0-master-SNAPSHOT"]
                  [clojure-contrib "1.2.0-SNAPSHOT"]
@@ -9,7 +9,7 @@
   :dev-dependencies [[clojure-complete "0.1.0" :exclusions [clojure]]])
 
 (deftask bar
-  (cake (:use useful)
+  (bake (:use useful)
         [foo (prompt-read "enter foo")
          bar (prompt-read "enter bar")
          pw  (prompt-read "enter password" :echo false)]

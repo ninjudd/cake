@@ -1,6 +1,6 @@
-(ns bake.ant
+(ns cake.ant
   "Lancet-inspired ant helpers."
-  (:require bake)
+  (:require cake)
   (:import [org.apache.tools.ant Project NoBannerLogger]
            [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]
            [org.apache.tools.ant.taskdefs Echo Javac Manifest Manifest$Attribute]
@@ -56,7 +56,7 @@
 (defmacro ant [task attrs & forms]
   `(doto (make* ~task ~attrs)
      ~@forms
-     (.setTaskName (name bake/current-task))
+     (.setTaskName (name cake/current-task))
      (.execute)))
 
 (defn get-reference [ref-id]

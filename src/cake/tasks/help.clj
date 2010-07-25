@@ -1,12 +1,12 @@
-(ns bake.tasks.help
-  (:use bake))
+(ns cake.tasks.help
+  (:use cake))
 
 (def line "-------------------------------------------")
 
 (defn print-task [name deps docs]
   (println line)
   (let [deps (if (seq deps) (cons "=>" deps) deps)]
-    (apply println "bake" name deps)
+    (apply println "cake" name deps)
     (doseq [doc docs] (println "  " doc))))
 
 (defn task-doc [& syms]
@@ -28,12 +28,12 @@
   (println line)
   (let [taskdocs (taskdocs)
         width    (apply max (map #(count (name (first %))) taskdocs))
-        taskdoc  (str "bake %-" width "s  ;; %s")]
+        taskdoc  (str "cake %-" width "s  ;; %s")]
     (doseq [[name doc] (sort-by first taskdocs)]
       (println (format taskdoc name doc)))))
 
 (deftask help
-  "Print tasks with documentation. Use 'bake help TASK' for more details."
+  "Print tasks with documentation. Use 'cake help TASK' for more details."
   "Use -s to list system tasks and -a to list all tasks, including those without documentation."
   (if-let [names (:help opts)]
     (apply task-doc (map symbol names))

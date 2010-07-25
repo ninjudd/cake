@@ -1,5 +1,5 @@
 pom.xml
-.bake
+.cake
 *.jar
 *.war
 *~
