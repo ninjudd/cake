@@ -17,12 +17,19 @@
     (read-string str)
     (symbol str)))
 
+(defn test-type [test]
+  (cond (namespace test) :fn
+        (keyword?  test) :tag
+        :else            :ns))
+
 (defn group-opts [coll]
-  (group-by #(cond (and (namespace %)
-                        (name %))     :fn
-                   (keyword? %)       :tag
-                   :else              :ns)
-            coll))
+  ;; don't use group-by so we are compatible with 1.1
+  (reduce
+   (fn [ret x]
+     (let [k (test-type x)]
+       (assoc ret k (conj (get ret k []) x))))
+   {}
+   coll))
 
 (defn get-grouped-tests [namespaces opts]
   (let [tests (:test opts)]
