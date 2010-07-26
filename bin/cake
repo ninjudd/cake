@@ -498,6 +498,17 @@ class Bake < JVM
   def enabled?
     Dir["lib/*.jar"].any?
   end
+
+  def eval(*forms)
+    forms = forms.join(' ')
+    with_socket do |socket|
+      log(:eval, forms) if debug?
+      socket.write('[' + forms + ']')
+      while (line = socket.gets)
+        puts line
+      end
+    end
+  end
 end
 
 # Bootstrap cake dependencies.
@@ -575,6 +586,8 @@ if $command == :repl
   else
     cake.repl
   end
+elsif $command == :eval
+  bake.eval(*$opts[:eval])
 elsif [:start, :reload, :restart].include?($command)
   if $opts[:l] or $opts[:log]
     system("tail -f .cake/bake.log")

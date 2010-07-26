@@ -55,6 +55,7 @@ Cake provides default tasks for most of the things you probably do on a regular 
     cake uberjar  ;; Create a standalone jar containing all project dependencies.
     cake uberwar  ;; Create a web archive containing all project dependencies.
     cake repl     ;; Start an interactive shell with history and tab completion.
+    cake eval     ;; Eval the given forms in the project JVM.
     cake swank    ;; Report status of swank server and start it if not running.
 
 [Default Task Documentation](http://wiki.github.com/ninjudd/cake/default-tasks)

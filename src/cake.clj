@@ -61,6 +61,7 @@
 
 (def implicit-tasks
   {'repl    "Start an interactive shell with history and tab completion."
+   'eval    "Eval the given forms in the project JVM."
    'stop    "Stop cake jvm processes."
    'start   "Start cake jvm processes."
    'restart "Restart cake jvm processes."
