@@ -38,7 +38,15 @@
        namespaces
        (map prep-opt tests)))))
 
-(defonce auto-count (atom 0))
+(defn timer [begin]
+  (println "----")
+  (println "Finished in" (/ (- (System/nanoTime) begin) (Math/pow 10 9)) "seconds.\n"))
+
+(defn print-results [m]
+  (println "\nRan" (:test m) "tests containing"
+           (+ (:pass m) (:fail m) (:error m)) "assertions.")
+  (println (:fail m) "failures," (:error m) "errors.")
+  (when (:start-time m) (timer (:start-time m))))
 
 (defmethod clojure.test/report :begin-test-ns [m]
   (clojure.test/with-test-out
@@ -46,28 +54,19 @@
 
 (defmethod clojure.test/report :summary [m]
   (clojure.test/with-test-out
-   (println "\nRan" (:test m) "tests containing"
-            (+ (:pass m) (:fail m) (:error m)) "assertions.")
-   (println (:fail m) "failures," (:error m) "errors.")))
+    (print-results m)))
 
 (defmethod clojure.test/report :begin-auto [m])
 
 (defmethod clojure.test/report :summary-auto [m]
-  (swap! auto-count inc)
   (clojure.test/with-test-out
     (if (and (= 0 (:fail m))
-             (= 0 (:error m)))
+             (= 0 (:error m))
+             (not (:full-report? m)))
       (println ".")
-      (do
-        (println "\nRan" (:test m) "tests containing"
-                 (+ (:pass m) (:fail m) (:error m)) "assertions.")
-        (println (:fail m) "failures," (:error m) "errors.")))))
+      (print-results m))))
 
 (declare start-time)
-
-(defn timer [begin]
-  (println "----")
-  (println "Finished in" (/ (- (System/nanoTime) begin) (Math/pow 10 9)) "seconds.\n"))
 
 (defn run-tests-for-fns [grouped-tests]
   (when-let [input-fs (:fn grouped-tests)]
@@ -82,8 +81,7 @@
               start-time (System/nanoTime)]
       (clojure.test/report {:type :begin-test-ns :ns ns})
       (clojure.test/test-all-vars ns)
-      (clojure.test/report (assoc @clojure.test/*report-counters* :type :summary))
-      (timer start-time)
+      (clojure.test/report (assoc @clojure.test/*report-counters* :type :summary :start-time start-time))
       @clojure.test/*report-counters*)))
 
 (defn run-tests-for-tags [grouped-tests test-namespaces]
@@ -95,15 +93,18 @@
                  (println "Testing" tag)
                  (doseq [test (tag tags-to-fs)]
                    (clojure.test/test-var test))
-                 (clojure.test/report (assoc @clojure.test/*report-counters* :type :summary))
-                 (timer start-time)
+                 (clojure.test/report (assoc @clojure.test/*report-counters* :type :summary :start-time start-time))
                  @clojure.test/*report-counters*))))))
 
-(defn run-tests-for-auto [grouped-tests]
+(defn run-tests-for-auto [grouped-tests & full-report]
   (for [ns (:ns grouped-tests)]
     (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)
               start-time (System/nanoTime)]
       (clojure.test/report {:type :begin-auto :ns ns})
       (clojure.test/test-all-vars ns)
-      (clojure.test/report (assoc @clojure.test/*report-counters* :type :summary-auto))
+      (clojure.test/report
+       (let [report (assoc @clojure.test/*report-counters* :type :summary-auto :start-time start-time)]
+         (if (first full-report)
+           (assoc report :full-report? true)
+           report)))
       @clojure.test/*report-counters*)))

@@ -10,7 +10,7 @@
       (binding [clojure.test/*test-out* *out*]
         (let [grouped-tests (get-grouped-tests nses opts)]
           (let [results (if (:auto opts)
-                          (run-tests-for-auto grouped-tests)
+                          (run-tests-for-auto grouped-tests (:report opts))
                           (concat
                            (run-tests-for-fns  grouped-tests)
                            (run-tests-for-nses grouped-tests)

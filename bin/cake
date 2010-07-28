@@ -7,6 +7,7 @@ require 'rexml/document'
 require 'socket'
 require 'timeout'
 require 'fileutils'
+require 'pp'
 
 begin
   require 'readline'
@@ -601,8 +602,14 @@ else
     interval = $opts[:autotest].last.to_i if $opts[:autotest]
     interval = interval || (config['autotest.interval'].to_i if config['autotest.interval']) || 1
     run_tests = true
+    ran = false
     while true
-      cake.send_command('test', ["--auto"]) if run_tests
+      args = ["--auto"]
+      if ran == false
+        args << "--report"
+        ran = true
+      end
+      cake.send_command('test', args) if run_tests
       run_tests = bake.reload
       cake.reload
       sleep(interval)

@@ -22,9 +22,9 @@
     (project-let [s "foo", f (java.io.File. s)]
       (is (= (str (:root project) "/" s)
              (.toString (file f))))))
-  
+
   (testing "file and string")
   
   (testing "tilde expansion")
-  
+
   (testing "home directory"))
