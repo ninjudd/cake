@@ -16,12 +16,18 @@
 (defmacro deftask "Just ignore deftask calls in bake."
   [name & body])
 
+(defn eval-verbose [form]
+  (try (eval form)
+       (catch Exception e
+         (println "evaluating form:" (prn-str form))
+         (throw e))))
+
 (defn eval-multi [form]
   (clojure.main/with-bindings
     (binding [project @bake-project]
       (if (vector? form)
-        (doseq [f form] (eval f))
-        (eval form)))))
+        (doseq [f form] (eval-verbose f))
+        (eval-verbose form)))))
 
 (defn quit []
   (if (= 0 (swank/num-connections))
