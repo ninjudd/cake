@@ -514,7 +514,7 @@ end
 
 # Bootstrap cake dependencies.
 lib = "#{$cakedir}/lib"
-if File.exists?("#{$cakedir}/.gitignore")
+if File.exists?("#{$cakedir}/.gitignore") and File.exists?("#{$cakedir}/project.clj")
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
     version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
