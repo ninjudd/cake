@@ -4,6 +4,11 @@
 (def current-task nil)
 (defonce cake-project (atom nil))
 (def project nil)
+(def opts    nil)
+(def config  nil)
+
+(defn verbose? []
+  (boolean (or (:v opts) (:verbose opts))))
 
 (ns cake
   (:use useful cake.project)
@@ -12,9 +17,6 @@
   (:import [java.io File FileReader FileInputStream InputStreamReader OutputStreamWriter BufferedReader]
            [java.net Socket ConnectException]
            [java.util Properties]))
-
-(defn verbose? [opts]
-  (or (:v opts) (:verbose opts)))
 
 (defmacro defproject [name version & args]
   (let [opts (apply hash-map args)
@@ -147,9 +149,6 @@
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)
         bindings (into ['opts 'cake/opts] bindings)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
-
-(def opts   nil)
-(def config nil)
 
 (defn read-config []
   (let [file (File. ".cake/config")]

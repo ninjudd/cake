@@ -113,7 +113,8 @@
           (.init)
           (.addBuildListener
            (make NoBannerLogger
-                 {:message-output-level Project/MSG_INFO
+                 {:message-output-level (if (cake/verbose?) Project/MSG_VERBOSE Project/MSG_INFO)
+                  :emacs-mode           true
                   :output-print-stream  outs
                   :error-print-stream   outs})))))
 
