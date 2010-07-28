@@ -47,7 +47,7 @@ def get_cake(version, dest = nil)
   path = "#{repo}/#{jar}"
 
   if not File.exists?(path)
-    log(:deps, "fetching cake libraries. this may take a moment...")
+    log(:deps, "fetching cake libraries (#{version}). this may take a moment...")
     url = "#{$repo}/#{version}/#{jar}"
     File.makedirs(repo)
     open(url) do |jarfile|
