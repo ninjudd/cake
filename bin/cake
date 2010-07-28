@@ -279,12 +279,11 @@ class JVM
         log(mode, "#{type} jvm stopped") if restart?
         reset!
       else
-        inspect(socket) if debug?
+        inspect(socket)
         if mode == :stop
           log(mode, "error stopping #{type} jvm, try 'cake kill' or 'cake kill -9'")
         else
-          log(mode, "warning: classes have changed but can't restart #{type} jvm with active connections")
-          log(mode, "         close active connections or use 'cake stop' to force quit")
+          log(mode, "close active connections or use 'cake stop' to force quit")
         end
       end
     end || (log(mode, "#{type} jvm not running") if $command == :stop)

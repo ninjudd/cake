@@ -10,14 +10,11 @@
 (def *ins*  nil)
 (def *outs* nil)
 
-(defonce servers (atom []))
+(defonce num-connections (atom 0))
 
 (defn print-stacktrace [e]
   (stacktrace/print-stack-trace e)
   (.flush *out*))
-
-(defn num-connections []
-  (reduce + (map #(count @(:connections %)) @servers)))
 
 (defn validate-form []
   (println
@@ -49,15 +46,17 @@
   (System/exit 0))
 
 (defn quit []
-  (if (>= 1 (num-connections)) ;; add one for the current connection
+  (if (= 0 @num-connections)
     (exit)
-    (println "refusing to quit because there are active connections")))
+    (println "warning: refusing to quit because there are active connections")))
 
 (defn repl []
   (let [marker (read)]
+    (swap! num-connections inc)
     (clojure.main/repl
      :init   #(in-ns 'user)
-     :prompt #(println (str marker (ns-name *ns*))))))
+     :prompt #(println (str marker (ns-name *ns*))))
+    (swap! num-connections dec)))
 
 (def default-commands
   {:validate    validate-form
@@ -72,7 +71,7 @@
   (and (instance? clojure.lang.Compiler$CompilerException e)
        (instance? UnsatisfiedLinkError (.getCause e))))
 
-(defn- create* [port f commands]
+(defn create [port f & commands]
   (let [commands (apply hash-map commands)]
     (server-socket/create-server port
       (fn [ins outs]
@@ -91,6 +90,3 @@
               (print-stacktrace e)
               (when (fatal? e) (System/exit 1))))))
       0 (InetAddress/getByName "localhost"))))
-
-(defn create [port f & commands]
-  (swap! servers conj (create* port f commands)))

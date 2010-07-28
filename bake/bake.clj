@@ -45,7 +45,7 @@
 
 (defn start-server [port]
   (init "project.clj")
-  (startup @bake-project)  
+  (startup @bake-project)
   (server/create port eval-multi :quit quit)
   (when-let [opts (swank/config)]
     (when-not (= false (:auto-start opts))
