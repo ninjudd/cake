@@ -1,6 +1,5 @@
 (ns cake.tasks.dependencies
   (:use cake cake.ant
-        [useful :only [silently]]
         [cake.project :only [group]]
         [clojure.java.shell :only [sh]])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
@@ -96,10 +95,9 @@
   (fetch-subprojects deps dest)  
   (when-let [deps (seq (remove subproject? deps))]
     (let [ref-id (str "cake.deps.fileset." (.getName dest))]
-      (silently :unless (verbose?)
-         (ant DependenciesTask {:fileset-id ref-id :path-id (:name project)}
-              (add-repositories (into repositories (:repositories project)))
-              (add-dependencies deps)))
+      (ant DependenciesTask {:fileset-id ref-id :path-id (:name project)}
+           (add-repositories (into repositories (:repositories project)))
+           (add-dependencies deps))
       (ant Copy {:todir dest :flatten true}
            (.addFileset (get-reference ref-id)))))
   (extract-native
