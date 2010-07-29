@@ -1,30 +1,34 @@
 (ns test-core
   (:use clojure.test cake))
 
-(defmacro project-let [bindings & body]
+(defmacro with-project [bindings & body]
   `(binding [project {:name "project-stub", :version "0.0.0", :root "/home/project"}]
      (let ~bindings
        ~@body)))
 
 (deftest file-fn
   (testing "single string"
-    (project-let [s "foo/bar/baz"]
+    (with-project [s "foo/bar/baz"]
       (is (= (str (:root project) "/" s)
              (.toString (file s))))))
   
   (testing "multiple strings"
-    (project-let [a "foo", b "bar"]
+    (with-project [a "foo", b "bar"]
       (is (= (str (:root project) "/" a "/" b)
              (.toString (file a b))))))
 
-  ;; working here
-  (comment testing "single file"
-    (project-let [s "foo", f (java.io.File. s)]
-      (is (= (str (:root project) "/" s)
-             (.toString (file f))))))
-
-  (testing "file and string")
+  (testing "single file"
+    (with-project [s "foo", f (java.io.File. s)]
+      (is (= s (.toString f)))))
   
-  (testing "tilde expansion")
+  (testing "file and string"
+    (with-project [foo "foo", f (file foo), s "bar"]
+      (is (= (str (:root project) "/" foo "/" s "!")
+             (.toString (file f s))))))
 
-  (testing "home directory"))
+  (is false)
+  
+  (testing "tilde expansion"
+    (with-project [p "/foo/bar", tp "~/foo/bar"]
+      (is (= (str (System/getProperty "user.home") p)
+             (.toString (file tp)))))))

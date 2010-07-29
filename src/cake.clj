@@ -33,7 +33,7 @@
 
 (defn expand-path [& path]
   (cond (instance? File (first path))
-        (cons (.getName (first path)) (rest path))
+        (cons (.getPath (first path)) (rest path))
         
         (when-let [fp (first path)] (.startsWith fp "~"))
         (apply list (System/getProperty "user.home")
