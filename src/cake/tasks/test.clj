@@ -5,7 +5,7 @@
 (deftask test #{compile}
   "Run project tests."
   (bake (:use bake.test) []
-    (let [nses  (all-test-namespaces project)]
+    (let [nses (all-test-namespaces project)]
       (doseq [ns nses] (require ns))
       (binding [clojure.test/*test-out* *out*]
         (let [grouped-tests (get-grouped-tests nses opts)]
