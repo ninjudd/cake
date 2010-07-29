@@ -23,11 +23,8 @@
   
   (testing "file and string"
     (with-project [foo "foo", f (file foo), s "bar"]
-      (is (= (str (:root project) "/" foo "/" s "!")
+      (is (= (str (:root project) "/" foo "/" s)
              (.toString (file f s))))))
-
-  (is false)
-  
 
   (testing "tilde expansion"
     (with-project [p "/foo/bar", tp "~/foo/bar"]
