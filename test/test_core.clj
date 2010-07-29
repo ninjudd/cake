@@ -28,6 +28,7 @@
 
   (is false)
   
+
   (testing "tilde expansion"
     (with-project [p "/foo/bar", tp "~/foo/bar"]
       (is (= (str (System/getProperty "user.home") p)
