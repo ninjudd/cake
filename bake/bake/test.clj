@@ -1,8 +1,7 @@
 (ns bake.test
   (:use [cake.contrib.find-namespaces :only [find-namespaces-in-dir]])
   (:require clojure.test
-            [clojure.stacktrace :as stack]
-            [com.georgejahad.difform :as diff]))
+            [clojure.stacktrace :as stack]))
 
 (defn map-tags [nses]
   (reduce (partial merge-with concat)
@@ -68,7 +67,7 @@
       (println ".")
       (print-results m))))
 
-(defn diff-actual [[f [_ expected actual]]]
+(comment defn diff-actual [[f [_ expected actual]]]
   (diff/clean-difform expected actual))
 
 (defmethod clojure.test/report :fail [m]
@@ -81,7 +80,7 @@
           actual   (:actual m)]
       (println "expected:" (pr-str expected))
       (println "  actual:" (pr-str actual))
-      (when (seq? actual)
+      (comment when (seq? actual)
         (diff-actual actual)))))
 
 (declare start-time)
