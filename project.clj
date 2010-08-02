@@ -1,4 +1,4 @@
-(defproject cake "0.3.4"
+(defproject cake "0.3.5-SNAPSHOT"
   :description "Save your fork, there's cake!"
   :dependencies [[clojure "1.2.0-beta1"]
                  [ordered-set "0.1.0"]
@@ -7,5 +7,5 @@
                  [org.clojars.ninjudd/maven-ant-tasks "2.1.0" :exclusions [ant/ant]]
                  [org.apache.maven.plugins/maven-shade-plugin "1.3.3"]
                  [org.clojars.lancepantz/difform "1.0.2"]]
-  :dev-dependencies [[clojure-complete "0.1.1" :exclusions [clojure]]
+  :dev-dependencies [[clojure-complete "0.1.2" :exclusions [clojure]]
                      [clojure-useful   "0.2.5" :exclusions [clojure]]])

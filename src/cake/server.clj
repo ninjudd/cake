@@ -58,6 +58,21 @@
      :prompt #(println (str marker (ns-name *ns*))))
     (swap! num-connections dec)))
 
+(defn eval-verbose [form]
+  (try (eval form)
+       (catch Exception e
+         (println "evaluating form:" (prn-str form))
+         (throw e))))
+
+(defn eval-multi
+  ([] (eval-multi (read)))
+  ([form]
+     (clojure.main/with-bindings
+       (in-ns 'user)
+       (if (vector? form)
+         (doseq [f form] (eval-verbose f))
+         (eval-verbose form)))))
+
 (def default-commands
   {:validate    validate-form
    :completions completions
@@ -65,6 +80,7 @@
    :force-quit  exit
    :quit        quit
    :repl        repl
+   :eval        eval-multi
    :ping        #(println "pong")})
 
 (defn fatal? [e]

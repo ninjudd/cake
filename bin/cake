@@ -40,7 +40,7 @@ $confdir = ".cake"
 Dir.chdir($bakedir)
 File.makedirs($confdir)
 
-def get_cake(version, dest = nil)
+def get_cake(version, dest = nil, opts = {})
   jar  = version =~ /(.*)-SNAPSHOT/ ? "cake-#{$1}-#{snapshot(version)}.jar" : "cake-#{version}.jar"
   repo = File.expand_path("~/.m2/repository/cake/cake/#{version}")
   path = "#{repo}/#{jar}"
@@ -64,6 +64,7 @@ def get_cake(version, dest = nil)
   File.copy(path, dest)
   "#{dest}/#{jar}"
 rescue OpenURI::HTTPError => e
+  raise if opts[:raise]
   log(:deps, "unable to find cake version #{version} on clojars.")
   log(:deps, "please check http://github.com/ninjudd/cake for latest install instructions.")
   exit
@@ -265,7 +266,7 @@ class JVM
       @pid = daemon %{ java -Dcake.project=#{$bakedir} #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})" /dev/null }
       File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
     end
-  rescue Errno::EADDRNOTAVAIL => e
+  rescue Errno::EADDRNOTAVAIL => e # port already in use
     retry
   end
 
@@ -330,6 +331,17 @@ class JVM
     end
   ensure
     save_history
+  end
+
+  def eval(forms = $opts[:eval])
+    forms = forms.join(' ')
+    with_socket do |socket|
+      log(:eval, forms) if debug?
+      socket.write(':eval [' + forms + ']')
+      while (line = socket.gets)
+        puts line
+      end
+    end
   end
 
 private
@@ -497,17 +509,6 @@ class Bake < JVM
   def enabled?
     Dir["lib/*.jar"].any?
   end
-
-  def eval(*forms)
-    forms = forms.join(' ')
-    with_socket do |socket|
-      log(:eval, forms) if debug?
-      socket.write('[' + forms + ']')
-      while (line = socket.gets)
-        puts line
-      end
-    end
-  end
 end
 
 # Bootstrap cake dependencies.
@@ -515,8 +516,13 @@ lib = "#{$cakedir}/lib"
 if File.exists?("#{$cakedir}/.gitignore") and File.exists?("#{$cakedir}/project.clj")
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
-    version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
-    cakejar = get_cake(version, lib)
+    begin
+      version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
+      cakejar = get_cake(version, lib, :raise => true)
+    rescue OpenURI::HTTPError => e
+      version = current_version
+      cakejar = get_cake(version, lib)
+    end
     extract(cakejar, "bake-#{version}.jar", "#{lib}/dev")
   end
 
@@ -579,14 +585,12 @@ if not [:deps, :clean].include?($command) and File.exists?('project.clj')
   bake.init
 end
 
-if $command == :repl
+if [:repl, :eval].include?($command)
   if File.exists?('project.clj') and not $opts[:cake]
-    bake.repl
+    bake.send($command)
   else
-    cake.repl
+    cake.send($command)
   end
-elsif $command == :eval
-  bake.eval(*$opts[:eval])
 elsif [:start, :reload, :restart].include?($command)
   if $opts[:l] or $opts[:log]
     system("tail -f .cake/bake.log")

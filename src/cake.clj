@@ -1,8 +1,8 @@
 (ns cake)
 
 ; must be declared first so other namespaces can access them
-(def current-task nil)
 (defonce cake-project (atom nil))
+(def current-task nil)
 (def project nil)
 (def opts    nil)
 (def config  nil)
@@ -63,7 +63,7 @@
 
 (def implicit-tasks
   {'repl    "Start an interactive shell with history and tab completion."
-   'eval    "Eval the given forms in the project JVM."
+   'eval    "Eval the given forms in the project jvm or in the cake jvm if not inside project."
    'stop    "Stop cake jvm processes."
    'start   "Start cake jvm processes."
    'restart "Restart cake jvm processes."
