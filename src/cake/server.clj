@@ -18,7 +18,7 @@
 
 (defn validate-form []
   (println
-   (try (read)
+   (try (while (not= ::EOF (read *in* false ::EOF)))
         "valid"
         (catch clojure.lang.LispReader$ReaderException e
           (if (.contains (.getMessage e) "EOF")
@@ -50,12 +50,15 @@
     (exit)
     (println "warning: refusing to quit because there are active connections")))
 
+(defn- reset-in []
+  (while (.ready *in*) (.read *in*)))
+
 (defn repl []
   (let [marker (read)]
     (swap! num-connections inc)
     (clojure.main/repl
      :init   #(in-ns 'user)
-     :prompt #(println (str marker (ns-name *ns*))))
+     :prompt #(do (reset-in) (println (str marker (ns-name *ns*)))))
     (swap! num-connections dec)))
 
 (defn eval-verbose [form]

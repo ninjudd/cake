@@ -406,10 +406,15 @@ private
     end
   end
 
-  def read_until_prompt(socket)
-    while line = socket.gets
-      return $1 if line =~ /^#{REPL_PROMPT}(.*)$/
-      puts line
+  def read_until_prompt(socket)    
+    while ready = select([socket, $stdin])[0]
+      if ready.first == socket
+        line = socket.gets
+        return $1 if line =~ /^#{REPL_PROMPT}(.*)$/
+        puts line
+      else
+        socket.puts($stdin.gets)
+      end
     end
   end
 
