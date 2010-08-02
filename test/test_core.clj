@@ -29,4 +29,9 @@
   (testing "tilde expansion"
     (with-project [p "/foo/bar", tp "~/foo/bar"]
       (is (= (str (System/getProperty "user.home") p)
-             (.toString (file tp)))))))
+             (.toString (file tp))))))
+
+  (testing "no arguments"
+    (with-project [p "/foo/bar"]
+      (is (= (str (:root project))
+             (.toString (file)))))))
