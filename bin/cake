@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
 # Save your fork, there's cake!"
-require 'ftools'
 require 'find'
 require 'open-uri'
 require 'rexml/document'
@@ -56,7 +55,7 @@ $cakedir = File.dirname(File.dirname(file))
 $repo    = "http://clojars.org/repo/cake/cake"
 $confdir = ".cake"
 Dir.chdir($bakedir)
-File.makedirs($confdir)
+FileUtils.makedirs($confdir)
 
 def get_cake(version, dest = nil, opts = {})
   jar  = version =~ /(.*)-SNAPSHOT/ ? "cake-#{$1}-#{snapshot(version)}.jar" : "cake-#{version}.jar"
@@ -66,7 +65,7 @@ def get_cake(version, dest = nil, opts = {})
   if not File.exists?(path)
     log(:deps, "fetching cake libraries (#{version}). this may take a moment...")
     url = "#{$repo}/#{version}/#{jar}"
-    File.makedirs(repo)
+    FileUtils.makedirs(repo)
     open(url) do |jarfile|
       open(path, "wb") do |file|
         while (buf = jarfile.read(8192))
@@ -78,7 +77,7 @@ def get_cake(version, dest = nil, opts = {})
   return path unless dest
 
   dest = File.expand_path(dest)
-  File.makedirs(dest)
+  FileUtils.makedirs(dest)
   File.copy(path, dest)
   "#{dest}/#{jar}"
 rescue OpenURI::HTTPError => e
@@ -110,7 +109,7 @@ def extract(jar, file, dest = File.dirname(jar))
     log(:deps, "extracting #{file} from #{jar}") if verbose?
     ret = system %{ jar xf #{jar} #{file} }
     raise "cannot find jar command" unless ret
-    File.makedirs(dest)
+    FileUtils.makedirs(dest)
     File.move(file, dest)
   end
   "#{dest}/#{file}"
@@ -220,7 +219,7 @@ class JVM
   end
 
   def refresh
-    @pid, @port = IO.read(pidfile).map {|l| l.to_i}
+    @pid, @port = IO.read(pidfile).split("\n").map {|l| l.to_i}
     Process.kill(0, @pid) # make sure pid is valid
     TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED => e
@@ -320,7 +319,7 @@ class JVM
         Find.find(path) do |f|
           Find.prune if f == "#{$bakedir}/src/jvm"
           files << f if File.exists?(f) and not File.directory?(f)
-        end
+        end if File.exists?(path)
       end
     end
     files
@@ -424,7 +423,7 @@ private
     end
   end
 
-  def read_until_prompt(socket)    
+  def read_until_prompt(socket)
     while ready = select([socket, $stdin])[0]
       if ready.first == socket
         line = socket.gets_nonblock

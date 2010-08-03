@@ -55,11 +55,11 @@
 
 (defn repl []
   (let [marker (read)]
-    (swap! num-connections inc)
-    (clojure.main/repl
-     :init   #(in-ns 'user)
-     :prompt #(do (reset-in) (println (str marker (ns-name *ns*)))))
-    (swap! num-connections dec)))
+    (try (swap! num-connections inc)
+         (clojure.main/repl
+          :init   #(in-ns 'user)
+          :prompt #(do (reset-in) (println (str marker (ns-name *ns*)))))
+         (finally (swap! num-connections dec)))))
 
 (defn eval-verbose [form]
   (try (eval form)
