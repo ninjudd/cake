@@ -73,7 +73,7 @@ def get_cake(version, dest = nil, opts = {})
 
   dest = File.expand_path(dest)
   FileUtils.makedirs(dest)
-  File.copy(path, dest)
+  FileUtils.copy(path, dest)
   "#{dest}/#{jar}"
 rescue OpenURI::HTTPError => e
   raise if opts[:raise]
@@ -105,7 +105,7 @@ def extract(jar, file, dest = File.dirname(jar))
     ret = system %{ jar xf #{jar} #{file} }
     raise "cannot find jar command" unless ret
     FileUtils.makedirs(dest)
-    File.move(file, dest)
+    FileUtils.move(file, dest)
   end
   "#{dest}/#{file}"
 end
