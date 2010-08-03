@@ -23,6 +23,24 @@ rescue LoadError => e
   end
 end
 
+class IO
+  def gets_nonblock
+    line = ""
+    while c = read_nonblock(1)
+      line << c
+      break if c == "\n"
+    end
+    line
+  rescue Errno::EAGAIN, EOFError => e
+    line
+  end
+
+  def print_flush(str)
+    print(str)
+    flush
+  end
+end
+
 def project_dir(dir)
   while dir != "/"
     return dir if [".cake", "project.clj", "build.clj"].any? {|file| File.exists?("#{dir}/#{file}")}
@@ -409,11 +427,11 @@ private
   def read_until_prompt(socket)    
     while ready = select([socket, $stdin])[0]
       if ready.first == socket
-        line = socket.gets
+        line = socket.gets_nonblock
         return $1 if line =~ /^#{REPL_PROMPT}(.*)$/
-        puts line
+        $stdout.print_flush line
       else
-        socket.puts($stdin.gets)
+        socket.print_flush($stdin.gets_nonblock)
       end
     end
   end
