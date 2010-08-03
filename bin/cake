@@ -33,11 +33,6 @@ class IO
   rescue Errno::EAGAIN, EOFError => e
     line
   end
-
-  def print_flush(str)
-    print(str)
-    flush
-  end
 end
 
 def project_dir(dir)
@@ -428,9 +423,10 @@ private
       if ready.first == socket
         line = socket.gets_nonblock
         return $1 if line =~ /^#{REPL_PROMPT}(.*)$/
-        $stdout.print_flush line
+        $stdout.print line
+        $stdout.flush
       else
-        socket.print_flush($stdin.gets_nonblock)
+        socket.puts($stdin.gets)
       end
     end
   end
