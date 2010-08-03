@@ -62,14 +62,15 @@
 (def run? nil)
 
 (def implicit-tasks
-  {'repl    "Start an interactive shell with history and tab completion."
-   'eval    "Eval the given forms in the project jvm or in the cake jvm if not inside project."
-   'stop    "Stop cake jvm processes."
-   'start   "Start cake jvm processes."
-   'restart "Restart cake jvm processes."
-   'reload  "Reload any .clj files that have changed or restart."
-   'ps      "List running cake jvm processes for all projects."
-   'kill    "Kill running cake jvm processes. Use -9 to force or --all for all projects."})
+  {'repl     "Start an interactive shell with history and tab completion."
+   'eval     "Eval the given forms in the project JVM."
+   'stop     "Stop cake jvm processes."
+   'start    "Start cake jvm processes."
+   'restart  "Restart cake jvm processes."
+   'reload   "Reload any .clj files that have changed or restart."
+   'ps       "List running cake jvm processes for all projects."
+   'kill     "Kill running cake jvm processes. Use -9 to force or --all for all projects."
+   'autotest "Automatically runs tests on changes to project"})
 
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
