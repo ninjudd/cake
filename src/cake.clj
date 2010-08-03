@@ -194,5 +194,6 @@
 (defn start-server [port]
   (init "project.clj" "build.clj")
   (when-not @cake/cake-project (require '[cake.tasks help new]))
+  (server/redirect-to-log ".cake/cake.log")
   (server/create port process-command :reload reload-files)
   nil)

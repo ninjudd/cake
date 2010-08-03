@@ -598,7 +598,8 @@ if [:repl, :eval].include?($command)
   end
 elsif [:start, :reload, :restart].include?($command)
   if $opts[:l] or $opts[:log]
-    system("tail -f .cake/bake.log")
+    system("touch .cake/project.log")
+    system("tail -f .cake/project.log")
   else
     cake.ping
     bake.ping

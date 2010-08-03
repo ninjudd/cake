@@ -3,7 +3,7 @@
   (:require [cake.contrib.server-socket :as server-socket]
             [clojure.stacktrace :as stacktrace]
             complete)
-  (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream]
+  (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream FileOutputStream ByteArrayInputStream ByteArrayInputStream StringReader]
            [clojure.lang LineNumberingPushbackReader]
            [java.net InetAddress]))
 
@@ -109,3 +109,15 @@
               (print-stacktrace e)
               (when (fatal? e) (System/exit 1))))))
       0 (InetAddress/getByName "localhost"))))
+
+(defn redirect-to-log [logfile]
+  (let [null-stream (ByteArrayInputStream. (byte-array []))
+        null-writer (LineNumberingPushbackReader. (StringReader. ""))
+        log-stream  (PrintStream. (FileOutputStream. logfile) true)
+        log-writer  (PrintWriter. log-stream true)]
+    (System/setIn  null-stream)
+    (System/setErr log-stream)
+    (System/setOut log-stream)
+    (alter-var-root #'*in*  (fn [_] null-writer))
+    (alter-var-root #'*out* (fn [_] log-writer))
+    (alter-var-root #'*err* (fn [_] log-writer))))

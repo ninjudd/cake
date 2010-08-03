@@ -26,13 +26,12 @@
     (server/eval-multi form)))
 
 (defn startup [project]
-  (System/setErr (PrintStream. (FileOutputStream. ".cake/bake.log")))
-  (binding [*err* (PrintWriter. System/err true)]
-    (try (doseq [ns (:require project)]
-           (require ns))
-         (eval (:startup project))
-         (catch Exception e
-           (server/print-stacktrace e)))))
+  (server/redirect-to-log ".cake/project.log")
+  (try (doseq [ns (:require project)]
+         (require ns))
+       (eval (:startup project))
+       (catch Exception e
+         (server/print-stacktrace e))))
 
 (defn start-server [port]
   (init "project.clj")
