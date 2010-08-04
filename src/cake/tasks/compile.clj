@@ -9,7 +9,7 @@
   (let [src (file "src" "jvm")]
     (when (.exists src)
       (ant Javac {:destdir     (file "classes")
-                  :classpath   (classpath project)
+                  :classpath   (classpath)
                   :srcdir      (path src)
                   :fork        true
                   :failonerror true}))))
