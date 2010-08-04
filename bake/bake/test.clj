@@ -97,7 +97,7 @@
     (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)
               start-time (System/nanoTime)]
       (clojure.test/report {:type :begin-test-ns :ns ns})
-      (clojure.test/test-all-vars ns)
+      (clojure.test/test-all-vars (find-ns ns))
       (clojure.test/report (assoc @clojure.test/*report-counters* :type :summary :start-time start-time))
       @clojure.test/*report-counters*)))
 
