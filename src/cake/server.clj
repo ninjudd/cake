@@ -98,7 +98,7 @@
                   *out*  (OutputStreamWriter. outs)
                   *err*  (PrintWriter. #^OutputStream outs true)
                   *ins*  ins
-                  *outs* outs]          
+                  *outs* (PrintStream. outs)]
           (try
             (let [form (read)]
               (if (keyword? form)

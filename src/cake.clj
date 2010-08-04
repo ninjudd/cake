@@ -1,7 +1,6 @@
 (ns cake)
 
 ; must be declared first so other namespaces can access them
-(defonce cake-project (atom nil))
 (def current-task nil)
 (def project nil)
 (def opts    nil)
@@ -22,8 +21,7 @@
   (let [opts (apply hash-map args)
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (apply hash-map task-opts)]    
-    `(do (compare-and-set! cake-project nil (create-project '~name ~version '~opts))
-         ; @cake-project must be set before we include the tasks for bake to work.
+    `(do (alter-var-root #'project (fn [_#] (create-project '~name ~version '~opts)))
          (require '~'[cake.tasks help jar test compile dependencies swank clean])
          ~@(for [ns tasks]
              `(try (require '~ns)
@@ -161,16 +159,15 @@
 
 (defn process-command [form]
   (let [[task args port] form]
-    (binding [project         @cake-project
-              ant/ant-project (ant/init-project @cake-project server/*outs*)
-              opts            (parse-opts (keyword task) args)
-              config          (read-config)
-              bake-port       port
-              run?            {}
+    (binding [opts   (parse-opts (keyword task) args)
+              config (read-config)
+              run?   {}
+              bake-port port
               readline-marker (read)]
-      (doseq [dir ["lib" "classes" "build"]]
-        (.mkdirs (file dir)))
-      (run-task (symbol (or task 'default))))))
+      (ant/in-project
+       (doseq [dir ["lib" "classes" "build"]]
+         (.mkdirs (file dir)))
+       (run-task (symbol (or task 'default)))))))
 
 (defn task-file? [file]
   (some (partial re-matches #".*\(deftask .*|.*\(defproject .*")
@@ -194,7 +191,7 @@
 
 (defn start-server [port]
   (init "project.clj" "build.clj")
-  (when-not @cake/cake-project (require '[cake.tasks help new]))
+  (when-not project (require '[cake.tasks help new]))
   (server/redirect-to-log ".cake/cake.log")
   (server/create port process-command :reload reload-files)
   nil)

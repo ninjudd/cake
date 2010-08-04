@@ -1,12 +1,13 @@
 (ns cake.ant
   "Lancet-inspired ant helpers."
+  (:use [cake.server :only [*outs*]])
   (:require cake)
   (:import [org.apache.tools.ant Project NoBannerLogger]
            [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]
            [org.apache.tools.ant.taskdefs Echo Javac Manifest Manifest$Attribute]
            [java.beans Introspector]))
 
-(def ant-project nil)
+(def *ant-project* nil)
 
 (defmulti coerce (fn [type val] [type (class val)]))
 
@@ -41,11 +42,11 @@
   ([class]
      (let [signature (into-array Class [Project])]
        (try (.newInstance (.getConstructor class signature)
-              (into-array [ant-project]))
+              (into-array [*ant-project*]))
             (catch NoSuchMethodException e
               (let [instance (.newInstance class)]
                 (try (.invoke (.getMethod class "setProject" signature)
-                       instance (into-array [ant-project]))
+                       instance (into-array [*ant-project*]))
                      (catch NoSuchMethodException e))
                 instance))))))
 
@@ -56,11 +57,11 @@
 (defmacro ant [task attrs & forms]
   `(doto (make* ~task ~attrs)
      ~@forms
-     (.setTaskName (name cake/current-task))
+     (.setTaskName (if cake/current-task (name cake/current-task) "null"))
      (.execute)))
 
 (defn get-reference [ref-id]
-  (.getReference ant-project ref-id))
+  (.getReference *ant-project* ref-id))
 
 (defn add-fileset [task attrs]
   (let [attrs (merge {:error-on-missing-dir false} attrs)]
@@ -82,7 +83,7 @@
     (.addConfiguredManifest task manifest)))
 
 (defn path [& paths]
-  (let [path (Path. ant-project)]
+  (let [path (Path. *ant-project*)]
     (doseq [p paths]
       (let [p (if (instance? java.io.File p) (.getPath p) p)]
         (if (.endsWith p "*")
@@ -90,7 +91,7 @@
           (.. path createPathElement (setPath p)))))
     path))
 
-(defn classpath [project & paths]
+(defn classpath [& paths]
   (apply path "src" "lib/*" paths))
 
 (defn args [task args]
@@ -107,16 +108,18 @@
     (.addEnv task
      (make Environment$Variable {:key (name key) :value val}))))
 
-(defn init-project [project outs]
-  (let [outs (java.io.PrintStream. outs)]
-    (make Project {:basedir (:root project)}
-          (.init)
-          (.addBuildListener
-           (make NoBannerLogger
-                 {:message-output-level (if (cake/verbose?) Project/MSG_VERBOSE Project/MSG_INFO)
-                  :emacs-mode           true
-                  :output-print-stream  outs
-                  :error-print-stream   outs})))))
+(defn init-project []
+  (make Project {:basedir (:root cake/project)}
+        (.init)
+        (.addBuildListener
+         (make NoBannerLogger
+               {:message-output-level (if (cake/verbose?) Project/MSG_VERBOSE Project/MSG_INFO)
+                :output-print-stream  *outs*
+                :error-print-stream   *outs*}))))
+
+(defmacro in-project [& forms]
+  `(binding [*ant-project* (init-project)]
+     ~@forms))
 
 (defn log [& message]
   (ant Echo {:message (apply str (interpose " " message))}))
