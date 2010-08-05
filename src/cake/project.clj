@@ -20,9 +20,10 @@
 
 (defn read-config []
   (let [file (File. ".cake/config")]
-    (when (.exists file)
+    (if (.exists file)
       (with-open [f (FileInputStream. file)]
-        (into {} (doto (Properties.) (.load f)))))))
+        (into {} (doto (Properties.) (.load f))))
+      {})))
 
 (def *config* (read-config))
 
