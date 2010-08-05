@@ -5,13 +5,13 @@
             [cake.server :as server])
   (:import [java.io FileOutputStream PrintStream PrintWriter]))
 
-(defonce bake-project (atom nil))
-(def project nil)
+(def *project* nil)
+(def *opts*    nil)
 
 (defmacro defproject "Just save project hash in bake."
   [name version & args]
   (let [opts (apply hash-map args)]
-    `(do (compare-and-set! bake-project nil (create-project '~name ~version '~opts)))))
+    `(do (alter-var-root #'*project* (fn [_#] (create-project '~name ~version '~opts))))))
 
 (defmacro deftask "Just ignore deftask calls in bake."
   [name & body])
@@ -21,21 +21,18 @@
     (server/quit)
     (println "refusing to quit because there are active swank connections")))
 
-(defn project-eval [form]
-  (binding [project @bake-project]
-    (server/eval-multi form)))
-
-(defn startup [project]
-  (server/redirect-to-log ".cake/project.log")
-  (try (doseq [ns (:require project)]
-         (require ns))
-       (eval (:startup project))
-       (catch Exception e
-         (server/print-stacktrace e))))
+(defn project-eval [[ns ns-forms opts body]]
+  (binding [*opts* opts]
+    (server/eval-multi `[(~'ns ~ns (:use ~'[bake :only [*project* *opts*]]) ~@ns-forms) ~body])))
 
 (defn start-server [port]
   (init "project.clj")
-  (startup @bake-project)
+  (server/redirect-to-log ".cake/project.log")
+  (try (doseq [ns (:require *project*)]
+         (require ns))
+       (eval (:startup *project*))
+       (catch Exception e
+         (server/print-stacktrace e)))
   (server/create port project-eval :quit quit)
   (when-let [opts (swank/config)]
     (when-not (= false (:auto-start opts))

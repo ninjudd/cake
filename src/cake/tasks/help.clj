@@ -20,8 +20,8 @@
 (def system-tasks '[stop start restart reload ps kill])
 
 (defn taskdocs []
-  (into (apply dissoc implicit-tasks (if (or (:s opts) (:a opts)) [] system-tasks))
-        (for [[sym task] @tasks :when (and (not= 'default sym) (or (:a opts) (seq (:doc task))))]
+  (into (apply dissoc implicit-tasks (if (or (:s *opts*) (:a *opts*)) [] system-tasks))
+        (for [[sym task] @tasks :when (and (not= 'default sym) (or (:a *opts*) (seq (:doc task))))]
           [sym (str (first (:doc task)))])))
 
 (defn list-all-tasks []
@@ -35,7 +35,7 @@
 (deftask help
   "Print tasks with documentation. Use 'cake help TASK' for more details."
   "Use -s to list system tasks and -a to list all tasks, including those without documentation."
-  (if-let [names (:help opts)]
+  (if-let [names (:help *opts*)]
     (apply task-doc (map symbol names))
     (list-all-tasks)))
 

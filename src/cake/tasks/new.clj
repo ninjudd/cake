@@ -13,16 +13,18 @@
 
 (deftask new
   "Create scaffolding for a new project."
-  (let [project (symbol (first (:new opts)))
+  (let [project (symbol (first (:new *opts*)))
         name    (name project)
-        group   (group project)]
-    (ant Mkdir {:dir name})
-    (ant Mkdir {:dir (str name "/src")})
-    (ant Mkdir {:dir (str name "/test")})
-    (spit (str name "/project.clj") (project-contents project))
+        group   (group project)
+        root    (str *pwd* "/" name)]
+    (println *pwd*)
+    (ant Mkdir {:dir root})
+    (ant Mkdir {:dir (str root "/src")})
+    (ant Mkdir {:dir (str root "/test")})
+    (spit (str root "/project.clj") (project-contents project))
     (log "Created file: project.clj")
-    (spit (str name "/.gitignore")
+    (spit (str root "/.gitignore")
           (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build"] (repeat "\n"))))
     (log "Created file: .gitignore")
-    (extract-resource "LICENSE" name)
+    (extract-resource "LICENSE" root)
     (log "Created default LICENSE file (Eclipse Public License)")))

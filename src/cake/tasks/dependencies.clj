@@ -57,8 +57,8 @@
          :exclusions  (map exclusion (:exclusions opts))}))))
 
 (defn subproject-path [dep]
-  (when config
-    (config (str "subproject." (name dep)))))
+  (when *config*
+    (*config* (str "subproject." (name dep)))))
 
 (defn subproject? [[dep version & opts]]
   (not (nil? (subproject-path dep))))
@@ -95,8 +95,8 @@
   (fetch-subprojects deps dest)  
   (when-let [deps (seq (remove subproject? deps))]
     (let [ref-id (str "cake.deps.fileset." (.getName dest))]
-      (ant DependenciesTask {:fileset-id ref-id :path-id (:name project)}
-           (add-repositories (into repositories (:repositories project)))
+      (ant DependenciesTask {:fileset-id ref-id :path-id (:name *project*)}
+           (add-repositories (into repositories (:repositories *project*)))
            (add-dependencies deps))
       (ant Copy {:todir dest :flatten true}
            (.addFileset (get-reference ref-id)))))
@@ -104,23 +104,23 @@
    (fileset-seq {:dir dest :includes "*.jar"})
    (str dest "/native")))
 
-(defn pom [project]
+(defn make-pom []
   (let [refid "cake.pom"
         file  (file "pom.xml")
-        attrs (select-keys project [:artifact-id :group-id :version :name :description])]
+        attrs (select-keys *project* [:artifact-id :group-id :version :name :description])]
     (ant Pom (assoc attrs :id refid)
-      (add-license (project :license))
-      (add-dependencies (project :dependencies)))
+      (add-license (:license *project*))
+      (add-dependencies (:dependencies *project*)))
     (ant WritePomTask {:pom-ref-id refid :file file})))
 
 (deftask deps "Fetch dependencies and create pom.xml."
   (println "Fetching dependencies...")
-  (fetch-deps (:dependencies project) (file "build/lib"))
-  (fetch-deps (:dev-dependencies project) (file "build/lib/dev"))
+  (fetch-deps (:dependencies *project*) (file "build/lib"))
+  (fetch-deps (:dev-dependencies *project*) (file "build/lib/dev"))
   (ant Delete {:dir "lib"})
   (ant Move {:file "build/lib" :tofile "lib" :verbose true :fail-on-error false})
-  (pom project))
+  (make-pom))
 
 (deftask version
   "Print the current project name and version."
-  (println (:artifact-id project) (:version project)))
+  (println (:artifact-id *project*) (:version *project*)))

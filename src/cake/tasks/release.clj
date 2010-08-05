@@ -18,13 +18,13 @@
   "check the project options for a keyfile"
   []
   (seq (map file (filter #(not (nil? %))
-                         (map #(-> % opts first)
+                         (map #(-> % *opts* first)
                               [:i :identity])))))
 
 (defn get-key-setting
   "look for a keyfile specified in options or config"
   [env]
-  (when-let [kf (get config (str env ".keyfile"))]
+  (when-let [kf (*config* (str env ".keyfile"))]
     [(file kf)]))
 
 (defn get-keys-in
@@ -57,10 +57,10 @@
          (println "Incorrect Password.")))))
 
 (defn merge-settings [{env :env :as settings}]
-  (let [defaults {:user (or (get config (str env ".user"))
+  (let [defaults {:user (or (*config* (str env ".user"))
                             (System/getProperty "user.name"))
                   :keys (find-keys env)
-                  :passphrase (when (:p opts) (prompt-read "Enter passphrase"))}]
+                  :passphrase (when (:p *opts*) (prompt-read "Enter passphrase"))}]
     (merge defaults settings)))
 
 (defn deploy*
@@ -71,7 +71,7 @@
         (println "Attempting to copy:" (.toString source) "to" dest)
         (try-scp user source dest keys passphrase)
         (when-not @*success*
-          (when (and keys (not (:p opts)))
+          (when (and keys (not (:p *opts*)))
             (println "All keyfiles failed, if a keyfile passphrase is required, use the -p flag"))
           (try-scp user source dest))))))
 

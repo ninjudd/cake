@@ -5,7 +5,7 @@
         [cake.contrib.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
-(defn compile-java [project]
+(defn compile-java []
   (let [src (file "src" "jvm")]
     (when (.exists src)
       (ant Javac {:destdir     (file "classes")
@@ -17,21 +17,17 @@
 (defn stale? [sourcefile classfile]
   (> (.lastModified sourcefile) (.lastModified classfile)))
 
-(defn aot
-  "Return a function that takes a namespace and returns whether it should be aot compiled."
-  [project]
-  (let [aot (or (:aot project) (:namespaces project))]
-    (if (= :all aot)
-      (constantly true)
-      (fn [namespace]
-        (or (= namespace (:main project))
-            (include? namespace aot))))))
-
 (defn classfile [namespace]
   (str (.. (str namespace) (replace "-" "_") (replace "." "/")) "__init.class"))
 
-(defn stale-namespaces [project]
-  (let [compile? (aot project)]
+(defn stale-namespaces []
+  (let [compile?
+        (let [aot (or (:aot *project*) (:namespaces *project*))]
+          (if (= :all aot)
+            (constantly true)
+            (fn [namespace]
+              (or (= namespace (:main *project*))
+                  (include? namespace aot)))))]
     (remove nil?
       (for [sourcefile (find-clojure-sources-in-dir (file "src"))]
         (let [namespace  (second (read-file-ns-decl sourcefile))
@@ -39,8 +35,8 @@
           (when (and (compile? namespace) (stale? sourcefile classfile))
             namespace))))))
 
-(defn compile-clojure [project]
-  (when-let [stale (seq (stale-namespaces project))]
+(defn compile-clojure []
+  (when-let [stale (seq (stale-namespaces))]
     (bake [libs stale]
       (doseq [lib libs]
         (compile lib)))))
@@ -54,16 +50,16 @@
         (when (= "macosx" (os-name))
           (add-fileset task {:file (file dir (.replaceAll libname "\\.jnilib" ".dylib"))}))))))
 
-(defn copy-native [project]
-  (when-let [libs (:native-libs project)]
+(defn copy-native []
+  (when-let [libs (:native-libs *project*)]
     (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}
          (add-native-libs "build/native/lib" libs))))
 
 (deftask compile #{compile-native}
   "Compile all clojure and java source files."
-  (copy-native project)
-  (compile-java project)
-  (compile-clojure project))
+  (copy-native)
+  (compile-java)
+  (compile-clojure))
 
 ;; add actions to compile-native if you need to compile native libraries
 ;; see http://github.com/lancepantz/tokyocabinet for an example

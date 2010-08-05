@@ -57,7 +57,7 @@
 (defmacro ant [task attrs & forms]
   `(doto (make* ~task ~attrs)
      ~@forms
-     (.setTaskName (if cake/current-task (name cake/current-task) "null"))
+     (.setTaskName (if cake/*current-task* (name cake/*current-task*) "null"))
      (.execute)))
 
 (defn get-reference [ref-id]
@@ -109,7 +109,7 @@
      (make Environment$Variable {:key (name key) :value val}))))
 
 (defn init-project []
-  (make Project {:basedir (:root cake/project)}
+  (make Project {:basedir (:root cake/*project*)}
         (.init)
         (.addBuildListener
          (make NoBannerLogger

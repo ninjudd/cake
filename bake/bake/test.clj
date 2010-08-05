@@ -10,7 +10,7 @@
                 tag (:tags (meta f))]
             {tag [f]})))
 
-(defn all-test-namespaces [project]
+(defn all-test-namespaces []
   (find-namespaces-in-dir (java.io.File. "test")))
 
 (defn prep-opt [str]

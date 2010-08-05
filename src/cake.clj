@@ -1,13 +1,14 @@
 (ns cake)
 
 ; must be declared first so other namespaces can access them
-(def current-task nil)
-(def project nil)
-(def opts    nil)
-(def config  nil)
+(def *current-task* nil)
+(def *project*      nil)
+(def *opts*         nil)
+(def *config*       nil)
+(def *pwd*          nil)
 
 (defn verbose? []
-  (boolean (or (:v opts) (:verbose opts))))
+  (boolean (or (:v *opts*) (:verbose *opts*))))
 
 (ns cake
   (:use useful cake.project)
@@ -21,7 +22,7 @@
   (let [opts (apply hash-map args)
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (apply hash-map task-opts)]    
-    `(do (alter-var-root #'project (fn [_#] (create-project '~name ~version '~opts)))
+    `(do (alter-var-root #'*project* (fn [_#] (create-project '~name ~version '~opts)))
          (require '~'[cake.tasks help jar test compile dependencies swank clean])
          ~@(for [ns tasks]
              `(try (require '~ns)
@@ -38,7 +39,7 @@
                (.substring (first path) 1)
                (rest path))
 
-        :else (cons (:root project) path)))
+        :else (cons (:root *project*) path)))
 
 (defn file-name [& path]
   (apply str (interpose (File/separator) (apply expand-path path))))
@@ -67,8 +68,7 @@
    'restart  "Restart cake jvm processes."
    'reload   "Reload any .clj files that have changed or restart."
    'ps       "List running cake jvm processes for all projects."
-   'kill     "Kill running cake jvm processes. Use -9 to force or --all for all projects."
-   'autotest "Automatically runs tests on changes to project"})
+   'kill     "Kill running cake jvm processes. Use -9 to force or --all for all projects."})
 
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
@@ -97,14 +97,12 @@
       (println "unknown task:" name)
       (when-not (run? name)
         (doseq [dep (:deps task)] (run-task dep))
-        (binding [current-task name]
+        (binding [*current-task* name]
           (doseq [action (:actions task)] (action)))
         (set! run? (assoc run? name true))))))
 
 (defmacro invoke [name]
   `(run-task '~name))
-
-(def bake-port nil)
 
 (defn- bake-connect [port]
   (loop []
@@ -123,17 +121,18 @@
        (conj v form)))
    [] bindings))
 
+(def *bake-port* nil)
+
 (defn bake* [ns-forms bindings body]
-  (if (nil? bake-port)
+  (if (nil? *bake-port*)
     (println "bake not supported. perhaps you don't have a project.clj")
-    (let [ns     (symbol (str "bake.task." (name current-task)))
-          forms `[(~'ns ~ns (:use ~'[bake :only [project]]) ~@ns-forms)
-                  (~'let ~(quote-if odd? bindings) ~@body)]
-          socket (bake-connect (int bake-port))
+    (let [ns     (symbol (str "bake.task." (name *current-task*)))
+          body  `(~'let ~(quote-if odd? bindings) ~@body)
+          socket (bake-connect (int *bake-port*))
           reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (OutputStreamWriter. (.getOutputStream socket))]
       (doto writer
-        (.write (prn-str forms))
+        (.write (prn-str [ns ns-forms *opts* body]))
         (.flush))
       (while-let [line (.readLine reader)]
         (println line))
@@ -145,8 +144,7 @@
    state to the project jvm. Namespace forms like use and require must be specified before bindings."
   {:arglists '([ns-forms* bindings body*])}
   [& forms]
-  (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)
-        bindings (into ['opts 'cake/opts] bindings)]
+  (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
 (defn read-config []
@@ -155,19 +153,19 @@
       (with-open [f (FileInputStream. file)]
         (into {} (doto (Properties.) (.load f)))))))
 
-(def readline-marker nil)
+(def *readline-marker* nil)
 
-(defn process-command [form]
-  (let [[task args port] form]
-    (binding [opts   (parse-opts (keyword task) args)
-              config (read-config)
-              run?   {}
-              bake-port port
-              readline-marker (read)]
-      (ant/in-project
-       (doseq [dir ["lib" "classes" "build"]]
-         (.mkdirs (file dir)))
-       (run-task (symbol (or task 'default)))))))
+(defn process-command [[task args port pwd]]
+  (binding [*opts*            (parse-opts (keyword task) args)
+            *config*          (read-config)
+            *bake-port*       port
+            *pwd*             pwd
+            *readline-marker* (read)
+            run?              {}]
+    (ant/in-project
+     (doseq [dir ["lib" "classes" "build"]]
+       (.mkdirs (file dir)))
+     (run-task (symbol (or task 'default))))))
 
 (defn task-file? [file]
   (some (partial re-matches #".*\(deftask .*|.*\(defproject .*")
@@ -186,12 +184,12 @@
 (defn prompt-read [prompt & opts]
   (let [opts (apply hash-map opts)
         echo (if (false? (:echo opts)) "@" "")]
-    (println (str echo readline-marker prompt))
+    (println (str echo *readline-marker* prompt))
     (read-line)))
 
 (defn start-server [port]
   (init "project.clj" "build.clj")
-  (when-not project (require '[cake.tasks help new]))
+  (when-not *project* (require '[cake.tasks help new]))
   (server/redirect-to-log ".cake/cake.log")
   (server/create port process-command :reload reload-files)
   nil)

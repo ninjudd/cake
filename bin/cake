@@ -45,7 +45,8 @@ end
 
 PATH_SEP = ':'
 file     = File.readlink(__FILE__) rescue __FILE__
-$bakedir = project_dir(Dir.getwd)
+$pwd     = Dir.getwd
+$bakedir = project_dir($pwd)
 $cakedir = File.dirname(File.dirname(file))
 $repo    = "http://clojars.org/repo/cake/cake"
 $confdir = ".cake"
@@ -323,7 +324,7 @@ class JVM
 
   def ping
     return unless enabled?
-    with_socket(10) do |socket|
+    with_socket do |socket|
       socket.write ":ping\n"
       log($command, "#{type} jvm not running") unless socket.gets == "pong\n"
     end
@@ -391,7 +392,7 @@ private
     pid
   end
 
-  def with_socket(retries = 10)
+  def with_socket(retries = 20)
     return unless port
     socket = TCPSocket.new("localhost", port)
     result = yield(socket)
@@ -399,6 +400,7 @@ private
   rescue Errno::ECONNREFUSED => e
     sleep 1
     retry if (retries -= 1) >= 0
+    log($command, "timeout while connecting to #{type} jvm")
     exit
   ensure
     socket.close if socket
@@ -480,7 +482,7 @@ class Cake < JVM
   def send_command(command, args = [])
     with_socket do |socket|
       args = args.collect{|arg| '"' + arg.gsub('"', '\"').gsub("\n", "\\n") + '"'}
-      cmd  = %{(#{command} [#{args.join(' ')}] #{bakeport}) "#{READLINE}"}
+      cmd  = %{[#{command} [#{args.join(' ')}] #{bakeport || "nil"} "#{$pwd}"] "#{READLINE}"}
       log(command, "sending: " + cmd) if debug?
       socket.write(cmd)
       while (line = socket.gets)
@@ -621,6 +623,7 @@ elsif [:start, :reload, :restart].include?($command)
 else
   cake.bakeport = bake.port
   if $command == :autotest
+    cake.send_command(:autotest)
     interval = $opts[:autotest].last.to_i if $opts[:autotest]
     interval = interval || (config['autotest.interval'].to_i if config['autotest.interval']) || 1
     run_tests = true
@@ -631,7 +634,7 @@ else
         args << "--report"
         ran = true
       end
-      cake.send_command('test', args) if run_tests
+      cake.send_command(:test, args) if run_tests
       run_tests = bake.reload
       cake.reload
       sleep(interval)

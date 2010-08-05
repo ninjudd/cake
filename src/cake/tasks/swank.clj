@@ -2,29 +2,29 @@
   (:use cake [cake.tasks.dependencies :only [fetch-deps]])
   (:require [cake.swank :as swank]))
 
-(defn swank-opts [project opts]
-  (let [opt    (comp first opts)
-        config (merge swank/defaults (:swank project))
+(defn swank-opts []
+  (let [opt    (comp first *opts*)
+        config (merge swank/defaults (:swank *project*))
         host   (or (opt :host) (opt :h) (:host config))
         port   (or (opt :port) (opt :p) (:port config))
         port   (if (string? port) (Integer/parseInt port) port)]
     {:host host :port port}))
 
-(defn existing-swank-dep? [project]
+(defn existing-swank-dep? []
   (let [swank? #(.matches (name (first %)) "swank-clojure")]
-    (or (some swank? (:dependencies project))
-        (some swank? (:dev-dependencies project)))))
+    (or (some swank? (:dependencies *project*))
+        (some swank? (:dev-dependencies *project*)))))
 
 (deftask deps (invoke swank-deps))
 (deftask swank-deps
-  (when-let [swank (:swank project)]
-    (when-not (existing-swank-dep? project)
+  (when-let [swank (:swank *project*)]
+    (when-not (existing-swank-dep?)
       (fetch-deps [(:library swank)] (file "lib/dev")))))
 
 (deftask swank
   "Report status of swank server and start it if not running."
   (bake (:require [cake.swank :as swank])
-        [opts (swank-opts project opts)]
+        [opts (swank-opts)]
         (if (not (swank/installed?))
           (do (println "swank-clojure is not in your library path.")
               (println "add swank-clojure as a dependency in project.clj or touch .cake/swank to enable"))
