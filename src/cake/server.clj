@@ -116,8 +116,6 @@
         log-stream  (PrintStream. (FileOutputStream. logfile) true)
         log-writer  (PrintWriter. log-stream true)]
     (System/setIn  null-stream)
-    (System/setErr log-stream)
     (System/setOut log-stream)
     (alter-var-root #'*in*  (fn [_] null-writer))
-    (alter-var-root #'*out* (fn [_] log-writer))
-    (alter-var-root #'*err* (fn [_] log-writer))))
+    (alter-var-root #'*out* (fn [_] log-writer))))
