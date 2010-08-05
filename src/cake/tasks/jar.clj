@@ -92,7 +92,9 @@
 (defn build-war []
   (let [web     "WEB-INF"
         classes (str web "/classes")]
-    (ant War {:dest-file (warfile)}
+    (when-not (or (= :all (:aot *project*)) (= :partial (:war *project*)))
+      (println "warning: some namespaces may not be included in your war, use ':aot :all' to include them"))
+  (ant War {:dest-file (warfile)}
          (add-manifest (manifest))
          (add-license)
          (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})

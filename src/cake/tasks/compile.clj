@@ -22,7 +22,7 @@
 
 (defn stale-namespaces []
   (let [compile?
-        (let [aot (or (:aot *project*) (:namespaces *project*))]
+        (let [aot (:aot *project*)]
           (if (= :all aot)
             (constantly true)
             (fn [namespace]

@@ -15,6 +15,7 @@
         (assoc :artifact-id artifact
                :group-id    (group project-name)
                :root        root
+               :aot         (or (:aot opts) (:namespaces opts))
                :version     version)
         (assoc-or :name artifact))))
 
