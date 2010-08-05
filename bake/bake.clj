@@ -1,17 +1,18 @@
 (ns bake
-  (:use cake.project)
   (:require clojure.main            
+            cake.project
             [cake.swank :as swank]
             [cake.server :as server])
   (:import [java.io FileOutputStream PrintStream PrintWriter]))
 
 (def *project* nil)
 (def *opts*    nil)
+(def *config*  cake.project/*config*)
 
 (defmacro defproject "Just save project hash in bake."
   [name version & args]
   (let [opts (apply hash-map args)]
-    `(do (alter-var-root #'*project* (fn [_#] (create-project '~name ~version '~opts))))))
+    `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts))))))
 
 (defmacro deftask "Just ignore deftask calls in bake."
   [name & body])
@@ -26,7 +27,7 @@
     (server/eval-multi `[(~'ns ~ns (:use ~'[bake :only [*project* *opts*]]) ~@ns-forms) ~body])))
 
 (defn start-server [port]
-  (init "project.clj")
+  (cake.project/init "project.clj")
   (server/redirect-to-log ".cake/project.log")
   (try (doseq [ns (:require *project*)]
          (require ns))
@@ -34,7 +35,6 @@
        (catch Exception e
          (server/print-stacktrace e)))
   (server/create port project-eval :quit quit)
-  (when-let [opts (swank/config)]
-    (when-not (= false (:auto-start opts))
-      (swank/start opts)))
+  (when-let [auto-start (*config* "swank.auto-start")]    
+    (swank/start auto-start))
   nil)

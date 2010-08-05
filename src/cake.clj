@@ -4,25 +4,26 @@
 (def *current-task* nil)
 (def *project*      nil)
 (def *opts*         nil)
-(def *config*       nil)
 (def *pwd*          nil)
 
 (defn verbose? []
   (boolean (or (:v *opts*) (:verbose *opts*))))
 
 (ns cake
-  (:use useful cake.project)
-  (:require [cake.ant :as ant]
+  (:use useful)
+  (:require cake.project
+            [cake.ant :as ant]
             [cake.server :as server])
-  (:import [java.io File FileReader FileInputStream InputStreamReader OutputStreamWriter BufferedReader]
-           [java.net Socket ConnectException]
-           [java.util Properties]))
+  (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader]
+           [java.net Socket ConnectException]))
+
+(def *config* cake.project/*config*)
 
 (defmacro defproject [name version & args]
   (let [opts (apply hash-map args)
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (apply hash-map task-opts)]    
-    `(do (alter-var-root #'*project* (fn [_#] (create-project '~name ~version '~opts)))
+    `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
          (require '~'[cake.tasks help jar test compile dependencies swank clean])
          ~@(for [ns tasks]
              `(try (require '~ns)
@@ -147,17 +148,10 @@
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
-(defn read-config []
-  (let [file (File. ".cake/config")]
-    (when (.exists file)
-      (with-open [f (FileInputStream. file)]
-        (into {} (doto (Properties.) (.load f)))))))
-
 (def *readline-marker* nil)
 
 (defn process-command [[task args port pwd]]
   (binding [*opts*            (parse-opts (keyword task) args)
-            *config*          (read-config)
             *bake-port*       port
             *pwd*             pwd
             *readline-marker* (read)
@@ -188,7 +182,7 @@
     (read-line)))
 
 (defn start-server [port]
-  (init "project.clj" "build.clj")
+  (cake.project/init "project.clj" "build.clj")
   (when-not *project* (require '[cake.tasks help new]))
   (server/redirect-to-log ".cake/cake.log")
   (server/create port process-command :reload reload-files)

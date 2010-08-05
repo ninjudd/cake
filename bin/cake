@@ -598,7 +598,7 @@ if not [:deps, :clean].include?($command) and File.exists?('project.clj')
   if newer?('project.clj', 'pom.xml')
     cake.send_command(:deps) 
     cake.init
-  elsif File.exist?('.cake/swank')    
+  elsif config['swank.auto-start'] or config['swank']
     cake.send_command(:"swank-deps")
     cake.init
   end
