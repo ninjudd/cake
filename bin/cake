@@ -44,7 +44,14 @@ def project_dir(dir)
 end
 
 PATH_SEP = ':'
-file     = File.readlink(__FILE__) rescue __FILE__
+
+begin
+  file = File.readlink(__FILE__) 
+rescue 
+  __FILE__
+end
+
+puts "file:" + file
 $pwd     = Dir.getwd
 $bakedir = project_dir($pwd)
 $cakedir = File.dirname(File.dirname(file))
