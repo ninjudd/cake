@@ -52,7 +52,7 @@ end
 PATH_SEP = ':'
 $pwd     = Dir.getwd
 $bakedir = project_dir($pwd)
-$cakedir = File.dirname(File.dirname(readlink(__FILE__))
+$cakedir = File.dirname(File.dirname(readlink(__FILE__)))
 $repo    = "http://clojars.org/repo/cake/cake"
 $confdir = ".cake"
 Dir.chdir($bakedir)
