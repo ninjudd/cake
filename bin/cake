@@ -48,7 +48,7 @@ PATH_SEP = ':'
 begin
   file = File.readlink(__FILE__) 
 rescue 
-  __FILE__
+  file = __FILE__
 end
 
 puts "file:" + file
