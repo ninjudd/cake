@@ -51,7 +51,7 @@
     (println "warning: refusing to quit because there are active connections")))
 
 (defn- reset-in []
-  (while (.ready *in*) (.read *in*)))
+  (while (< 0 (.available *ins*)) (.read *ins*)))
 
 (defn repl []
   (let [marker (read)]
