@@ -1,5 +1,14 @@
-Cake is a build tool for Clojure that is as easy to use as it sounds, inspired by fond
-memories of Rake and countless hours of singeing our hair with other build tools.
+Cake is a tasty build tool for clojure, designed to be as powerful and fun to use as clojure itself. 
+Cake has the following features:
+
+* a persistent JVM, eliminating start-up overhead
+* a dependency based task model, making it simple to define your own tasks and extend existing ones
+* a large library of built in tasks
+* compatibility with most lein project.clj's
+* cross platform (linux, os x, windows, commodore 64)
+* an enhanced REPL with readline and tab completion
+
+_This software is a pre-release, please submit an issue on github if you run into any problems._
 
 ## Installation
 
@@ -131,7 +140,7 @@ separating them with commas, as in the third example.
 
 ### Extending tasks
 
-Like Rake, Cake allows you to add actions, dependencies and even documentation to existing
+Cake allows you to add actions, dependencies and even documentation to existing
 tasks. For example:
 
     (deftask compile #{compile-native}
