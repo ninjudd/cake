@@ -36,10 +36,12 @@
       (if (not (.endsWith file ".clj"))
         (println "cannot reload non-clojure file:" file)
         (if-let [ns (second (read-file-ns-decl (java.io.File. file)))]
-          (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
-            (try (load-file file)
-                 (catch Exception e
-                   (print-stacktrace e))))
+          (if (symbol? ns)
+            (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
+              (try (load-file file)
+                   (catch Exception e
+                     (print-stacktrace e))))
+            (throw (Exception. (format "invalid ns declaration in %s" file))))
           (println "cannot reload file without namespace declaration:" file))))))
 
 (defn exit []

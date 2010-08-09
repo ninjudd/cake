@@ -279,7 +279,7 @@ class JVM
             FileUtils.touch(pidfile)
             @load_time = Time.now
           else
-            inspect(socket) if debug?
+            inspect(socket)
             log(:reload, "unable to reload all #{type} files, restarting") if verbose?
             stop(:reload)
           end
