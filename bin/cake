@@ -394,8 +394,12 @@ private
   end
 
   def inspect(socket)
-    while line = socket.gets
+    line = socket.gets
+    if debug? or not line.start_with?('reload-failed:')
       puts line
+      while line = socket.gets
+        puts line
+      end
     end
   end
 

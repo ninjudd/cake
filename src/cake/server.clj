@@ -34,7 +34,7 @@
   (let [files (read)]
     (doseq [file files]
       (if (not (.endsWith file ".clj"))
-        (println "cannot reload non-clojure file:" file)
+        (println "reload-failed: cannot reload non-clojure file:" file)
         (if-let [ns (second (read-file-ns-decl (java.io.File. file)))]
           (if (symbol? ns)
             (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
@@ -42,7 +42,7 @@
                    (catch Exception e
                      (print-stacktrace e))))
             (throw (Exception. (format "invalid ns declaration in %s" file))))
-          (println "cannot reload file without namespace declaration:" file))))))
+          (println "reload-failed: cannot reload file without namespace declaration:" file))))))
 
 (defn exit []
   (System/exit 0))

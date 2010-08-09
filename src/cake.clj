@@ -168,7 +168,7 @@
 (defn skip-task-files [load-file]
   (fn [file]
     (if (task-file? file)
-      (println "unable to reload file with deftask or defproject in it:" file)
+      (println "reload-failed: unable to reload file with deftask or defproject in it:" file)
       (load-file file))))
 
 (defn reload-files []
