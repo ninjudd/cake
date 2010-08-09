@@ -17,20 +17,25 @@
         (print-task sym [] [doc])
         (println "unknown task:" sym)))))
 
-(def system-tasks '[stop start restart reload ps kill])
+(def system-tasks '#{stop start restart reload ps kill})
 
 (defn taskdocs []
-  (into (apply dissoc implicit-tasks (if (or (:s *opts*) (:a *opts*)) [] system-tasks))
+  (into implicit-tasks
         (for [[sym task] @tasks :when (and (not= 'default sym) (or (:a *opts*) (seq (:doc task))))]
           [sym (str (first (:doc task)))])))
 
 (defn list-all-tasks []
-  (println line)
   (let [taskdocs (taskdocs)
         width    (apply max (map #(count (name (first %))) taskdocs))
         taskdoc  (str "cake %-" width "s  ;; %s")]
+    (println line)
     (doseq [[name doc] (sort-by first taskdocs)]
-      (println (format taskdoc name doc)))))
+      (when-not (system-tasks name)
+        (println (format taskdoc name doc))))
+    (println)
+    (println "-- system tasks ---------------------------")
+    (doseq [name (sort system-tasks)]
+      (println (format taskdoc name (taskdocs name))))))
 
 (deftask help
   "Print tasks with documentation. Use 'cake help TASK' for more details."
