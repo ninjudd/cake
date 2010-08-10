@@ -2,3 +2,4 @@
 (println (+ 43 9))
 (println *file*)
 (println bake/*pwd*)
+(println bake/*env*)

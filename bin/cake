@@ -513,7 +513,8 @@ class Cake < JVM
   def send_command(command, args = [])
     with_socket do |socket|
       args = args.collect{|arg| '"' + arg.gsub('"', '\"').gsub("\n", "\\n") + '"'}
-      cmd  = %{[#{command} [#{args.join(' ')}] #{bakeport || "nil"} "#{$pwd}"] "#{READLINE}"}
+      env  = command == :run ? ('{' + ENV.collect {|k,v| "#{k.inspect} #{v.inspect}"}.join(' ') + '}') : 'nil'
+      cmd  = %{[#{command} [#{args.join(' ')}] #{bakeport || 'nil'} "#{$pwd}" #{env}] "#{READLINE}"}
       log(command, "sending: " + cmd) if debug?
       socket.write(cmd)
       while (line = socket.gets)

@@ -5,6 +5,7 @@
 (def *project*      nil)
 (def *opts*         nil)
 (def *pwd*          nil)
+(def *env*          nil)
 
 (defn verbose? []
   (boolean (or (:v *opts*) (:verbose *opts*))))
@@ -133,7 +134,7 @@
           reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (OutputStreamWriter. (.getOutputStream socket))]
       (doto writer
-        (.write (prn-str [ns ns-forms *opts* *pwd* body]))
+        (.write (prn-str [ns ns-forms *opts* *pwd* *env* body]))
         (.flush))
       (while-let [line (.readLine reader)]
         (println line))
@@ -150,10 +151,11 @@
 
 (def *readline-marker* nil)
 
-(defn process-command [[task args port pwd]]
+(defn process-command [[task args port pwd env]]
   (binding [*opts*            (parse-opts (keyword task) args)
             *bake-port*       port
             *pwd*             pwd
+            *env*             env
             *readline-marker* (read)
             run?              {}]
     (ant/in-project
