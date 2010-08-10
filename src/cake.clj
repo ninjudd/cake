@@ -187,6 +187,8 @@
     (when-not (= (.getPath global-project) (System/getProperty "cake.project"))
       (cake.project/init (.getPath (File. global-project "tasks.clj")))))
   (when-not *project* (require '[cake.tasks help new]))
+  (when (= "global" (:artifact-id *project*))
+    (undeftask clean compile test autotest jar uberjar war uberwar install release))
   (server/redirect-to-log ".cake/cake.log")
   (server/create port process-command :reload reload-files)
   nil)
