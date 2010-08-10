@@ -3,7 +3,7 @@
   (:require [cake.contrib.server-socket :as server-socket]
             [clojure.stacktrace :as stacktrace]
             complete)
-  (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream FileOutputStream ByteArrayInputStream ByteArrayInputStream StringReader]
+  (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream FileOutputStream ByteArrayInputStream StringReader]
            [clojure.lang LineNumberingPushbackReader]
            [java.net InetAddress]))
 
