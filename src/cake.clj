@@ -24,7 +24,7 @@
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (apply hash-map task-opts)]    
     `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
-         (require '~'[cake.tasks help jar test compile dependencies swank clean])
+         (require '~'[cake.tasks help run jar test compile dependencies swank clean])
          ~@(for [ns tasks]
              `(try (require '~ns)
                    (catch java.io.FileNotFoundException e#
@@ -133,7 +133,7 @@
           reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (OutputStreamWriter. (.getOutputStream socket))]
       (doto writer
-        (.write (prn-str [ns ns-forms *opts* body]))
+        (.write (prn-str [ns ns-forms *opts* *pwd* body]))
         (.flush))
       (while-let [line (.readLine reader)]
         (println line))
@@ -183,7 +183,7 @@
 
 (defn start-server [port]
   (cake.project/init "project.clj" "build.clj")
-  (when-not *project* (require '[cake.tasks help new]))
+  (when-not *project* (require '[cake.tasks help new run]))
   (server/redirect-to-log ".cake/cake.log")
   (server/create port process-command :reload reload-files)
   nil)

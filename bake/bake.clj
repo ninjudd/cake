@@ -7,6 +7,7 @@
 
 (def *project* nil)
 (def *opts*    nil)
+(def *pwd*     nil)
 (def *config*  cake.project/*config*)
 
 (defmacro defproject "Just save project hash in bake."
@@ -22,8 +23,8 @@
     (server/quit)
     (println "refusing to quit because there are active swank connections")))
 
-(defn project-eval [[ns ns-forms opts body]]
-  (binding [*opts* opts]
+(defn project-eval [[ns ns-forms opts pwd body]]
+  (binding [*opts* opts, *pwd* pwd]
     (server/eval-multi `[(~'ns ~ns (:use ~'[bake :only [*project* *opts*]]) ~@ns-forms) ~body])))
 
 (defn start-server [port]
