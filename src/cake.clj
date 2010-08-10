@@ -182,8 +182,11 @@
     (read-line)))
 
 (defn start-server [port]
-  (cake.project/init "project.clj" "build.clj")
-  (when-not *project* (require '[cake.tasks help new run]))
+  (cake.project/init "project.clj" "tasks.clj")
+  (let [global-project (File. (System/getProperty "user.home") ".cake")]
+    (when-not (= (.getPath global-project) (System/getProperty "cake.project"))
+      (cake.project/init (.getPath (File. global-project "tasks.clj")))))
+  (when-not *project* (require '[cake.tasks help new]))
   (server/redirect-to-log ".cake/cake.log")
   (server/create port process-command :reload reload-files)
   nil)

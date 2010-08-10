@@ -59,12 +59,23 @@ class IO
   end
 end
 
+GLOBAL_DEFAULT_PROJECT = <<END
+(defproject global "0.0.0"
+  :description "This is the global cake project. It is used whenever you run cake outside a project directory"
+  :dependencies [[clojure "1.2.0-RC2"]
+                 [clojure-contrib "1.2.0-RC2"]])
+END
+
 def project_dir(dir)
   while dir != File.dirname(dir)
-    return dir if [".cake", "project.clj", "build.clj"].any? {|file| File.exists?("#{dir}/#{file}")}
+    return dir if ["project.clj", "tasks.clj"].any? {|file| File.exists?("#{dir}/#{file}")}
     dir = File.dirname(dir)
   end
-  $home
+  project_dir = "#{$home}/.cake"
+  project_clj = "#{project_dir}/project.clj"
+  FileUtils.makedirs(project_dir) unless File.exists?(project_dir)
+  File.open(project_clj, 'w') {|f| f.write(GLOBAL_DEFAULT_PROJECT)} unless File.exists?(project_clj)
+  project_dir
 end
 
 def readlink(file)
@@ -518,7 +529,7 @@ class Cake < JVM
   end
 
   def files
-    super.concat ["build.clj", ".cake/swank"]
+    super.concat ["build.clj", "#{$home}/.cake/tasks.clj"]
   end
 
   def java_opts
@@ -627,10 +638,10 @@ if not [:deps, :clean].include?($command) and File.exists?('project.clj')
 end
 
 if [:repl, :eval].include?($command)
-  if File.exists?('project.clj') and not $opts[:cake]
-    bake.send($command)
-  else
+  if $opts[:cake] or not File.exists?('project.clj')
     cake.send($command)
+  else
+    bake.send($command)
   end
 elsif [:start, :reload, :restart].include?($command)
   if $opts[:l] or $opts[:log]

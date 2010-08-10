@@ -70,7 +70,7 @@ Cake provides default tasks for most of the things you probably do on a regular 
 ## Custom Tasks
 
 You can also create your own custom tasks using the `deftask` macro. Just add your tasks
-directly to project.clj or build.clj, or if you put your tasks in a namespace within your
+directly to project.clj or tasks.clj, or if you put your tasks in a namespace within your
 src directory they can be used by both your project and other projects. In this case, you
 just need to add the enclosing namespace to the `:tasks` vector in project.clj.
 

@@ -6,4 +6,4 @@
   "Execute a script in the project jvm."
   (let [script (first (*opts* :run))]
     (bake [script (if (.isAbsolute (File. script)) script (str *pwd* "/" script))]
-      (load-file script))))
+       (load-file script))))
