@@ -7,7 +7,7 @@ require 'socket'
 require 'timeout'
 require 'fileutils'
 
-if RUBY_PLATFORM =~ /(mingw|mswin)32$/
+if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   require 'win32/process'
   PATH_SEP = ';'
   $home = ENV['HOMEDRIVE'] + ENV['HOMEPATH']
