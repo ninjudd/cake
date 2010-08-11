@@ -3,7 +3,7 @@
         [cake.project :only [group]]
         [clojure.java.shell :only [sh]])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
-           [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move]
+           [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move Replace]
            [org.apache.maven.model Dependency Exclusion License]
            [java.io File]))
 
@@ -120,7 +120,3 @@
   (ant Delete {:dir "lib"})
   (ant Move {:file "build/lib" :tofile "lib" :verbose true})
   (make-pom))
-
-(deftask version
-  "Print the current project name and version."
-  (println (:artifact-id *project*) (:version *project*)))
