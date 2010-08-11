@@ -58,15 +58,12 @@
     (exit)
     (println "warning: refusing to quit because there are active connections")))
 
-(defn- reset-in []
-  (while (< 0 (.available *ins*)) (.read *ins*)))
-
 (defn repl []
   (let [marker (read)]
     (try (swap! num-connections inc)
          (clojure.main/repl
           :init   #(in-ns 'user)
-          :prompt #(do (reset-in) (println (str marker (ns-name *ns*)))))
+          :prompt #(println (str marker (ns-name *ns*))))
          (finally (swap! num-connections dec)))))
 
 (defn eval-verbose [form]
