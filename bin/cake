@@ -11,6 +11,8 @@ require 'pp'
 
 if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   require 'win32/process'
+  TERM = 'BRK'
+  KILL = 'KILL'
   PATH_SEP = ';'
   $home = ENV['HOMEDRIVE'] + ENV['HOMEPATH']
 
@@ -18,6 +20,8 @@ if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
     Process.create(:app_name => cmd).process_id
   end
 else
+  TERM = 'TERM'
+  KILL = 'KILL'
   PATH_SEP = ':'
   $home = File.expand_path("~")
 
@@ -230,6 +234,10 @@ def config
   @config ||= Configuration.new(".cake/config")
 end
 
+def ps
+  `jps -v`.split("\n").select {|l| l =~ /cake\.project/}
+end
+
 class JVM
   attr_reader :type, :classpath, :libpath, :port, :pid, :pidfile, :load_time
 
@@ -345,7 +353,7 @@ class JVM
   end
 
   def kill
-    Process.kill($opts[:"9"] ? "KILL" : "TERM", pid) if pid
+    Process.kill($opts[:"9"] ? KILL : TERM, pid) if pid
   end
 
   def files
@@ -624,9 +632,9 @@ bake = Bake.new(
 
 if $command == :kill
   if $opts[:all]
-    `jps -v | grep cake.project`.split("\n").each do |line|
+    ps.each do |line|
       pid = line.split(' ').first.to_i
-      Process.kill($opts[:"9"] ? "KILL" : "TERM", pid)
+      Process.kill($opts[:"9"] ? KILL : TERM, pid)
     end
   else
     cake.kill
@@ -634,7 +642,7 @@ if $command == :kill
   end
   exit
 elsif $command == :ps
-  puts `jps -v | grep cake.project`.sort.reverse
+  puts ps.sort.reverse
   exit
 elsif restart? or config_updated?
   cake.stop
