@@ -6,6 +6,8 @@ require 'rexml/document'
 require 'socket'
 require 'timeout'
 require 'fileutils'
+require 'io/wait'
+require 'pp'
 
 if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   require 'win32/process'
@@ -452,22 +454,23 @@ private
     end
   end
 
-  def read_until_prompt(socket)
+  def read_until_prompt(socket, wait = 0.01, read_timeout = 3)
     prompt = nil
-    while prompt.nil?
-      while ready = select([socket, $stdin], nil, nil, 0.1)
-        if ready.first.include?(socket)
-          line = socket.gets_nonblock
-          if line =~ /^#{REPL_PROMPT}(.*)$/
-            prompt = $1
-          else
-            $stdout.print line
-            $stdout.flush
-          end
+    while read_timeout -= wait
+      while socket.wait(wait)
+        line = socket.gets_nonblock
+        if line =~ /^#{REPL_PROMPT}(.*)$/
+          prompt = $1
         else
-          socket.puts($stdin.gets)
+          $stdout.print line
+          $stdout.flush
         end
       end
+      break if prompt
+
+      while $stdin.ready?
+        socket.puts($stdin.gets)
+      end if read_timeout <= 0
     end
     prompt
   end
@@ -493,9 +496,8 @@ private
     input = []
     prompt = "#{@ns}=> "
     Readline.completion_proc = method(:completions)
-    while line = Readline.readline(prompt)      
+    while line = Readline.readline(prompt)
       input << line
-      input.concat $stdin.gets_nonblock(nil).split("\n")
       if valid_input = validate(input)
         Readline::HISTORY.push(valid_input)
         return valid_input
