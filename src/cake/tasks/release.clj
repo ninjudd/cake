@@ -1,84 +1,70 @@
 (ns cake.tasks.release
   (:use cake cake.ant)
-  (:import (org.apache.tools.ant.taskdefs.optional.ssh Scp)))
+  (:import (org.apache.tools.ant.taskdefs.optional.ssh Scp SSHExec)
+           (com.jcraft.jsch JSch)
+           (java.io ByteArrayInputStream ByteArrayOutputStream)
+           (javax.security.auth.login FailedLoginException)))
 
-(def *success* (atom false))
+(def *credentials* {})
 
-(defn scp
-  "call the scp ant task with options"
-  [user to-file to-path & options]
-  (let [settings {:trust true
-                  :failonerror true
-                  :file (.toString to-file)
-                  :todir (str user "@" to-path)}
-        options (into settings options)]
-    (ant Scp options)))
-
-(defn- get-key-options
-  "check the project options for a keyfile"
-  []
-  (seq (map file (filter #(not (nil? %))
-                         (map #(-> % *opts* first)
-                              [:i :identity])))))
-
-(defn get-key-setting
-  "look for a keyfile specified in options or config"
-  [env]
-  (when-let [kf (*config* (str env ".keyfile"))]
-    [(file kf)]))
-
-(defn get-keys-in
-  "look for id_rsa, id_dsa, or identity in path"
-  [path]
-  (seq (filter #(.exists %)
-               (map #(file (java.io.File. path) ".ssh" %)
-                    ["id_rsa" "id_dsa" "identity"]))))
-
-(defn find-keys [& [env]]
-  (let [keys (or (get-key-options)
-                 (when env (get-key-setting env))
-                 (get-keys-in (System/getProperty "user.home")))]
-    (when keys (apply println "Using keyfiles:" (map #(-> % .toString .trim) keys)))
+(defn find-keys []
+  (let [keys (or (seq (map file (filter #(not (nil? %))
+                                        (map #(-> % *opts* first)
+                                             [:i :identity]))))
+                 (seq (filter #(.exists %)
+                              (map #(file (java.io.File. (System/getProperty "user.home")) ".ssh" %)
+                                   ["id_rsa" "id_dsa" "identity"]))))]
+    (when keys
+      (print "\n")
+      (apply println "Trying keyfiles:" (map #(-> % .toString .trim) keys))
+      (print "\n"))
     keys))
 
-(defn try-scp
-  ([user source dest keys passphrase]
-     (doseq [key keys :while (not @*success*)]
-       (print (.toString key) "...")
-       (try
-         (scp user source dest {:keyfile key :passphrase passphrase})
-         (swap! *success* (fn [x] true))
-         (catch org.apache.tools.ant.BuildException e
-           (println "F\n")))))
-  ([user source dest]
-     (try 
-       (scp user source dest {:password (prompt-read (str "password for " user))})
-       (catch org.apache.tools.ant.BuildException e
-         (println "Incorrect Password.")))))
+(defn scp [source dest settings]
+  (ant Scp (merge {:trust true
+                   :file (if (instance? java.io.File source)
+                           (.toString source)
+                           source)
+                   :todir (str (:username *credentials*) "@" (:host settings) ":" dest)}
+                  settings
+                  *credentials*)))
 
-(defn merge-settings [{env :env :as settings}]
-  (let [defaults {:user (or (*config* (str env ".user"))
-                            (System/getProperty "user.name"))
-                  :keys (find-keys env)
-                  :passphrase (when (:p *opts*) (prompt-read "Enter passphrase"))}]
-    (merge defaults settings)))
+(defn ssh [command settings]
+  (ant SSHExec (merge {:trust true, :command command}
+                      settings
+                      *credentials*)))
 
-(defn deploy*
-  [settings]
-  (let [{:keys [user source hosts path keys passphrase]} (merge-settings settings)]
-    (doseq [host hosts]
-      (let [dest (str host ":" path)]
-        (println "Attempting to copy:" (.toString source) "to" dest)
-        (try-scp user source dest keys passphrase)
-        (when-not @*success*
-          (when (and keys (not (:p *opts*)))
-            (println "All keyfiles failed, if a keyfile passphrase is required, use the -p flag"))
-          (try-scp user source dest))))))
+(defn try-keyfile [host user key & [passphrase]]
+  (try
+    (println (str "trying " key))
+    (ssh "dir" {:host host
+                :username user
+                :keyfile key
+                :passphrase passphrase})
+    (println (str key " returning true"))
+    true
+    (catch org.apache.tools.ant.BuildException e
+      nil)))
 
-(defn deploy [& args]
-  (if (vector? (first args))
-    (let [hosts (first args)
-          settings (apply hash-map (rest args))]
-      (deploy* (assoc settings :hosts hosts)))
-    (let [settings (apply hash-map args)]
-      (deploy* settings))))
+(defn try-password [host user]
+  (println "All keyfiles failed, if a keyfile passphrase is required, use the -p flag\n")
+  (println "attempting password authentication...\n")
+  (let [password (prompt-read "password" :echo false)]
+    (try
+      (ssh "dir" {:host host
+                  :username user
+                  :password password})
+      password)))
+
+(defn get-credentials [host user & args]
+  (let [passphrase (when (:p *opts*) (prompt-read "passphrase" :echo false))]
+    (loop [keys (first args)]
+      (if (try-keyfile host user (first keys) passphrase)
+        {:username user, :keyfile (first keys), :passphrase passphrase}
+        (if (seq (rest keys))
+          (recur (rest keys))
+          {:username user, :password (try-password host user)})))))
+
+(defmacro with-credentials [credentials & forms]
+  `(binding [*credentials* ~credentials]
+     ~@forms))
