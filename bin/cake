@@ -47,11 +47,11 @@ rescue LoadError => e
 end
 
 class IO
-  def gets_nonblock
+  def gets_nonblock(delim = "\n")
     line = ""
     while c = read_nonblock(1)
       line << c
-      break if c == "\n"
+      break if c == delim
     end
     line
   rescue Errno::EAGAIN, EOFError => e
@@ -453,24 +453,38 @@ private
   end
 
   def read_until_prompt(socket)
-    while ready = select([socket, $stdin])[0]
-      if ready.first == socket
-        line = socket.gets_nonblock
-        return $1 if line =~ /^#{REPL_PROMPT}(.*)$/
-        $stdout.print line
-        $stdout.flush
-      else
-        socket.puts($stdin.gets)
+    prompt = nil
+    while prompt.nil?
+      while ready = select([socket, $stdin], nil, nil, 0.1)
+        if ready.first.include?(socket)
+          line = socket.gets_nonblock
+          if line =~ /^#{REPL_PROMPT}(.*)$/
+            prompt = $1
+          else
+            $stdout.print line
+            $stdout.flush
+          end
+        else
+          socket.puts($stdin.gets)
+        end
       end
     end
+    prompt
   end
 
-  def complete?(input)
-    return true if input.empty?
+  def validate(input)
+    return input if input.empty?
     with_socket do |socket|
       socket.write(":validate #{input.join("\n").strip}")
       socket.close_write # send eof
-      socket.gets != "incomplete\n"
+      results = socket.gets(nil)
+
+      return if results == "incomplete\n"
+      if results == "invalid\n"
+        input.join(' ').strip
+      else
+        results.strip
+      end
     end
   end
 
@@ -479,11 +493,12 @@ private
     input = []
     prompt = "#{@ns}=> "
     Readline.completion_proc = method(:completions)
-    while line = Readline.readline(prompt)
+    while line = Readline.readline(prompt)      
       input << line
-      if complete?(input)
-        Readline::HISTORY.push(input.join(' ').strip)
-        return input.join("\n").strip
+      input.concat $stdin.gets_nonblock(nil).split("\n")
+      if valid_input = validate(input)
+        Readline::HISTORY.push(valid_input)
+        return valid_input
       end
       prompt[-2] = ?*
     end

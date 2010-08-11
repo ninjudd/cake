@@ -16,10 +16,16 @@
   (stacktrace/print-stack-trace e)
   (.flush *out*))
 
+(defn read-forms []
+  (loop [forms []]
+    (let [form (read *in* false ::EOF)]
+      (if (= ::EOF form)
+        forms
+        (recur (conj forms form))))))
+
 (defn validate-form []
   (println
-   (try (while (not= ::EOF (read *in* false ::EOF)))
-        "valid"
+   (try (apply pr-str (read-forms))
         (catch clojure.lang.LispReader$ReaderException e
           (if (.contains (.getMessage e) "EOF")
             "incomplete"
