@@ -15,6 +15,7 @@ if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   KILL = 'KILL'
   PATH_SEP = ';'
   $home = ENV['HOMEDRIVE'] + ENV['HOMEPATH']
+  $win  = true
 
   def daemon(cmd)
     Process.create(:app_name => cmd).process_id
@@ -86,7 +87,7 @@ end
 
 def readlink(file)
   File.readlink(file)
-rescue NotImplementedError
+rescue NotImplementedError, Errno::EINVAL
   file
 end
 
@@ -104,7 +105,7 @@ def get_cake(version, dest = nil, opts = {})
   path = "#{repo}/#{jar}"
 
   if not File.exists?(path)
-    log(:deps, "fetching cake libraries. this may take a moment...")
+    log(:deps, "fetching cake libraries. this may take a moment...") unless @logged; @logged = true
     url = "#{$repo}/#{version}/#{jar}"
     log(:deps, "downloading #{url}") if verbose?
     FileUtils.makedirs(repo)
@@ -278,6 +279,12 @@ class JVM
     init
   end
 
+  def with_restart
+    stop
+    yield
+    start
+  end
+
   def reload_stale_files
     stale_files = files.select {|f| stale?(f)}
 
@@ -292,7 +299,7 @@ class JVM
         stop(:reload)
       else
         log(:reload, "clojure #{type} files have changed, reloading") if verbose?
-        with_socket(0) do |socket|
+        with_socket(nil) do |socket|
           stale_files = stale_files.collect {|f| %{"#{f}"} }
           socket.write ":reload [#{stale_files.join(" ")}]\n"
           if socket.eof?
@@ -334,7 +341,8 @@ class JVM
   end
 
   def stop(mode = :stop)
-    with_socket(0) do |socket|
+    return unless running?
+    with_socket(nil) do |socket|
       action = mode == :reload ? 'quit' : 'force-quit'
       log(mode, "sending #{action} to #{type} jvm on port #{port}") if debug?
       socket.write(":#{action}\n")
@@ -440,9 +448,11 @@ private
     result
   rescue Errno::ECONNREFUSED, Errno::EBADF => e
     sleep 1
-    retry if (retries -= 1) >= 0
-    log($command, "timeout while connecting to #{type} jvm")
-    exit
+    if retries
+      retry if (retries -= 1) >= 0
+      log($command, "timeout while connecting to #{type} jvm")
+      exit
+    end
   ensure
     socket.close if socket
   end
@@ -536,6 +546,8 @@ class Cake < JVM
 
   READLINE = "READLINE__#{rand}"
   def send_command(command, args = [])
+    with_restart { FileUtils.remove_dir("lib/dev", true) } if $win and [:deps, :clean].include?(command)
+
     with_socket do |socket|
       args = args.collect{|arg| '"' + arg.gsub('"', '\"').gsub("\n", "\\n") + '"'}
       env  = command == :run ? ('{' + ENV.collect {|k,v| "#{k.inspect} #{v.inspect}"}.join(' ') + '}') : 'nil'
@@ -651,8 +663,11 @@ elsif restart? or config_updated?
 end
 
 cake.init
-if not [:deps, :clean].include?($command) and File.exists?('project.clj')
-  if newer?('project.clj', 'pom.xml')
+if [:deps, :clean].include?($command)
+  bake.stop
+elsif File.exists?('project.clj')
+  if newer?('project.clj', 'pom.xml') or not bake.enabled?
+    bake.stop
     cake.send_command(:deps)
     cake.init
   elsif config['swank.auto-start'] or config['swank']
