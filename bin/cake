@@ -66,6 +66,26 @@ class IO
   end
 end
 
+def add_opt!(key, *vals)
+  ($opts[key.to_sym] ||= []).concat vals
+end
+
+def parse_opts!
+  ARGV.unshift('default') if ARGV.empty? or ARGV.first[0,1] == '-'
+  $command = ARGV.shift.to_sym
+  $opts = {}
+  ARGV.each do |opt|
+    case opt
+    when /^-(\w*)$/              then $1.split('').each {|c| add_opt!(c, '')}
+    when /^--?([-\w]*)=([\S]+)$/ then add_opt!($1, *$2.split(','))
+    when /^--?([-\w]*)$/         then add_opt!($1, "")
+    else                              add_opt!($command, opt)
+    end
+  end
+  $opts.freeze
+end
+parse_opts!
+
 GLOBAL_DEFAULT_PROJECT = <<END
 (defproject global "0.0.0"
   :description "This is the global cake project. It is used whenever you run cake outside a project directory"
@@ -74,6 +94,12 @@ GLOBAL_DEFAULT_PROJECT = <<END
 END
 
 def project_dir(dir)
+  if $opts[:project]
+    project = $opts[:project].first
+    raise "project dir #{project} does not exist" unless File.exists?(project)
+    return project
+  end
+
   while dir != File.dirname(dir)
     return dir if ["project.clj", "tasks.clj"].any? {|file| File.exists?("#{dir}/#{file}")}
     dir = File.dirname(dir)
@@ -162,26 +188,6 @@ def newer?(file1, file2)
   return false unless File.exists?(file1)
   not File.exists?(file2) or test(?>, file1, file2)
 end
-
-def add_opt!(key, *vals)
-  ($opts[key.to_sym] ||= []).concat vals
-end
-
-def parse_opts!
-  ARGV.unshift('default') if ARGV.empty? or ARGV.first[0,1] == '-'
-  $command = ARGV.shift.to_sym
-  $opts = {}
-  ARGV.each do |opt|
-    case opt
-    when /^-(\w*)$/                then $1.split('').each {|c| add_opt!(c, '')}
-    when /^--?([-\w]*)=([-,\w]+)$/ then add_opt!($1, *$2.split(','))
-    when /^--?([-\w]*)$/           then add_opt!($1, "")
-    else                                add_opt!($command, opt)
-    end
-  end
-  $opts.freeze
-end
-parse_opts!
 
 def debug?
   ENV['CAKE_DEBUG'] or $opts[:d] or $opts[:debug]
