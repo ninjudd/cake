@@ -71,8 +71,8 @@ def add_opt!(key, *vals)
 end
 
 def parse_opts!
-  ARGV.unshift('run', '--global') if ARGV.first.index('/')
-  ARGV.unshift('default') if ARGV.empty? or ARGV.first[0,1] == '-'
+  ARGV.unshift('run', '--global') if ARGV.any? and ARGV.first.index('/')
+  ARGV.unshift('default')         if ARGV.empty? or ARGV.first[0,1] == '-'
   $command = ARGV.shift.to_sym
   $opts = {}
   ARGV.each do |opt|
