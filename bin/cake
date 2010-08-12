@@ -77,15 +77,70 @@ def parse_opts!
   $opts = {}
   ARGV.each do |opt|
     case opt
-    when /^-(\w*)$/              then $1.split('').each {|c| add_opt!(c, '')}
-    when /^--?([-\w]*)=([\S]+)$/ then add_opt!($1, *$2.split(','))
-    when /^--?([-\w]*)$/         then add_opt!($1, "")
+    when /^-(\w+)$/              then $1.split('').each {|c| add_opt!(c, '')}
+    when /^--?([-\w]+)=([\S]+)$/ then add_opt!($1, *$2.split(','))
+    when /^--?([-\w]+)$/         then add_opt!($1, "")
     else                              add_opt!($command, opt)
     end
   end
   $opts.freeze
 end
 parse_opts!
+
+def debug?
+  ENV['CAKE_DEBUG'] or $opts[:d] or $opts[:debug]
+end
+
+def verbose?
+  debug? or $opts[:v] or $opts[:verbose]
+end
+
+def restart?
+  $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command)
+end
+
+def admin_command?
+  [:start, :stop, :reload, :restart].include?($command)
+end
+
+def log(command, *message)
+  message.each do |line|
+    printf("%11s %s\n", "[#{command}]", line)
+  end
+end
+
+class Configuration < Hash
+  def initialize(*paths)
+    paths.each do |path|
+      File.open(path, 'r') do |file|
+        file.each do |line|
+          next if ['#', '!'].include?(line[0,1])
+          key, value = line.split('=', 2)
+          next unless key and value
+          self[key.strip] = value.strip
+        end
+      end if File.exists?(path)
+    end
+  end
+
+  def [](*keys)
+    if keys.first.kind_of?(Symbol)
+      key = keys.join('.') + '.'
+      clone.delete_if {|k,v| not k.index(key) == 0}
+    else
+      super
+    end
+  end
+end
+
+def config
+  @config ||= Configuration.new("#{$home}/.cake/config", ".cake/config")
+end
+
+if debug?
+  puts "opts: #{$opts.inspect}"
+  puts "config: #{$config.inspect}"
+end
 
 GLOBAL_DEFAULT_PROJECT = <<END
 (defproject global "0.0.0"  
@@ -196,56 +251,6 @@ end
 def newer?(file1, file2)
   return false unless File.exists?(file1)
   not File.exists?(file2) or test(?>, file1, file2)
-end
-
-def debug?
-  ENV['CAKE_DEBUG'] or $opts[:d] or $opts[:debug]
-end
-
-def verbose?
-  debug? or $opts[:v] or $opts[:verbose]
-end
-
-def restart?
-  $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command)
-end
-
-def admin_command?
-  [:start, :stop, :reload, :restart].include?($command)
-end
-
-def log(command, *message)
-  message.each do |line|
-    printf("%11s %s\n", "[#{command}]", line)
-  end
-end
-
-class Configuration < Hash
-  def initialize(*paths)
-    paths.each do |path|
-      File.open(path, 'r') do |file|
-        file.each do |line|
-          next if ['#', '!'].include?(line[0,1])
-          key, value = line.split('=', 2)
-          next unless key and value
-          self[key.strip] = value.strip
-        end
-      end if File.exists?(path)
-    end
-  end
-
-  def [](*keys)
-    if keys.first.kind_of?(Symbol)
-      key = keys.join('.') + '.'
-      clone.delete_if {|k,v| not k.index(key) == 0}
-    else
-      super
-    end
-  end
-end
-
-def config
-  @config ||= Configuration.new("#{$home}/.cake/config", ".cake/config")
 end
 
 def ps
@@ -418,7 +423,9 @@ class JVM
   end
 
   def eval(forms = $opts[:eval])
-    forms = forms.join(' ')
+    forms = forms.collect do |form|
+      form == '-' ? $stdin.gets(nil) : form
+    end.join(' ')
     with_socket do |socket|
       log(:eval, forms) if debug?
       socket.write(':eval [' + forms + ']')
