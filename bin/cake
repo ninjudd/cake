@@ -71,6 +71,7 @@ def add_opt!(key, *vals)
 end
 
 def parse_opts!
+  ARGV.unshift('run', '--global') if ARGV.first.index('/')
   ARGV.unshift('default') if ARGV.empty? or ARGV.first[0,1] == '-'
   $command = ARGV.shift.to_sym
   $opts = {}
@@ -102,9 +103,8 @@ GLOBAL_DEFAULT_PROJECT = <<END
 END
 
 def project_dir(dir)
-  if $opts[:project]
-    project = $opts[:project].first
-    raise "cannot specify both --project and --global options" if $opts[:global]
+  if $opts[:project] and not $opts[:global]
+    project = $opts[:project].last
     raise "project dir #{project} does not exist" unless File.exists?(project)
     return project
   end
