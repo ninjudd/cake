@@ -24,11 +24,14 @@
 
 (defn validate-form []
   (println
-   (try (apply pr-str (read-seq))
-        (catch LispReader$ReaderException e
-          (if (.contains (.getMessage e) "EOF")
-            "incomplete"
-            "invalid")))))
+   (try (doall (read-seq))
+        "valid"
+        (catch RuntimeException e
+          (let [cause (.getCause e)]
+            (if (and (instance? LispReader$ReaderException cause) (.contains (.getMessage cause) "EOF"))
+              "incomplete"
+              "invalid"))))))
+
 
 (defn completions []
   (let [[prefix ns] (read)]
