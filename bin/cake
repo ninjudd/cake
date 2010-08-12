@@ -96,7 +96,7 @@ GLOBAL_DEFAULT_PROJECT = <<END
 ;;  1. This project is used whenever you run cake outside a project directory.
 ;;  2. Any dependencies specified here will be available in the global repl.
 ;;  3. Any dev-dependencies specified here will be available in all projects, though you
-;;     must run 'cake deps' manually for the global project when you change this file.
+;;     must run 'cake deps --global' manually when you change this file.
 ;;  4. Configuration options in ~/.cake/config are used in all projects.
 ;;--------------------
 END
@@ -104,6 +104,7 @@ END
 def project_dir(dir)
   if $opts[:project]
     project = $opts[:project].first
+    raise "cannot specify both --project and --global options" if $opts[:global]
     raise "project dir #{project} does not exist" unless File.exists?(project)
     return project
   end
@@ -111,7 +112,7 @@ def project_dir(dir)
   while dir != File.dirname(dir)
     return dir if ["project.clj", "tasks.clj"].any? {|file| File.exists?("#{dir}/#{file}")}
     dir = File.dirname(dir)
-  end
+  end unless $opts[:global]
   project_dir = "#{$home}/.cake"
   project_clj = "#{project_dir}/project.clj"
   FileUtils.makedirs(project_dir) unless File.exists?(project_dir)
