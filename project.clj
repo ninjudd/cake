@@ -1,4 +1,4 @@
-(defproject cake "0.3.12-SNAPSHOT"
+(defproject cake "0.3.12"
   :description "Save your fork, there's cake!"
   :dependencies [[clojure "1.2.0-RC2"]
                  [ordered-set "0.1.0"]
