@@ -1,4 +1,4 @@
-Cake is a tasty build tool for clojure, designed to be as powerful and fun to use as clojure itself. 
+Cake is a tasty build tool for clojure, designed to be as powerful and fun to use as clojure itself.
 Cake has the following features:
 
 * a persistent JVM, eliminating start-up overhead
@@ -51,19 +51,32 @@ If you don't yet have a project.clj file, creating one is simple. Here's an exam
 
 Cake provides default tasks for most of the things you probably do on a regular basis.
 
-    cake help     ;; Print tasks with documentation. Use 'cake help TASK' for more details.
-    cake test     ;; Run project tests.
-    cake compile  ;; Compile all clojure and java source files.
-    cake deps     ;; Fetch dependencies and create pom.xml.
-    cake jar      ;; Build a jar file containing project source and class files.
-    cake release  ;; Release project jar to clojars.
-    cake install  ;; Install jar to local repository.
-    cake war      ;; Create a web archive containing project source and class files.
-    cake uberjar  ;; Create a standalone jar containing all project dependencies.
-    cake uberwar  ;; Create a web archive containing all project dependencies.
-    cake repl     ;; Start an interactive shell with history and tab completion.
-    cake eval     ;; Eval the given forms in the project JVM.
-    cake swank    ;; Report status of swank server and start it if not running.
+    cake help      ;; Print tasks with documentation. Use 'cake help TASK' for more details.
+    cake deps      ;; Fetch dependencies and create pom.xml.
+    cake clean     ;; Remove cake build artifacts.
+    cake repl      ;; Start an interactive shell with history and tab completion.
+    cake eval      ;; Eval the given forms in the project JVM.
+    cake run       ;; Execute a script in the project jvm.
+    cake test      ;; Run project tests.
+    cake autotest  ;; Automatically run tests whenever your project code changes.
+    cake compile   ;; Compile all clojure and java source files.
+    cake jar       ;; Build a jar file containing project source and class files.
+    cake uberjar   ;; Create a standalone jar containing all project dependencies.
+    cake install   ;; Install jar to local repository.
+    cake release   ;; Release project jar to clojars.
+    cake war       ;; Create a web archive containing project source and class files.
+    cake uberwar   ;; Create a web archive containing all project dependencies.
+    cake swank     ;; Report status of swank server and start it if not running.
+    cake version   ;; Print the current project name and version.
+
+Cake also provides several system tasks for managing the persistent JVM.
+
+    cake start     ;; Start cake jvm processes.
+    cake stop      ;; Stop cake jvm processes.
+    cake restart   ;; Restart cake jvm processes.
+    cake reload    ;; Reload any .clj files that have changed or restart.
+    cake ps        ;; List running cake jvm processes for all projects.
+    cake kill      ;; Kill running cake jvm processes. Use -9 to force or --all for all projects.
 
 [Default Task Documentation](http://wiki.github.com/ninjudd/cake/default-tasks)
 
