@@ -55,7 +55,6 @@ Cake provides default tasks for most of the things you probably do on a regular 
     cake deps      ;; Fetch dependencies and create pom.xml.
     cake clean     ;; Remove cake build artifacts.
     cake repl      ;; Start an interactive shell with history and tab completion.
-    cake eval      ;; Eval the given forms in the project JVM.
     cake run       ;; Execute a script in the project jvm.
     cake test      ;; Run project tests.
     cake autotest  ;; Automatically run tests whenever your project code changes.
@@ -64,6 +63,8 @@ Cake provides default tasks for most of the things you probably do on a regular 
     cake uberjar   ;; Create a standalone jar containing all project dependencies.
     cake install   ;; Install jar to local repository.
     cake release   ;; Release project jar to clojars.
+    cake eval      ;; Eval the given forms in the project JVM.
+    cake filter    ;; Thread each line in stdin through the given forms, printing the results.
     cake war       ;; Create a web archive containing project source and class files.
     cake uberwar   ;; Create a web archive containing all project dependencies.
     cake swank     ;; Report status of swank server and start it if not running.

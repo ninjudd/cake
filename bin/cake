@@ -143,7 +143,7 @@ if debug?
 end
 
 GLOBAL_DEFAULT_PROJECT = <<END
-(defproject global "0.0.0"  
+(defproject global "0.0.0"
   :description "Don't rename this project, though you can change the version to your heart's content."
   :dependencies [[clojure "1.2.0-RC2"]
                  [clojure-contrib "1.2.0-RC2"]])
@@ -428,10 +428,26 @@ class JVM
     end.join(' ')
     with_socket do |socket|
       log(:eval, forms) if debug?
-      socket.write(':eval [' + forms + ']')
+      socket.write(":eval #{forms}")
+      socket.close_write
       while (line = socket.gets)
         puts line
       end
+    end
+  end
+
+  EOL = "EOL__#{rand}"
+  def filter(forms = $opts[:filter])
+    with_socket do |socket|
+      socket.write(":eval")
+      while line = $stdin.gets
+        socket.write %{(-> #{line.inspect} #{forms.join(' ')} (println)) (println "#{EOL}")}
+        while (line = socket.gets)
+          break if line.start_with?(EOL)
+          puts line
+        end
+      end
+      socket.close_write
     end
   end
 
@@ -698,7 +714,7 @@ elsif File.exists?('project.clj')
   bake.init
 end
 
-if [:repl, :eval].include?($command)
+if [:repl, :eval, :filter].include?($command)
   if $opts[:cake] or not File.exists?('project.clj')
     cake.send($command)
   else

@@ -4,7 +4,7 @@
             [clojure.stacktrace :as stacktrace]
             complete)
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream FileOutputStream ByteArrayInputStream StringReader]
-           [clojure.lang LineNumberingPushbackReader]
+           [clojure.lang LineNumberingPushbackReader LispReader$ReaderException]
            [java.net InetAddress]))
 
 (def *ins*  nil)
@@ -16,17 +16,16 @@
   (stacktrace/print-stack-trace e)
   (.flush *out*))
 
-(defn read-forms []
-  (loop [forms []]
-    (let [form (read *in* false ::EOF)]
-      (if (= ::EOF form)
-        forms
-        (recur (conj forms form))))))
+(defn read-seq []
+  (lazy-seq
+   (let [form (read *in* false ::EOF)]
+     (when-not (= ::EOF form)
+       (cons form (read-seq))))))
 
 (defn validate-form []
   (println
-   (try (apply pr-str (read-forms))
-        (catch clojure.lang.LispReader$ReaderException e
+   (try (apply pr-str (read-seq))
+        (catch LispReader$ReaderException e
           (if (.contains (.getMessage e) "EOF")
             "incomplete"
             "invalid")))))
@@ -77,12 +76,11 @@
          (throw e))))
 
 (defn eval-multi
-  ([] (eval-multi (read)))
-  ([form]
+  ([] (eval-multi (read-seq)))
+  ([forms]
      (clojure.main/with-bindings
        (in-ns 'user)
-       (if (vector? form)
-         (doseq [f form] (eval-verbose f))
+       (doseq [form forms]
          (eval-verbose form)))))
 
 (def default-commands
