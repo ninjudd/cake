@@ -638,11 +638,11 @@ else
 end
 
 cake = Cake.new(
-  [cakepath, "src", "src/clj", config['cake.claspath'], "lib/dev/*"],
+  [cakepath, "src", "src/clj", config['cake.claspath'], "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
   [config['cake.library.path'], "lib/dev/native"]
 )
 bake = Bake.new(
-  [bakepath, "src", "src/clj", "classes", "test", config['project.classpath'], "lib/*", "lib/dev/*"],
+  [bakepath, "src", "src/clj", "classes", "test", config['project.classpath'], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
   [config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 
