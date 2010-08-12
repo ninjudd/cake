@@ -134,7 +134,7 @@
           reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (OutputStreamWriter. (.getOutputStream socket))]
       (doto writer
-        (.write (prn-str [ns ns-forms *opts* *pwd* *env* body]))
+        (.write (prn-str [ns ns-forms *command-line-args* *opts* *pwd* *env* body]))
         (.flush))
       (while-let [line (.readLine reader)]
         (println line))
@@ -152,12 +152,13 @@
 (def *readline-marker* nil)
 
 (defn process-command [[task args port pwd env]]
-  (binding [*opts*            (parse-opts (keyword task) args)
-            *bake-port*       port
-            *pwd*             pwd
-            *env*             env
-            *readline-marker* (read)
-            run?              {}]
+  (binding [*command-line-args* args
+            *opts*              (parse-opts (keyword task) args)
+            *bake-port*         port            
+            *pwd*               pwd
+            *env*               env
+            *readline-marker*   (read)
+            run?                {}]
     (ant/in-project
      (doseq [dir ["lib" "classes" "build"]]
        (.mkdirs (file dir)))

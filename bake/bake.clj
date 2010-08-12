@@ -24,8 +24,9 @@
     (server/quit)
     (println "refusing to quit because there are active swank connections")))
 
-(defn project-eval [[ns ns-forms opts pwd env body]]
-  (binding [*opts* opts, *pwd* pwd, *env* env]
+(defn project-eval [[ns ns-forms args opts pwd env body]]
+  (binding [*command-line-args* args,
+            *opts* opts, *pwd* pwd, *env* env]
     (server/eval-multi `[(~'ns ~ns (:use ~'[bake :only [*project* *opts*]]) ~@ns-forms) ~body])))
 
 (defn start-server [port]
