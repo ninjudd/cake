@@ -19,14 +19,14 @@
                :version     version)
         (assoc-or :name artifact))))
 
-(defn read-config []
-  (let [file (File. ".cake/config")]
-    (if (.exists file)
-      (with-open [f (FileInputStream. file)]
-        (into {} (doto (Properties.) (.load f))))
-      {})))
+(defn read-config [file]
+  (if (.exists file)
+    (with-open [f (FileInputStream. file)]
+      (into {} (doto (Properties.) (.load f))))
+    {}))
 
-(def *config* (read-config))
+(def *config* (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
+                     (read-config (File. ".cake/config"))))
 
 (defn init [& files]
   (doseq [file files :when (.exists (java.io.File. file))]

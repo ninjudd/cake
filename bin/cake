@@ -212,15 +212,17 @@ def log(command, *message)
 end
 
 class Configuration < Hash
-  def initialize(path)
-    File.open(path, 'r') do |file|
-      file.each do |line|
-        next if ['#', '!'].include?(line[0,1])
-        key, value = line.split('=', 2)
-        next unless key and value
-        self[key.strip] = value.strip
-      end
-    end if File.exists?(path)
+  def initialize(*paths)
+    paths.each do |path|
+      File.open(path, 'r') do |file|
+        file.each do |line|
+          next if ['#', '!'].include?(line[0,1])
+          key, value = line.split('=', 2)
+          next unless key and value
+          self[key.strip] = value.strip
+        end
+      end if File.exists?(path)
+    end
   end
 
   def [](*keys)
@@ -234,7 +236,7 @@ class Configuration < Hash
 end
 
 def config
-  @config ||= Configuration.new(".cake/config")
+  @config ||= Configuration.new("#{$home}/.cake/config", ".cake/config")
 end
 
 def ps
@@ -367,7 +369,7 @@ class JVM
   end
 
   def files
-    files = ["project.clj", ".cake/config"]
+    files = ["project.clj", "#{$home}/.cake/config", ".cake/config"]
     classpath.split(PATH_SEP).uniq.each do |path|
       if path =~ /(.*)\/\*$/
         files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
