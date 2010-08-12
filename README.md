@@ -253,6 +253,34 @@ also specify options for an individual project by adding the Java properties
     project.java_opts = -Xms1024M -Xmx2048M -Dfoo=bar
     cake.java_opts    = -Xms128M -Xmx128M -Dfoo=baz
 
+## The global project
+
+If you run cake outside of a project directory, it will use the _global project_.  You can
+also use the `--global` option to run any command in the global project, no matter what
+your current directory is. The global project is automatically created in
+`~/.cake/project.clj` the first time you use it.
+
+_So why do you need the global project?_
+
+It's useful for experimenting with clojure in a repl. You can add `:dependencies` to this
+project if you want to experiment with a new library. And any `:dev-dependencies` in the
+global project will be available in every project, though you have to run `cake deps
+--global` manually when you change `~/.cake/project.clj`. Also, any configuration options
+in `~/.cake/config` and any tasks in `~/.cake/tasks.clj` will be available in every
+project.
+
+For example, you could put subproject delcarations or JVM options in `~/.cake/config` and
+commonly used tasks in `~/.cake/tasks.clj`. Suppose you want to always run tests before
+releasing any project. Just add this line to `~/.cake/tasks.clj`:
+
+    (deftask release #{test})
+
+Another cool thing the global project enables is writing clojure shell scripts. Just add
+the following line to the top of a file, make it executable and executing it will run the clojure
+code in the global project. The file doesn't even have to end in .clj.
+
+    #!/usr/bin/env cake
+
 ## Inspirational Quote
 
 > You are what makes Clojure great - find some cake and celebrate!
