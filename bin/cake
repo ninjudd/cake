@@ -197,10 +197,6 @@ def verbose?
   debug? or $opts[:v] or $opts[:verbose]
 end
 
-def config_updated?
-  newer?(".cake/config", ".cake/cake.pid") or (File.exists?(".cake/bake.pid") and newer?(".cake/config", ".cake/bake.pid"))
-end
-
 def restart?
   $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command)
 end
@@ -371,7 +367,7 @@ class JVM
   end
 
   def files
-    files = ["project.clj"]
+    files = ["project.clj", ".cake/config"]
     classpath.split(PATH_SEP).uniq.each do |path|
       if path =~ /(.*)\/\*$/
         files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
@@ -662,7 +658,7 @@ if $command == :kill
 elsif $command == :ps
   puts ps.sort.reverse
   exit
-elsif restart? or config_updated?
+elsif restart?
   cake.stop
   bake.stop
   exit if $command == :stop
