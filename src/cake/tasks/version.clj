@@ -39,7 +39,7 @@
     new-version))
 
 (deftask version
-  "Display the project version. Use bump [--major --minor --patch --version] to increment."
+  "Display project version. Use 'bump [--major --minor --patch --snapshot]' to increment."
   (if-let [arg (first (:version *opts*))]
     (println (:artifact-id *project*)
              (:version *project*)
