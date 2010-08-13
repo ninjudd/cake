@@ -37,7 +37,7 @@
        (eval (:startup *project*))
        (catch Exception e
          (server/print-stacktrace e)))
-  (server/create port project-eval :quit quit)
   (when-let [auto-start (*config* "swank.auto-start")]    
     (swank/start auto-start))
+  (server/create port project-eval :quit quit)
   nil)

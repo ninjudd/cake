@@ -21,7 +21,8 @@
               (println "add 'swank = true' or 'swank.auto-start = localhost:4005' to .cake/config to enable"))
           (if (swank/running?)
             (let [num (swank/num-connections), s (if (= 1 num) "" "s")]
-              (println (format "swank currently running on port %d with %d active connection%s" swank/*port* num s)))
+              (println
+               (format "swank currently running on port %d with %d active connection%s" @swank/current-port num s)))
             (if (swank/start (or (first (:swank *opts*)) "localhost:4005"))
-              (println "started swank-clojure server on port" swank/*port*)
+              (println "started swank-clojure server on port" @swank/current-port)
               (println "unable to start swank-clojure server, port already in use"))))))

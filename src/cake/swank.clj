@@ -2,8 +2,8 @@
   (:use [cake.project :only [*config*]])
   (:import [java.io File StringWriter PrintWriter]))
 
-(def *port* nil)
-(defn running? [] (not (nil? *port*)))
+(def current-port (atom nil))
+(defn running? [] (not (nil? @current-port)))
 
 (defmacro if-ns [ns-reference then-form else-form]
   "Try to load a namespace reference. If sucessful, evaluate then-form otherwise evaluate else-form."
@@ -25,10 +25,10 @@
             writer      (StringWriter.)]
         (binding [*out* writer
                   *err* (PrintWriter. writer)]
-          (start-repl port :host host)
-          (when-not (.contains (.toString writer) "java.net.BindException")
-            (alter-var-root #'*port* (fn [_] port))
-            true)))))
+          (start-repl port :host host))
+        (if (.contains (.toString writer) "java.net.BindException")
+          false
+          (compare-and-set! current-port nil port)))))
   (do
     (defn installed? [] false)
     (defn num-connections [] 0)
