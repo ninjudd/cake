@@ -513,8 +513,8 @@ private
     while read_timeout -= wait
       while socket.wait(wait)
         line = socket.gets_nonblock
-        if line =~ /^#{REPL_PROMPT}(.*)$/
-          prompt = $1
+        if line =~ /^(.*)#{REPL_PROMPT}(.*)$/
+          prompt = $1.empty? ? $2 : "#{$1}\n#{$2}"
         else
           $stdout.print line
           $stdout.flush
