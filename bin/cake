@@ -596,7 +596,7 @@ class Cake < JVM
   end
 
   def files
-    super.concat ["build.clj", "#{$home}/.cake/tasks.clj"]
+    super.concat ["tasks.clj", "#{$home}/.cake/tasks.clj"]
   end
 
   def java_opts
