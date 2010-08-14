@@ -83,14 +83,25 @@ class IO
 end
 
 class Object
-  def to_clj
+  # Support converting simple Ruby data structures to Clojure expressions.
+  def clj(unquoted = false)
+    if unquoted ^ unquoted?
+      case self
+      when Array  : return collect {|i| i.clj(true)}.join(' ')
+      when String : return self
+      end
+    end
     case self
-    when Hash   : '{' + collect {|k,v| k.to_clj + ' ' + v.to_clj}.join(' ') + '}'
-    when Array  : '[' + collect {|i| i.to_clj}.join(' ') + ']'
+    when Hash   : '{' + collect {|k,v| k.clj + ' ' + v.clj}.join(' ') + '}'
+    when Array  : '[' + collect {|i| i.clj}.join(' ') + ']'
     when Symbol : ":#{to_s}"
-    else          inspect
+    when String : inspect
+    else raise "unable to convert #{self} to clojure expression"
     end
   end
+  define_method(:unquoted?) { @unquote }
+  define_method(:unquote!)  { @unquote = true; self }
+  define_method(:~)         { self.clone.unquote! }
 end
 
 begin
@@ -173,21 +184,6 @@ class Configuration < Hash
   end
 end
 
-GLOBAL_DEFAULT_PROJECT = <<END
-(defproject global "0.0.0"
-  :description "Don't rename this project, though you can change the version to your heart's content."
-  :dependencies [[clojure "1.2.0-RC2"]
-                 [clojure-contrib "1.2.0-RC2"]])
-;;--------------------
-;; This is the global cake project. What does that mean?
-;;  1. This project is used whenever you run cake outside a project directory.
-;;  2. Any dependencies specified here will be available in the global repl.
-;;  3. Any dev-dependencies specified here will be available in all projects, though you
-;;     must run 'cake deps --global' manually when you change this file.
-;;  4. Configuration options in ~/.cake/config are used in all projects.
-;;--------------------
-END
-
 def project_dir(dir)
   if $opts[:project] and not $opts[:global]
     project = $opts[:project].last
@@ -199,11 +195,7 @@ def project_dir(dir)
     return dir if ["project.clj", "tasks.clj"].any? {|file| File.exists?("#{dir}/#{file}")}
     dir = File.dirname(dir)
   end unless $opts[:global]
-  project_dir = "#{$home}/.cake"
-  project_clj = "#{project_dir}/project.clj"
-  FileUtils.makedirs(project_dir) unless File.exists?(project_dir)
-  File.open(project_clj, 'w') {|f| f.write(GLOBAL_DEFAULT_PROJECT)} unless File.exists?(project_clj)
-  project_dir
+  "#{$home}/.cake"
 end
 
 def readlink(file)
@@ -342,7 +334,8 @@ class JVM
         log(:reload, "clojure #{type} files have changed, reloading") if verbose?
         with_socket(nil) do |socket|
           stale_files = stale_files.collect {|f| %{"#{f}"} }
-          socket.write ":reload [#{stale_files.join(" ")}]\n"
+          socket.write ":reload {} [#{stale_files.join(" ")}]"
+          socket.close_write
           if socket.eof?
             FileUtils.touch(pidfile)
             @load_time = Time.now
@@ -386,7 +379,7 @@ class JVM
     with_socket(nil) do |socket|
       action = mode == :reload ? 'quit' : 'force-quit'
       log(mode, "sending #{action} to #{type} jvm on port #{port}") if debug?
-      socket.write(":#{action}\n")
+      socket.write(":#{action} {}")
       if socket.eof?
         log(mode, "#{type} jvm stopped") if restart?
         reset!
@@ -445,7 +438,7 @@ class JVM
     save_history
   end
 
-  def run(file)
+  def run(file = $opts[:run].first)
     file = File.expand_path(file)
     with_socket do |socket|
       log(:run, "running file #{file}") if debug?
@@ -458,9 +451,10 @@ class JVM
     forms = forms.collect do |form|
       form == '-' ? $stdin.gets(nil) : form
     end.join(' ')
+    forms = "(doall (map println [#{forms}]))" if $opts[:p]
     with_socket do |socket|
       log(:eval, forms) if debug?
-      socket.write(":eval #{$vars} #{forms} :EOF ")
+      socket.write(":eval #{$vars} #{forms} :cake/EOF ")
       socket.duplex($stdin, $stdout)
     end
   end
@@ -468,9 +462,9 @@ class JVM
   EOL = "EOL__#{rand}"
   def filter(forms = $opts[:filter])
     with_socket do |socket|
-      socket.write(":eval #{$vars}")
+      socket.write %(:filter #{$vars} "#{EOL}")
       while line = $stdin.gets
-        socket.write %{(-> #{line.inspect} #{forms.join(' ')} (println)) (println "#{EOL}")}
+        socket.write [line, ~forms].clj
         while (line = socket.gets)
           break if line.start_with?(EOL)
           puts line
@@ -487,12 +481,9 @@ private
   end
 
   def inspect(socket)
-    line = socket.gets
-    if debug? or not line.start_with?('reload-failed:')
+    while line = socket.gets
+      break if line.start_with?('reload-failed:') and not debug?
       puts line
-      while line = socket.gets
-        puts line
-      end
     end
   end
 
@@ -553,7 +544,7 @@ private
   def complete?(input)
     return true if input.empty?
     with_socket do |socket|
-      socket.write(":validate #{input.join("\n").strip}")
+      socket.write(":validate {} #{input.join("\n").strip}")
       socket.close_write # send eof
       socket.gets != "incomplete\n"
     end
@@ -581,7 +572,7 @@ private
   def completions(prefix)
     return [] if prefix.empty?
     with_socket do |socket|
-      socket.write(":completions [\"#{prefix}\" #{@ns}]\n")
+      socket.write [:completions, {}, ~[prefix, ~@ns]].clj(true)
       completions = []
       while line = socket.gets
         completions << line.chomp
@@ -599,9 +590,9 @@ class Cake < JVM
     with_restart { FileUtils.remove_dir("lib/dev", true) } if $win and [:deps, :clean].include?(command)
 
     with_socket do |socket|
-      cmd = [command, bakeport, READLINE].to_clj
+      cmd = [command, bakeport, READLINE].clj
       log(command, "sending: " + cmd) if debug?
-      socket.write("#{cmd} #{$vars}")      
+      socket.write("#{cmd} #{$vars}")
       socket.duplex($stdin, $stdout) do |line|
         if line =~ /^#{READLINE}(.*)$/
           socket.write(prompt($1))
@@ -651,6 +642,25 @@ end
 
 #==================================
 
+FileUtils.makedirs("#{$home}/.cake")
+project_clj = "#{$home}/.cake/project.clj"
+File.open(project_clj, 'w') do |file|
+  f.write <<END
+(defproject global "0.0.0"
+  :description "Don't rename this project, though you can change the version to your heart's content."
+  :dependencies [[clojure "1.2.0-RC2"]
+                 [clojure-contrib "1.2.0-RC2"]])
+;;--------------------
+;; This is the global cake project. What does that mean?
+;;  1. This project is used whenever you run cake outside a project directory.
+;;  2. Any dependencies specified here will be available in the global repl.
+;;  3. Any dev-dependencies specified here will be available in all projects, though you
+;;     must run 'cake deps --global' manually when you change this file.
+;;  4. Configuration options in ~/.cake/config are used in all projects.
+;;--------------------
+END
+end unless File.exists?(project_clj)
+
 parse_opts!
 $pwd     = Dir.getwd
 $bakedir = project_dir($pwd)
@@ -658,7 +668,7 @@ $cakedir = File.dirname(File.dirname(readlink(__FILE__)))
 $repo    = "http://clojars.org/repo/cake/cake"
 $confdir = ".cake"
 $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
-$vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts}.to_clj
+$vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts}.clj
 
 Dir.chdir($bakedir)
 FileUtils.makedirs($confdir)
@@ -742,7 +752,7 @@ elsif File.exists?('project.clj')
   bake.init
 end
 
-if [:repl, :eval, :filter].include?($command)
+if [:repl, :eval, :filter, :run].include?($command)
   if $opts[:cake] or not File.exists?('project.clj')
     cake.send($command)
   else

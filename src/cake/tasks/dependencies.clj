@@ -114,7 +114,7 @@
     (ant WritePomTask {:pom-ref-id refid :file file})))
 
 (deftask deps "Fetch dependencies and create pom.xml."
-  (println "Fetching dependencies...")
+  (log "Fetching dependencies...")
   (fetch-deps (:dependencies *project*) (file "build/lib"))
   (fetch-deps (:dev-dependencies *project*) (file "build/lib/dev"))
   (ant Delete {:dir "lib"})

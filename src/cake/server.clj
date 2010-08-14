@@ -1,5 +1,6 @@
 (ns cake.server
   (:use cake
+        [clojure.main :only [skip-whitespace]]
         [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.contrib.server-socket :as server-socket]
             [clojure.stacktrace :as stacktrace]
@@ -16,8 +17,8 @@
 
 (defn read-seq []
   (lazy-seq
-   (let [form (read *in* false :EOF)]
-     (when-not (= :EOF form)
+   (let [form (read *in* false :cake/EOF)]
+     (when-not (= :cake/EOF form)
        (cons form (read-seq))))))
 
 (defn validate-form []
@@ -84,6 +85,13 @@
        (doseq [form forms]
          (eval-verbose form)))))
 
+(defn eval-filter []
+  (let [end (read)]
+    (eval-multi
+     (for [[line & forms] (read-seq)]
+       `(do (-> ~line ~@forms (println))
+            (println ~end))))))
+
 (defn run-file []
   (let [script (read)]
     (load-file script)))
@@ -96,6 +104,7 @@
    :quit        quit
    :repl        repl
    :eval        eval-multi
+   :filter      eval-filter
    :run         run-file
    :ping        #(println "pong")})
 
@@ -115,8 +124,6 @@
           (try
             (let [form (read)
                   vars (read)]
-              (println form)
-              (println vars)
               (binding [*vars*              vars
                         *pwd*               (:pwd  vars)
                         *env*               (:env  vars)
