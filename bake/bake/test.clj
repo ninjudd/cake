@@ -1,14 +1,8 @@
 (ns bake.test
-  (:use [cake.contrib.find-namespaces :only [find-namespaces-in-dir]])
-  (:require clojure.test
+  (:use [cake.contrib.find-namespaces :only [find-namespaces-in-dir]]
+        useful)
+  (:require [clojure.test :as test]
             [clojure.stacktrace :as stack]))
-
-(defn map-tags [nses]
-  (reduce (partial merge-with concat)
-          (for [ns nses
-                [name f] (ns-publics ns)
-                tag (:tags (meta f))]
-            {tag [f]})))
 
 (defn all-test-namespaces []
   (find-namespaces-in-dir (java.io.File. "test")))
@@ -23,18 +17,10 @@
         (keyword?  test) :tag
         :else            :ns))
 
-(defn group-opts [coll]
-  ;; don't use group-by so we are compatible with 1.1
-  (reduce
-   (fn [ret x]
-     (let [k (test-type x)]
-       (assoc ret k (conj (get ret k []) x))))
-   {}
-   coll))
-
 (defn get-grouped-tests [namespaces opts]
   (let [tests (:test opts)]
-    (group-opts
+    (group-by
+     test-type
      (if (nil? tests)
        namespaces
        (map prep-opt tests)))))
@@ -49,22 +35,26 @@
   (println (:fail m) "failures," (:error m) "errors.")
   (when (:start-time m) (timer (:start-time m))))
 
-(defmethod clojure.test/report :begin-test-ns [m]
-  (clojure.test/with-test-out
+(defmethod test/report :begin-test-ns [m]
+  (test/with-test-out
    (println "\nTesting" (ns-name (:ns m)))))
 
-(defmethod clojure.test/report :summary [m]
-  (clojure.test/with-test-out
+(defmethod test/report :summary [m]
+  (test/with-test-out
     (print-results m)))
 
+<<<<<<< HEAD
 (defmethod clojure.test/report :fn-summary [m]
   (clojure.test/with-test-out
     (print-results m)))
 
 (defmethod clojure.test/report :begin-auto [m])
+=======
+(defmethod test/report :begin-auto [m])
+>>>>>>> fix bugs in test
 
-(defmethod clojure.test/report :summary-auto [m]
-  (clojure.test/with-test-out
+(defmethod test/report :summary-auto [m]
+  (test/with-test-out
     (if (and (= 0 (:fail m))
              (= 0 (:error m))
              (not (:full-report? m)))
@@ -74,61 +64,69 @@
 (comment defn diff-actual [[f [_ expected actual]]]
   (diff/clean-difform expected actual))
 
-(defmethod clojure.test/report :fail [m]
-  (clojure.test/with-test-out
-    (clojure.test/inc-report-counter :fail)
-    (println "\nFAIL in" (clojure.test/testing-vars-str m))
-    (when (seq clojure.test/*testing-contexts*) (println (clojure.test/testing-contexts-str)))
+(defmethod test/report :fail [m]
+  (test/with-test-out
+    (test/inc-report-counter :fail)
+    (println "\nFAIL in" (test/testing-vars-str m))
+    (when (seq test/*testing-contexts*) (println (test/testing-contexts-str)))
     (when-let [message (:message m)] (println message))
     (let [expected (:expected m)
           actual   (:actual m)]
-      (println "expected:" (pr-str expected))
-      (println "  actual:" (pr-str actual))
       (comment when (seq? actual)
         (diff-actual actual)))))
 
 (declare start-time)
 
+(defn test-fn-seq [pairs]
+  (binding [test/*report-counters* (ref test/*initial-report-counters*)
+            start-time (System/nanoTime)]
+    (doseq [[ns fs] pairs]
+      (let [ns (find-ns (symbol ns))
+            once-fixture-fn (test/join-fixtures (::test/once-fixtures (meta ns)))
+            each-fixture-fn (test/join-fixtures (::test/each-fixtures (meta ns)))]
+        (once-fixture-fn
+         (fn [] (doseq [f fs]
+                  (each-fixture-fn (fn [] (test/test-var f))))))))
+    (test/report (assoc @test/*report-counters* :type :summary :start-time start-time))))
+
 (defn run-tests-for-fns [grouped-tests]
-  (when-let [input-fs (:fn grouped-tests)]
-    (println "testing functions:" (apply str (interpose ", " input-fs)))
-    (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)
-              start-time (System/nanoTime)]
-      (doseq [f input-fs]
-        (clojure.test/test-var (ns-resolve (symbol (namespace f))
-                                           (symbol (name f)))))
-      (clojure.test/report (assoc @clojure.test/*report-counters* :type :fn-summary :start-time start-time)))))
+  (when-let [input-fs (seq (for [[ns fs] (group-by namespace (:fn grouped-tests))
+                                 f fs]
+                             [ns (ns-resolve (symbol (namespace f))
+                                             (symbol (name f)))]))]
+    (test-fn-seq (reduce (fn [m [k v]] (update m k conj v)) {} input-fs))))
 
 (defn run-tests-for-nses [grouped-tests]
   (for [ns (:ns grouped-tests)]
-    (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)
+    (binding [test/*report-counters* (ref test/*initial-report-counters*)
               start-time (System/nanoTime)]
-      (clojure.test/report {:type :begin-test-ns :ns ns})
-      (clojure.test/test-all-vars (find-ns ns))
-      (clojure.test/report (assoc @clojure.test/*report-counters* :type :summary :start-time start-time))
-      @clojure.test/*report-counters*)))
+      (test/report {:type :begin-test-ns :ns ns})
+      (test/test-all-vars (find-ns ns))
+      (test/report (assoc @test/*report-counters* :type :summary :start-time start-time))
+      @test/*report-counters*)))
+
+(defn map-tags [nses tags]
+  (reduce (partial merge-with concat)
+          (for [ns nses
+                [name f] (ns-publics ns)
+                tag (:tags (meta f))]
+            (when (contains? (set tags) tag)
+              {ns [f]}))))
 
 (defn run-tests-for-tags [grouped-tests test-namespaces]
   (when-let [input-tags (:tag grouped-tests)]
-    (let [tags-to-fs (map-tags test-namespaces)]
-      (doall (for [tag input-tags]
-               (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)
-                         start-time (System/nanoTime)]
-                 (println "Testing" tag)
-                 (doseq [test (tag tags-to-fs)]
-                   (clojure.test/test-var test))
-                 (clojure.test/report (assoc @clojure.test/*report-counters* :type :summary :start-time start-time))
-                 @clojure.test/*report-counters*))))))
+    (let [input-fs (-> test-namespaces (map-tags input-tags) )]
+      (test-fn-seq input-fs))))
 
 (defn run-tests-for-auto [grouped-tests & full-report]
   (for [ns (:ns grouped-tests)]
-    (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)
+    (binding [test/*report-counters* (ref test/*initial-report-counters*)
               start-time (System/nanoTime)]
-      (clojure.test/report {:type :begin-auto :ns ns})
-      (clojure.test/test-all-vars ns)
-      (clojure.test/report
-       (let [report (assoc @clojure.test/*report-counters* :type :summary-auto :start-time start-time)]
+      (test/report {:type :begin-auto :ns ns})
+      (test/test-all-vars ns)
+      (test/report
+       (let [report (assoc @test/*report-counters* :type :summary-auto :start-time start-time)]
          (if (first full-report)
            (assoc report :full-report? true)
            report)))
-      @clojure.test/*report-counters*)))
+      @test/*report-counters*)))
