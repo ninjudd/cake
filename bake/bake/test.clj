@@ -57,6 +57,10 @@
   (clojure.test/with-test-out
     (print-results m)))
 
+(defmethod clojure.test/report :fn-summary [m]
+  (clojure.test/with-test-out
+    (print-results m)))
+
 (defmethod clojure.test/report :begin-auto [m])
 
 (defmethod clojure.test/report :summary-auto [m]
@@ -88,9 +92,12 @@
 (defn run-tests-for-fns [grouped-tests]
   (when-let [input-fs (:fn grouped-tests)]
     (println "testing functions:" (apply str (interpose ", " input-fs)))
-    (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)]
-      (doseq [f input-fs] (clojure.test/test-var (ns-resolve (symbol (namespace f)) (symbol (name f)))))
-      (list (assoc @clojure.test/*report-counters* :type :fns)))))
+    (binding [clojure.test/*report-counters* (ref clojure.test/*initial-report-counters*)
+              start-time (System/nanoTime)]
+      (doseq [f input-fs]
+        (clojure.test/test-var (ns-resolve (symbol (namespace f))
+                                           (symbol (name f)))))
+      (clojure.test/report (assoc @clojure.test/*report-counters* :type :fn-summary :start-time start-time)))))
 
 (defn run-tests-for-nses [grouped-tests]
   (for [ns (:ns grouped-tests)]
