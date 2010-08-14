@@ -1,5 +1,5 @@
 (ns cake.tasks.help
-  (:use cake))
+  (:use cake cake.core))
 
 (def line "-------------------------------------------")
 

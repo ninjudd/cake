@@ -1,5 +1,5 @@
 (ns cake.tasks.compile
-  (:use cake cake.ant
+  (:use cake cake.core cake.ant
         [useful :only [include?]]
         [cake.tasks.dependencies :only [os-name os-arch]]
         [cake.contrib.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]])

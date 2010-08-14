@@ -1,7 +1,7 @@
 (ns cake.project
-  (:use [useful :only [assoc-or]])
-  (:import [java.io File FileInputStream]
-           [java.util Properties]))
+  (:use cake
+        [useful :only [assoc-or]])
+  (:import [java.io File]))
 
 (defn group [project]
   (if (or (= project 'clojure) (= project 'clojure-contrib))
@@ -19,15 +19,6 @@
                :version     version)
         (assoc-or :name artifact))))
 
-(defn read-config [file]
-  (if (.exists file)
-    (with-open [f (FileInputStream. file)]
-      (into {} (doto (Properties.) (.load f))))
-    {}))
-
-(def *config* (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
-                     (read-config (File. ".cake/config"))))
-
 (defn init [& files]
-  (doseq [file files :when (.exists (java.io.File. file))]
+  (doseq [file files :when (.exists (File. file))]
     (load-file file)))

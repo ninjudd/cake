@@ -38,21 +38,6 @@ else
   end
 end
 
-begin
-  require 'readline'
-rescue LoadError => e
-  module Readline
-    HISTORY = []
-    attr_accessor :basic_word_break_characters, :completion_proc
-    def readline(prompt)
-      $stdout.print prompt
-      $stdout.flush
-      $stdin.gets
-    end
-    extend Readline
-  end
-end
-
 class IO
   def gets_nonblock(delim = "\n")
     line = ""
@@ -61,8 +46,64 @@ class IO
       break if c == delim
     end
     line
-  rescue Errno::EAGAIN, EOFError => e
+  rescue Errno::EAGAIN, EOFError
     line
+  end
+
+  def eof_nonblock?
+    ungetc(read_nonblock(1)[0])
+    false
+  rescue Errno::EAGAIN, EOFError => e
+    e.kind_of?(EOFError)
+  end
+
+  def print_flush(str)
+    print(str)
+    flush
+  end
+
+  def duplex(input, output, input_wait = 0, interval = 0.01)
+    until eof_nonblock?
+      while self.wait(interval)
+        if line = block_given? ? yield(gets_nonblock) : gets_nonblock
+          output.print_flush(line) if line.kind_of?(String)
+        else
+          finished = true
+        end
+      end
+      input_wait -= interval
+      return if finished
+
+      while input.ready?
+        return if input.eof?
+        write(input.gets)
+      end if input_wait <= 0
+    end
+  end
+end
+
+class Object
+  def to_clj
+    case self
+    when Hash   : '{' + collect {|k,v| k.to_clj + ' ' + v.to_clj}.join(' ') + '}'
+    when Array  : '[' + collect {|i| i.to_clj}.join(' ') + ']'
+    when Symbol : ":#{to_s}"
+    else          inspect
+    end
+  end
+end
+
+begin
+  require 'readline'
+rescue LoadError => e
+  module Readline
+    HISTORY = []
+    attr_accessor :basic_word_break_characters, :completion_proc
+    def readline(prompt)
+      $stdout.print_flush(prompt)
+      $stdin.gets
+    end
+    extend Readline
   end
 end
 
@@ -73,9 +114,9 @@ end
 def parse_opts!
   ARGV.unshift('run', '--global') if ARGV.any? and ARGV.first.index('/')
   ARGV.unshift('default')         if ARGV.empty? or ARGV.first[0,1] == '-'
-  $command = ARGV.shift.to_sym
+  $command = ARGV.first.to_sym
   $opts = {}
-  ARGV.each do |opt|
+  ARGV[1..-1].each do |opt|
     case opt
     when /^-(\w+)$/              then $1.split('').each {|c| add_opt!(c, '')}
     when /^--?([-\w]+)=([\S]+)$/ then add_opt!($1, *$2.split(','))
@@ -85,7 +126,6 @@ def parse_opts!
   end
   $opts.freeze
 end
-parse_opts!
 
 def debug?
   ENV['CAKE_DEBUG'] or $opts[:d] or $opts[:debug]
@@ -133,15 +173,6 @@ class Configuration < Hash
   end
 end
 
-def config
-  @config ||= Configuration.new("#{$home}/.cake/config", ".cake/config")
-end
-
-if debug?
-  puts "opts: #{$opts.inspect}"
-  puts "config: #{$config.inspect}"
-end
-
 GLOBAL_DEFAULT_PROJECT = <<END
 (defproject global "0.0.0"
   :description "Don't rename this project, though you can change the version to your heart's content."
@@ -180,14 +211,6 @@ def readlink(file)
 rescue NotImplementedError, Errno::EINVAL
   file
 end
-
-$pwd     = Dir.getwd
-$bakedir = project_dir($pwd)
-$cakedir = File.dirname(File.dirname(readlink(__FILE__)))
-$repo    = "http://clojars.org/repo/cake/cake"
-$confdir = ".cake"
-Dir.chdir($bakedir)
-FileUtils.makedirs($confdir)
 
 def get_cake(version, dest = nil, opts = {})
   jar  = version =~ /(.*)-SNAPSHOT/ ? "cake-#{$1}-#{snapshot(version)}.jar" : "cake-#{version}.jar"
@@ -351,7 +374,7 @@ class JVM
     else
       log(:start, "starting #{type} jvm") if verbose? or $command == :start
       @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-      @pid = daemon %{java -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(use '#{type})(start-server #{port})"}
+      @pid = daemon %{java -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(use '#{type}.core) (start-server #{port})"}
       File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
     end
   rescue Errno::EADDRNOTAVAIL => e # port already in use
@@ -410,7 +433,7 @@ class JVM
     load_history
     loop do
       with_socket do |socket|
-        socket.write %{:repl "#{REPL_PROMPT}"}
+        socket.write %{:repl #{$vars} "#{REPL_PROMPT}"}
         while @ns = read_until_prompt(socket)
           line = readline
           return unless line
@@ -422,24 +445,30 @@ class JVM
     save_history
   end
 
+  def run(file)
+    file = File.expand_path(file)
+    with_socket do |socket|
+      log(:run, "running file #{file}") if debug?
+      socket.write(":run #{$vars} #{file.inspect}")
+      socket.duplex($stdin, $stdout)
+    end
+  end
+
   def eval(forms = $opts[:eval])
     forms = forms.collect do |form|
       form == '-' ? $stdin.gets(nil) : form
     end.join(' ')
     with_socket do |socket|
       log(:eval, forms) if debug?
-      socket.write(":eval #{forms}")
-      socket.close_write
-      while (line = socket.gets)
-        puts line
-      end
+      socket.write(":eval #{$vars} #{forms} :EOF ")
+      socket.duplex($stdin, $stdout)
     end
   end
 
   EOL = "EOL__#{rand}"
   def filter(forms = $opts[:filter])
     with_socket do |socket|
-      socket.write(":eval")
+      socket.write(":eval #{$vars}")
       while line = $stdin.gets
         socket.write %{(-> #{line.inspect} #{forms.join(' ')} (println)) (println "#{EOL}")}
         while (line = socket.gets)
@@ -508,23 +537,15 @@ private
     end
   end
 
-  def read_until_prompt(socket, wait = 0.01, read_timeout = 3)
+  def read_until_prompt(socket)
     prompt = nil
-    while read_timeout -= wait
-      while socket.wait(wait)
-        line = socket.gets_nonblock
-        if line =~ /^(.*)#{REPL_PROMPT}(.*)$/
-          prompt = $1.empty? ? $2 : "#{$1}\n#{$2}"
-        else
-          $stdout.print line
-          $stdout.flush
-        end
+    socket.duplex($stdin, $stdout, 3) do |line|
+      if line =~ /^(.*)#{REPL_PROMPT}(.*)$/
+        prompt = $1.empty? ? $2 : "#{$1}\n#{$2}"
+        nil
+      else
+        line
       end
-      break if prompt
-
-      while $stdin.ready?
-        socket.puts($stdin.gets)
-      end if read_timeout <= 0
     end
     prompt
   end
@@ -574,22 +595,20 @@ class Cake < JVM
   attr_accessor :bakeport
 
   READLINE = "READLINE__#{rand}"
-  def send_command(command, args = [])
+  def send_command(command)
     with_restart { FileUtils.remove_dir("lib/dev", true) } if $win and [:deps, :clean].include?(command)
 
     with_socket do |socket|
-      args = args.collect{|arg| '"' + arg.gsub('"', '\"').gsub("\n", "\\n") + '"'}
-      env  = command == :run ? ('{' + ENV.collect {|k,v| "#{k.inspect} #{v.inspect}"}.join(' ') + '}') : 'nil'
-      cmd  = %{[#{command} [#{args.join(' ')}] #{bakeport || 'nil'} "#{$pwd}" #{env}] "#{READLINE}"}
+      cmd = [command, bakeport, READLINE].to_clj
       log(command, "sending: " + cmd) if debug?
-      socket.write(cmd)
-      while (line = socket.gets)
+      socket.write("#{cmd} #{$vars}")      
+      socket.duplex($stdin, $stdout) do |line|
         if line =~ /^#{READLINE}(.*)$/
           socket.write(prompt($1))
         elsif line =~ /^@#{READLINE}(.*)$/
           socket.write(prompt($1, :echo => false))
         else
-          puts line
+          line
         end
       end
     end
@@ -600,7 +619,7 @@ class Cake < JVM
   end
 
   def java_opts
-    [ENV['CAKE_JAVA_OPTS'], config['cake.java_opts'], super].compact.join(' ')
+    [ENV['CAKE_JAVA_OPTS'], $config['cake.java_opts'], super].compact.join(' ')
   end
 
 private
@@ -622,12 +641,31 @@ end
 
 class Bake < JVM
   def java_opts
-    [ENV['JAVA_OPTS'], config['project.java_opts'], super].compact.join(' ')
+    [ENV['JAVA_OPTS'], $config['project.java_opts'], super].compact.join(' ')
   end
 
   def enabled?
     Dir["lib/*.jar"].any?
   end
+end
+
+#==================================
+
+parse_opts!
+$pwd     = Dir.getwd
+$bakedir = project_dir($pwd)
+$cakedir = File.dirname(File.dirname(readlink(__FILE__)))
+$repo    = "http://clojars.org/repo/cake/cake"
+$confdir = ".cake"
+$config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
+$vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts}.to_clj
+
+Dir.chdir($bakedir)
+FileUtils.makedirs($confdir)
+
+if debug?
+  puts "config: #{$config.inspect}"
+  puts "vars:   #{$vars}"
 end
 
 # Bootstrap cake dependencies.
@@ -663,12 +701,12 @@ else
 end
 
 cake = Cake.new(
-  [cakepath, "src", "src/clj", config['cake.claspath'], "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
-  [config['cake.library.path'], "lib/dev/native"]
+  [cakepath, "src", "src/clj", $config['cake.claspath'], "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [$config['cake.library.path'], "lib/dev/native"]
 )
 bake = Bake.new(
-  [bakepath, "src", "src/clj", "classes", "test", config['project.classpath'], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
-  [config['project.library.path'], "lib/native", "lib/dev/native"]
+  [bakepath, "src", "src/clj", "classes", "test", $config['project.classpath'], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [$config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 
 if $command == :kill
@@ -699,9 +737,6 @@ elsif File.exists?('project.clj')
     bake.stop
     cake.send_command(:deps)
     cake.init
-  elsif config['swank.auto-start'] or config['swank']
-    cake.send_command(:"swank-deps")
-    cake.init
   end
 
   bake.init
@@ -726,7 +761,7 @@ else
   if $command == :autotest
     cake.send_command(:autotest)
     interval = $opts[:autotest].last.to_i if $opts[:autotest]
-    interval = interval || (config['autotest.interval'].to_i if config['autotest.interval']) || 1
+    interval = interval || ($config['autotest.interval'].to_i if $config['autotest.interval']) || 1
     run_tests = true
     ran = false
     while true
@@ -741,6 +776,6 @@ else
       sleep(interval)
     end
   else
-    cake.send_command($command, ARGV)
+    cake.send_command($command)
   end
 end

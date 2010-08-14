@@ -1,5 +1,5 @@
 (ns cake.tasks.swank
-  (:use cake [cake.tasks.dependencies :only [fetch-deps]])
+  (:use cake cake.core [cake.tasks.dependencies :only [fetch-deps]])
   (:require [cake.swank :as swank]))
 
 (defn existing-swank-dep? []

@@ -1,5 +1,5 @@
 (ns cake.tasks.new
-  (:use cake cake.ant
+  (:use cake cake.core cake.ant
         [cake.project :only [group]]
         [useful.io :only [extract-resource]])
   (:import [org.apache.tools.ant.taskdefs Mkdir]))

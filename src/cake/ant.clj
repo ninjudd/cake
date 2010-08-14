@@ -1,7 +1,6 @@
 (ns cake.ant
   "Lancet-inspired ant helpers."
-  (:use [cake.server :only [*outs*]])
-  (:require cake)
+  (:use cake)
   (:import [org.apache.tools.ant Project NoBannerLogger]
            [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]
            [org.apache.tools.ant.taskdefs Echo Javac Manifest Manifest$Attribute]
@@ -57,7 +56,7 @@
 (defmacro ant [task attrs & forms]
   `(doto (make* ~task ~attrs)
      ~@forms
-     (.setTaskName (if cake/*current-task* (name cake/*current-task*) "null"))
+     (.setTaskName (if *current-task* (name *current-task*) "null"))
      (.execute)))
 
 (defn get-reference [ref-id]
@@ -109,11 +108,11 @@
      (make Environment$Variable {:key (name key) :value val}))))
 
 (defn init-project []
-  (make Project {:basedir (:root cake/*project*)}
+  (make Project {:basedir (:root *project*)}
         (.init)
         (.addBuildListener
          (make NoBannerLogger
-               {:message-output-level (if (cake/verbose?) Project/MSG_VERBOSE Project/MSG_INFO)
+               {:message-output-level (if (verbose?) Project/MSG_VERBOSE Project/MSG_INFO)
                 :output-print-stream  *outs*
                 :error-print-stream   *outs*}))))
 
