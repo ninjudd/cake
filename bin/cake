@@ -84,24 +84,36 @@ end
 
 class Object
   # Support converting simple Ruby data structures to Clojure expressions.
-  def clj(unquoted = false)
-    if unquoted ^ unquoted?
+  def to_clj(unquote = false)
+    if unquote
       case self
-      when Array  : return collect {|i| i.clj(true)}.join(' ')
+      when Array  : return collect {|i| i.to_clj(true)}.join(' ')
       when String : return self
       end
     end
     case self
-    when Hash   : '{' + collect {|k,v| k.clj + ' ' + v.clj}.join(' ') + '}'
-    when Array  : '[' + collect {|i| i.clj}.join(' ') + ']'
+    when Hash   : '{' + collect {|k,v| k.to_clj + ' ' + v.to_clj}.join(' ') + '}'
+    when Array  : '[' + collect {|i| i.to_clj}.join(' ') + ']'
     when Symbol : ":#{to_s}"
-    when String : inspect
-    else raise "unable to convert #{self} to clojure expression"
+    else          inspect
     end
   end
-  define_method(:unquoted?) { @unquote }
-  define_method(:unquote!)  { @unquote = true; self }
-  define_method(:~)         { self.clone.unquote! }
+
+  define_method(:~) { Unquoted.new(self) }
+end
+
+class Unquoted
+  attr_reader :object
+  def initialize(object)
+    @object = object
+  end
+
+  def to_clj(quote = false)
+    object.to_clj(!quote)
+  end
+  alias to_s to_clj
+
+  define_method(:~) { @object }
 end
 
 begin
@@ -464,7 +476,7 @@ class JVM
     with_socket do |socket|
       socket.write %(:filter #{$vars} "#{EOL}")
       while line = $stdin.gets
-        socket.write [line, ~forms].clj
+        socket.write [line, ~forms].to_clj
         while (line = socket.gets)
           break if line.start_with?(EOL)
           puts line
@@ -572,7 +584,7 @@ private
   def completions(prefix)
     return [] if prefix.empty?
     with_socket do |socket|
-      socket.write [:completions, {}, ~[prefix, ~@ns]].clj(true)
+      socket.write ~[:completions, {}, ~[prefix, ~@ns]]
       completions = []
       while line = socket.gets
         completions << line.chomp
@@ -590,7 +602,7 @@ class Cake < JVM
     with_restart { FileUtils.remove_dir("lib/dev", true) } if $win and [:deps, :clean].include?(command)
 
     with_socket do |socket|
-      cmd = [command, bakeport, READLINE].clj
+      cmd = [command, bakeport, READLINE].to_clj
       log(command, "sending: " + cmd) if debug?
       socket.write("#{cmd} #{$vars}")
       socket.duplex($stdin, $stdout) do |line|
@@ -668,7 +680,7 @@ $cakedir = File.dirname(File.dirname(readlink(__FILE__)))
 $repo    = "http://clojars.org/repo/cake/cake"
 $confdir = ".cake"
 $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
-$vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts}.clj
+$vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts}.to_clj
 
 Dir.chdir($bakedir)
 FileUtils.makedirs($confdir)

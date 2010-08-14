@@ -7,7 +7,7 @@
   (bake (:require [cake.swank :as swank]) []
         (if (not (swank/installed?))
           (do (println "swank-clojure is not in your library path.")
-              (println "add 'swank = true' or 'swank.auto-start = localhost:4005' to .cake/config to enable"))
+              (println "add swank-clojure as a dev-dependency in ~/.cake/project.clj to enable"))
           (if (swank/running?)
             (let [num (swank/num-connections), s (if (= 1 num) "" "s")]
               (println
