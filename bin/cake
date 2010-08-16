@@ -450,8 +450,7 @@ class JVM
     save_history
   end
 
-  def run(file = $opts[:run].first)
-    file = File.expand_path(file)
+  def run(file = $script)
     with_socket do |socket|
       log(:run, "running file #{file}") if debug?
       socket.write(":run #{$vars} #{file.inspect}")
@@ -674,6 +673,7 @@ END
 end unless File.exists?(project_clj)
 
 parse_opts!
+$script  = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd     = Dir.getwd
 $bakedir = project_dir($pwd)
 $cakedir = File.dirname(File.dirname(readlink(__FILE__)))
