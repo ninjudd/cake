@@ -1,5 +1,5 @@
 (ns cake.tasks.version
-  (:use cake cake.ant)
+  (:use cake cake.core cake.ant)
   (:import [org.apache.tools.ant.taskdefs Replace]))
 
 (def *version-levels* [:major :minor :patch])
