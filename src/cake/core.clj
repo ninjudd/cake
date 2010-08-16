@@ -11,7 +11,7 @@
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (apply hash-map task-opts)]    
     `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
-         (require '~'[cake.tasks help run jar test compile dependencies swank clean])
+         (require '~'[cake.tasks help run jar test compile dependencies swank clean version])
          ~@(for [ns tasks]
              `(try (require '~ns)
                    (catch java.io.FileNotFoundException e#

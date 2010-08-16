@@ -120,7 +120,3 @@
   (ant Delete {:dir "lib"})
   (ant Move {:file "build/lib" :tofile "lib" :verbose true})
   (make-pom))
-
-(deftask version
-  "Print the current project name and version."
-  (println (:artifact-id *project*) (:version *project*)))
