@@ -311,7 +311,8 @@ class JVM
   end
 
   def refresh
-    @pid, @port = IO.read(pidfile).split("\n").map {|l| l.to_i}
+    @pid, @port, @version = IO.read(pidfile).split("\n"); @pid = @pid.to_i; @port = @port.to_i
+    kill unless @version == $version
     Process.kill(0, @pid) # make sure pid is valid
     TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Process::Error => e
@@ -380,7 +381,7 @@ class JVM
       log(:start, "starting #{type} jvm") if verbose? or $command == :start
       @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
       @pid = daemon %{java -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(use '#{type}.core) (start-server #{port})"}
-      File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n") }
+      File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
     end
   rescue Errno::EADDRNOTAVAIL => e # port already in use
     retry
@@ -693,10 +694,11 @@ end
 # Bootstrap cake dependencies.
 lib = "#{$cakedir}/lib"
 if File.exists?("#{$cakedir}/.gitignore") and File.exists?("#{$cakedir}/project.clj")
+  $version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
     begin
-      version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
+      version = $version
       cakejar = get_cake(version, lib, :raise => true)
     rescue OpenURI::HTTPError => e
       version = current_version
@@ -712,11 +714,12 @@ else
   bakejar = "#{lib}/bake.jar"
   if File.exists?(cakejar) and File.exists?(bakejar)
     # Inside a gem install.
+    $version = File.basename(File.dirname(lib)).split('-')[1]
     cakepath = cakejar
     bakepath = bakejar
   else
     # Naked script.
-    version  = current_version
+    $version  = current_version
     cakepath = get_cake(version)
     bakepath = extract(cakepath, "bake-#{version}.jar")
   end
@@ -731,7 +734,10 @@ bake = Bake.new(
   [$config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 
-if $command == :kill
+if $command == :default and $opts[:version]
+  puts "cake #{$version}"
+  exit
+elsif $command == :kill
   if $opts[:all]
     ps.each do |line|
       pid = line.split(' ').first.to_i
