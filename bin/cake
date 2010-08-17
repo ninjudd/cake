@@ -386,7 +386,7 @@ class JVM
     else
       log(:start, "starting #{type} jvm") if verbose? or $command == :start
       @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-      @pid = daemon %{java -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(use '#{type}.core) (start-server #{port})"}
+      @pid = daemon %{java -d32 -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(use '#{type}.core) (start-server #{port})"}
       File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
     end
   rescue Errno::EADDRNOTAVAIL => e # port already in use
@@ -767,8 +767,7 @@ cake.init
 if [:deps, :clean].include?($command)
   bake.stop
 elsif File.exists?('project.clj')
-  if newer?('project.clj', 'pom.xml') or not bake.enabled?
-    bake.stop
+  if not bake.enabled?
     cake.send_command(:deps)
     cake.init
   end
