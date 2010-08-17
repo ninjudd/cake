@@ -95,9 +95,15 @@ class Object
     when Hash   : '{' + collect {|k,v| k.to_clj + ' ' + v.to_clj}.join(' ') + '}'
     when Array  : '[' + collect {|i| i.to_clj}.join(' ') + ']'
     when Symbol : ":#{to_s}"
-    else          inspect
+    else          inspect.gsub(/(\\a|\\e|\\v)/) {|c| CLJ_SUB[c]}
     end
   end
+
+  CLJ_SUB = {
+    '\a' => '\007',
+    '\e' => '\033',
+    '\v' => '\013',
+  }
 
   define_method(:~) { Unquoted.new(self) }
 end
