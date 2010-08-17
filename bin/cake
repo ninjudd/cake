@@ -435,7 +435,7 @@ class JVM
   def ping
     return unless enabled?
     with_socket do |socket|
-      socket.write ":ping\n"
+      socket.write ":ping {}\n"
       log($command, "#{type} jvm not running") unless socket.gets == "pong\n"
     end
   end
