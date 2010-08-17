@@ -663,7 +663,7 @@ end
 FileUtils.makedirs("#{$home}/.cake")
 project_clj = "#{$home}/.cake/project.clj"
 File.open(project_clj, 'w') do |file|
-  f.write <<END
+  file.write <<END
 (defproject global "0.0.0"
   :description "Don't rename this project, though you can change the version to your heart's content."
   :dependencies [[clojure "1.2.0-RC2"]
