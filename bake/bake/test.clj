@@ -43,15 +43,7 @@
   (test/with-test-out
     (print-results m)))
 
-<<<<<<< HEAD
-(defmethod clojure.test/report :fn-summary [m]
-  (clojure.test/with-test-out
-    (print-results m)))
-
-(defmethod clojure.test/report :begin-auto [m])
-=======
 (defmethod test/report :begin-auto [m])
->>>>>>> fix bugs in test
 
 (defmethod test/report :summary-auto [m]
   (test/with-test-out
