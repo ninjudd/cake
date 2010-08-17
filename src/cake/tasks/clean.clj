@@ -1,5 +1,5 @@
 (ns cake.tasks.clean
-  (:use cake cake.ant)
+  (:use cake cake.core cake.ant)
   (:import (org.apache.tools.ant.taskdefs Delete Mkdir)))
 
 (deftask clean

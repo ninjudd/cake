@@ -1,14 +1,13 @@
 (ns cake.server
-  (:use [cake.contrib.find-namespaces :only [read-file-ns-decl]])
+  (:use cake
+        [clojure.main :only [skip-whitespace]]
+        [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.contrib.server-socket :as server-socket]
             [clojure.stacktrace :as stacktrace]
             complete)
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream FileOutputStream ByteArrayInputStream StringReader]
            [clojure.lang LineNumberingPushbackReader LispReader$ReaderException]
            [java.net InetAddress]))
-
-(def *ins*  nil)
-(def *outs* nil)
 
 (defonce num-connections (atom 0))
 
@@ -18,8 +17,8 @@
 
 (defn read-seq []
   (lazy-seq
-   (let [form (read *in* false ::EOF)]
-     (when-not (= ::EOF form)
+   (let [form (read *in* false :cake/EOF)]
+     (when-not (= :cake/EOF form)
        (cons form (read-seq))))))
 
 (defn validate-form []
@@ -79,12 +78,23 @@
          (throw e))))
 
 (defn eval-multi
-  ([] (eval-multi (read-seq)))
+  ([] (eval-multi (doall (read-seq))))
   ([forms]
      (clojure.main/with-bindings
        (in-ns 'user)
        (doseq [form forms]
          (eval-verbose form)))))
+
+(defn eval-filter []
+  (let [end (read)]
+    (eval-multi
+     (for [[line & forms] (read-seq)]
+       `(do (-> ~line ~@forms (println))
+            (println ~end))))))
+
+(defn run-file []
+  (let [script (read)]
+    (load-file script)))
 
 (def default-commands
   {:validate    validate-form
@@ -94,6 +104,8 @@
    :quit        quit
    :repl        repl
    :eval        eval-multi
+   :filter      eval-filter
+   :run         run-file
    :ping        #(println "pong")})
 
 (defn fatal? [e]
@@ -110,14 +122,20 @@
                   *ins*  ins
                   *outs* (PrintStream. outs)]
           (try
-            (let [form (read)]
-              (if (keyword? form)
-                (when-let [command (or (commands form) (default-commands form))]
-                  (command))
-                (f form)))
+            (let [form (read)
+                  vars (read)]
+              (binding [*vars*              vars
+                        *pwd*               (:pwd  vars)
+                        *env*               (:env  vars)
+                        *opts*              (:opts vars)
+                        *command-line-args* (:args vars)]              
+                (if (keyword? form)
+                  (when-let [command (or (commands form) (default-commands form))]
+                    (command))                
+                  (f form))))
             (catch Exception e
               (print-stacktrace e)
-              (when (fatal? e) (System/exit 1))))))
+              (when (fatal? e) (System/exit 1))))))      
       0 (InetAddress/getByName "localhost"))))
 
 (defn redirect-to-log [logfile]

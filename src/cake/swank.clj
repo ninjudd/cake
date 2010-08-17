@@ -1,5 +1,5 @@
 (ns cake.swank
-  (:use [cake.project :only [*config*]])
+  (:use cake)
   (:import [java.io File StringWriter PrintWriter]))
 
 (def current-port (atom nil))

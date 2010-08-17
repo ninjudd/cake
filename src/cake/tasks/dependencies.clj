@@ -1,11 +1,13 @@
 (ns cake.tasks.dependencies
-  (:use cake cake.ant
+  (:use cake cake.core cake.ant
         [cake.project :only [group]]
         [clojure.java.shell :only [sh]])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
            [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move]
            [org.apache.maven.model Dependency Exclusion License]
            [java.io File]))
+
+(def *exclusions* nil)
 
 (def repositories
   [["central"           "http://repo1.maven.org/maven2"]
@@ -54,7 +56,7 @@
         {:group-id    (group dep)
          :artifact-id (name dep)
          :version     version
-         :exclusions  (map exclusion (:exclusions opts))}))))
+         :exclusions  (map exclusion (concat *exclusions* (:exclusions opts)))}))))
 
 (defn subproject-path [dep]
   (when *config*
@@ -84,7 +86,7 @@
           (throw (Exception. (str "unable to locate subproject jar: " (.getPath jar)))))
         (ant Copy {:todir dest}
              (add-fileset {:file jar})
-             (add-jarset (File. path "lib") (:exclusions opts)))))))
+             (add-jarset (File. path "lib") (concat *exclusions* (:exclusions opts))))))))
 
 (defn extract-native [jars dest]
   (doseq [jar jars]
@@ -114,9 +116,11 @@
     (ant WritePomTask {:pom-ref-id refid :file file})))
 
 (deftask deps "Fetch dependencies and create pom.xml."
-  (println "Fetching dependencies...")
+  (log "Fetching dependencies...")
   (fetch-deps (:dependencies *project*) (file "build/lib"))
-  (fetch-deps (:dev-dependencies *project*) (file "build/lib/dev"))
-  (ant Delete {:dir "lib"})
-  (ant Move {:file "build/lib" :tofile "lib" :verbose true})
+  (binding [*exclusions* ['clojure 'clojure-contrib]]
+    (fetch-deps (:dev-dependencies *project*) (file "build/lib/dev")))
+  (when (.exists (file "build/lib"))
+    (ant Delete {:dir "lib"})
+    (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
   (make-pom))

@@ -1,15 +1,10 @@
-(ns bake
+(ns bake.core
+  (:use cake)
   (:require clojure.main            
             cake.project
             [cake.swank :as swank]
             [cake.server :as server])
   (:import [java.io FileOutputStream PrintStream PrintWriter]))
-
-(def *project* nil)
-(def *opts*    nil)
-(def *pwd*     nil)
-(def *env*     nil)
-(def *config*  cake.project/*config*)
 
 (defmacro defproject "Just save project hash in bake."
   [name version & args]
@@ -24,10 +19,8 @@
     (server/quit)
     (println "refusing to quit because there are active swank connections")))
 
-(defn project-eval [[ns ns-forms args opts pwd env body]]
-  (binding [*command-line-args* args,
-            *opts* opts, *pwd* pwd, *env* env]
-    (server/eval-multi `[(~'ns ~ns (:use ~'[bake :only [*project* *opts*]]) ~@ns-forms) ~body])))
+(defn project-eval [[ns ns-forms body]]
+  (server/eval-multi `[(~'ns ~ns (:use ~'cake) ~@ns-forms) ~body]))
 
 (defn start-server [port]
   (cake.project/init "project.clj")

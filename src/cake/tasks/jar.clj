@@ -1,5 +1,5 @@
 (ns cake.tasks.jar
-  (:use cake cake.ant ordered-set
+  (:use cake cake.core cake.ant ordered-set
         [useful :only [absorb]])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete]
            [org.apache.tools.ant.taskdefs.optional.ssh Scp]

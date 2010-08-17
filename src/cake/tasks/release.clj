@@ -1,5 +1,5 @@
 (ns cake.tasks.release
-  (:use cake cake.ant)
+  (:use cake cake.core cake.ant)
   (:import (org.apache.tools.ant.taskdefs.optional.ssh Scp SSHExec)
            (com.jcraft.jsch JSch)
            (java.io ByteArrayInputStream ByteArrayOutputStream)

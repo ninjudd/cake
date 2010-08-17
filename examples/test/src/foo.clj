@@ -1,5 +1,5 @@
 (ns foo
-  (:use cake))
+  (:use cake cake.core))
 
 (defn bar []
   [(count *project*) (keys *project*)])

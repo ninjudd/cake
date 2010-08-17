@@ -1,5 +1,5 @@
 (ns test-core
-  (:use clojure.test cake))
+  (:use clojure.test cake cake.core))
 
 (defmacro with-project [bindings & body]
   `(binding [*project* {:name "project-stub", :version "0.0.0", :root "/home/project"}]
