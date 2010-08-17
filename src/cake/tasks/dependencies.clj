@@ -7,6 +7,8 @@
            [org.apache.maven.model Dependency Exclusion License]
            [java.io File]))
 
+(def *exclusions* nil)
+
 (def repositories
   [["central"           "http://repo1.maven.org/maven2"]
    ["clojure"           "http://build.clojure.org/releases"]
@@ -54,7 +56,7 @@
         {:group-id    (group dep)
          :artifact-id (name dep)
          :version     version
-         :exclusions  (map exclusion (:exclusions opts))}))))
+         :exclusions  (map exclusion (concat *exclusions* (:exclusions opts)))}))))
 
 (defn subproject-path [dep]
   (when *config*
@@ -84,7 +86,7 @@
           (throw (Exception. (str "unable to locate subproject jar: " (.getPath jar)))))
         (ant Copy {:todir dest}
              (add-fileset {:file jar})
-             (add-jarset (File. path "lib") (:exclusions opts)))))))
+             (add-jarset (File. path "lib") (concat *exclusions* (:exclusions opts))))))))
 
 (defn extract-native [jars dest]
   (doseq [jar jars]
@@ -116,7 +118,8 @@
 (deftask deps "Fetch dependencies and create pom.xml."
   (log "Fetching dependencies...")
   (fetch-deps (:dependencies *project*) (file "build/lib"))
-  (fetch-deps (:dev-dependencies *project*) (file "build/lib/dev"))
+  (binding [*exclusions* ['clojure 'clojure-contrib]]
+    (fetch-deps (:dev-dependencies *project*) (file "build/lib/dev")))
   (when (.exists (file "build/lib"))
     (ant Delete {:dir "lib"})
     (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
