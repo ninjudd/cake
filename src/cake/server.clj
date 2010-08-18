@@ -80,10 +80,9 @@
 (defn eval-multi
   ([] (eval-multi (doall (read-seq))))
   ([forms]
-     (clojure.main/with-bindings
-       (in-ns 'user)
-       (doseq [form forms]
-         (eval-verbose form)))))
+     (in-ns 'user)
+     (doseq [form forms]
+       (eval-verbose form))))
 
 (defn eval-filter []
   (let [end (read)]
@@ -124,15 +123,16 @@
           (try
             (let [form (read)
                   vars (read)]
-              (binding [*vars*              vars
-                        *pwd*               (:pwd  vars)
-                        *env*               (:env  vars)
-                        *opts*              (:opts vars)
-                        *command-line-args* (:args vars)]              
-                (if (keyword? form)
-                  (when-let [command (or (commands form) (default-commands form))]
-                    (command))                
-                  (f form))))
+              (clojure.main/with-bindings
+                (set! *command-line-args* (:args vars))
+                (binding [*vars* vars
+                          *pwd*  (:pwd  vars)
+                          *env*  (:env  vars)
+                          *opts* (:opts vars)]
+                  (if (keyword? form)
+                    (when-let [command (or (commands form) (default-commands form))]
+                      (command))                
+                    (f form)))))
             (catch Exception e
               (print-stacktrace e)
               (when (fatal? e) (System/exit 1))))))      
