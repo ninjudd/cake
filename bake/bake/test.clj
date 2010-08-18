@@ -1,4 +1,5 @@
 (ns bake.test
+  (:refer-clojure :exclude [group-by])
   (:use [cake.contrib.find-namespaces :only [find-namespaces-in-dir]]
         useful)
   (:require [clojure.test :as test]
@@ -16,6 +17,15 @@
   (cond (namespace test) :fn
         (keyword?  test) :tag
         :else            :ns))
+
+;from 1.2
+(defn- group-by [f coll]
+  (persistent!
+   (reduce
+    (fn [ret x]
+      (let [k (f x)]
+        (assoc! ret k (conj (get ret k []) x))))
+    (transient {}) coll)))
 
 (defn get-grouped-tests [namespaces opts]
   (let [tests (:test opts)]
