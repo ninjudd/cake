@@ -1,49 +1,49 @@
 (ns cake.tasks.version
-  (:use cake cake.core cake.ant)
+  (:use cake cake.core cake.ant
+        [useful :only [update]])
   (:import [org.apache.tools.ant.taskdefs Replace]))
 
-(def *version-levels* [:major :minor :patch])
+(def version-levels [:major :minor :patch])
+(def defline (str "(defproject " (:artifact-id *project*) " \"%s\""))
 
-(def defline (format "(defproject %s \"" (:artifact-id *project*) " \""))
-
-(defn version-map [v]
-  (let [[v snapshot] (.split v "-")]
+(defn version-map [version]
+  (let [[version snapshot] (.split version "-")]
     (into {:snapshot snapshot}
           (map vector
-               *version-levels*
+               version-levels
                (map #(Integer/parseInt %)
-                    (.split v "\\."))))))
+                    (.split version "\\."))))))
 
-(defn bump [level & [snapshot]]
-  (let [version (:version *project*)
-        version-map (version-map version)
-        version-map (apply assoc version-map
-                           level (inc (level version-map))
-                           (mapcat #(list % 0)
-                                   (take-while (partial not= level)
-                                               (reverse *version-levels*))))
-        new-version (apply str (interpose "." (map version-map *version-levels*)))]
-    (if snapshot
-      (str new-version "-SNAPSHOT")
-      new-version)))
+(defn version-str [version]
+  (str (apply str (interpose "." (or (map version version-levels) 0)))
+       (when (version :snapshot) "-SNAPSHOT")))
 
-(defn update-version [arg]
-  (let [level (first (filter *opts* *version-levels*))
-        level (if (not level) :patch level)
-        new-version (if (= "bump" arg)
-                      (bump level (:snapshot *opts*))
-                      arg)]
+(defn bump
+  ([] (bump (version-map (:version *project*))
+            (first (filter *opts* version-levels))
+            (:snapshot *opts*)))
+  ([version level snapshot?]
+      (let [snapshot (when-not snapshot? :snapshot)
+            level    (or level (when-not (:snapshot version) :patch))
+            version  (if snapshot? (assoc version :snapshot true) version)]
+        (if level
+          (reduce dissoc (update version level inc)
+                  (conj (take-while (partial not= level) (reverse version-levels)) snapshot))
+          (dissoc version snapshot)))))
+  
+(defn update-version [action]
+  (let [new-version (if (= "bump" action) (version-str (bump)) action)]
     (ant Replace {:file "project.clj"
-                  :token (str defline (:version *project*))
-                  :value (str defline new-version)})
+                  :token (format defline (:version *project*))
+                  :value (format defline new-version)})
     new-version))
 
 (deftask version
   "Display project version. Use 'bump [--major --minor --patch --snapshot]' to increment."
-  (if-let [arg (first (:version *opts*))]
+  (if-let [action (first (:version *opts*))]
     (println (:artifact-id *project*)
              (:version *project*)
              "->"
              (:artifact-id *project*)
-             (update-version arg))
+             (update-version action))
     (println (:artifact-id *project*) (:version *project*))))
