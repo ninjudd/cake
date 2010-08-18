@@ -10,7 +10,13 @@ require 'io/wait'
 require 'pp'
 
 if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
-  require 'win32/process'
+  begin
+    require 'win32/process'
+  rescue LoadError
+    puts 'cake requires win32/process. use "gem install win32-process" to install'
+    exit
+  end
+
   TERM = 1
   KILL = 'KILL'
   PATH_SEP = ';'
@@ -87,15 +93,15 @@ class Object
   def to_clj(unquote = false)
     if unquote
       case self
-      when Array  : return collect {|i| i.to_clj(true)}.join(' ')
-      when String : return self
+      when Array  then return collect {|i| i.to_clj(true)}.join(' ')
+      when String then return self
       end
     end
     case self
-    when Hash   : '{' + collect {|k,v| k.to_clj + ' ' + v.to_clj}.join(' ') + '}'
-    when Array  : '[' + collect {|i| i.to_clj}.join(' ') + ']'
-    when Symbol : ":#{to_s}"
-    else          inspect.gsub(/(\\a|\\e|\\v)/) {|c| CLJ_SUB[c]}
+    when Hash   then '{' + collect {|k,v| k.to_clj + ' ' + v.to_clj}.join(' ') + '}'
+    when Array  then '[' + collect {|i| i.to_clj}.join(' ') + ']'
+    when Symbol then ":#{to_s}"
+    else             inspect.gsub(/(\\a|\\e|\\v)/) {|c| CLJ_SUB[c]}
     end
   end
 
@@ -124,7 +130,7 @@ end
 
 begin
   require 'readline'
-rescue LoadError => e
+rescue LoadError
   module Readline
     HISTORY = []
     attr_accessor :basic_word_break_characters, :completion_proc

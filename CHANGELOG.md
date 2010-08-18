@@ -1,5 +1,5 @@
 ### `0.4.0` - August 18, 2010
-- full Windows support, including repl and readline
+- full Windows support, including repl and readline; [install instructions](http://wiki.github.com/ninjudd/cake/cake-on-windows)
 - moved environment-specific vars to `cake` namespace and make them available to all commands (e.g. `cake/*env*`, `cake/*pwd*`)
 - move core functionality in `cake.core`
 - bind `*command-line-args*` for all commands
