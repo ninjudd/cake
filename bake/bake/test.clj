@@ -74,6 +74,8 @@
     (when-let [message (:message m)] (println message))
     (let [expected (:expected m)
           actual   (:actual m)]
+      (println "expected:" (pr-str expected))
+      (println "  actual:" (pr-str actual))
       (comment when (seq? actual)
         (diff-actual actual)))))
 
