@@ -12,6 +12,8 @@
                   :classpath   (classpath)
                   :srcdir      (path src)
                   :fork        true
+                  :debug       true
+                  :debug-level "source,lines"
                   :failonerror true}))))
 
 (defn stale? [sourcefile classfile]
