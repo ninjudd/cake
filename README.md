@@ -41,8 +41,8 @@ If you don't yet have a project.clj file, creating one is simple. Here's an exam
       :description "Embedded graph db library for Clojure."
       :url "http://jiraph.org"
       :tasks [protobuf.tasks]
-      :dependencies [[clojure "1.2.0-master-SNAPSHOT"]
-                     [clojure-contrib "1.2.0-SNAPSHOT"]
+      :dependencies [[clojure "1.2.0"]
+                     [clojure-contrib "1.2.0"]
                      [clojure-useful "0.2.1"]
                      [clojure-protobuf "0.3.0"]
                      [tokyocabinet "1.2.3"]])
