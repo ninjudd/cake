@@ -23,6 +23,7 @@
   (server/eval-multi `[(~'ns ~ns (:use ~'cake) ~@ns-forms) ~body]))
 
 (defn start-server [port]
+  (in-ns 'bake.core)
   (cake.project/init "project.clj")
   (server/redirect-to-log ".cake/project.log")
   (try (doseq [ns (:require *project*)]

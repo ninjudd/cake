@@ -75,7 +75,7 @@
      (do-something)
      (do-something-else))"
   [name & body]
-  (verify (not (implicit-tasks name)) (format "Cannot redefine %s task" name))
+  (verify (not (implicit-tasks name)) (str "Cannot redefine implicit task: " name))
   (let [[deps body] (if (set? (first body))
                       [(first body) (rest body)]
                       [#{} body])
@@ -92,11 +92,13 @@
   (let [name form, task (@tasks name)]
     (if (nil? task)
       (println "unknown task:" name)
-      (when-not (run? name)
-        (doseq [dep (:deps task)] (run-task dep))
-        (binding [*current-task* name]
-          (doseq [action (:actions task)] (action)))
-        (set! run? (assoc run? name true))))))
+      (verify (not= :in-progress (run? name)) (str "circular dependency found in task: " name)
+        (when-not (run? name)
+          (set! run? (assoc run? name :in-progress))
+          (doseq [dep (:deps task)] (run-task dep))
+          (binding [*current-task* name]
+            (doseq [action (:actions task)] (action)))
+          (set! run? (assoc run? name true)))))))
 
 (defmacro invoke [name & [opts]]
   `(binding [*opts* (or ~opts *opts*)]
@@ -184,13 +186,14 @@
     (read-line)))
 
 (defn start-server [port]
+  (in-ns 'cake.core)
   (cake.project/init "project.clj" "tasks.clj")
   (let [global-project (File. (System/getProperty "user.home") ".cake")]
     (when-not (= (.getPath global-project) (System/getProperty "cake.project"))
       (cake.project/init (.getPath (File. global-project "tasks.clj")))))
   (when-not *project* (require '[cake.tasks help new]))
   (when (= "global" (:artifact-id *project*))
-    (undeftask clean compile test autotest jar uberjar war uberwar install release)
+    (undeftask test autotest jar uberjar war uberwar install release)
     (require '[cake.tasks new]))
   (server/redirect-to-log ".cake/cake.log")
   (server/create port process-command :reload reload-files)

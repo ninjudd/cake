@@ -18,7 +18,7 @@
 
 (deftask primary
   (println "executing primary task...")
-  (when (:secondary opts)
+  (when (:secondary *opts*)
     (invoke secondary)))
 
 (deftask secondary
@@ -41,3 +41,9 @@
 (deftask release
   "Release code to production servers."
   (println "releasing to production..."))
+
+;; Cake will automatically detect circular dependencies.
+
+(deftask foo #{bar})
+(deftask bar #{baz})
+(deftask baz #{foo})

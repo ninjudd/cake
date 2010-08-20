@@ -3,6 +3,7 @@
 - support restarting of project jvm from clojure using `cake.core/bake-restart` function
 - restart project jvm after fetching new deps or compiling new `.class` files
 - make `deps` a dependency of `compile`
+- automatically detect circular dependencies
 - fix bug that was leaving defunct jvms running
 - only fetch deps if `project.clj` is newer than a file in `lib` or `pom.xml`
 - add force option to compile and deps
