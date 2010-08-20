@@ -125,10 +125,11 @@
                   vars (read)]
               (clojure.main/with-bindings
                 (set! *command-line-args* (:args vars))
-                (binding [*vars* vars
-                          *pwd*  (:pwd  vars)
-                          *env*  (:env  vars)
-                          *opts* (:opts vars)]
+                (binding [*vars*   vars
+                          *pwd*    (:pwd vars)
+                          *env*    (:env vars)
+                          *opts*   (:opts vars)
+                          *script* (:script vars)]
                   (if (keyword? form)
                     (when-let [command (or (commands form) (default-commands form))]
                       (command))                

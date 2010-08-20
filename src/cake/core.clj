@@ -4,12 +4,13 @@
             [cake.ant :as ant]
             [cake.server :as server])
   (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader]
+           [org.apache.tools.ant.taskdefs ExecTask]
            [java.net Socket ConnectException]))
 
 (defmacro defproject [name version & args]
   (let [opts (apply hash-map args)
         [tasks task-opts] (split-with symbol? (:tasks opts))
-        task-opts (apply hash-map task-opts)]    
+        task-opts (apply hash-map task-opts)]
     `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
          (require '~'[cake.tasks help run jar test compile dependencies swank clean version])
          ~@(for [ns tasks]
@@ -21,13 +22,13 @@
 (defn expand-path [& path]
   (cond (instance? File (first path))
         (cons (.getPath (first path)) (rest path))
-        
+
         (when-let [fp (first path)] (.startsWith fp "~"))
         (apply list (System/getProperty "user.home")
                (.substring (first path) 1)
                (rest path))
 
-        :else (cons (:root *project*) path)))
+        :else (cons *root* path)))
 
 (defn file-name [& path]
   (apply str (interpose (File/separator) (apply expand-path path))))
@@ -36,6 +37,12 @@
   "Create a File object from a string or seq"
   [& path]
   (File. (apply file-name path)))
+
+(defn newer? [& args]
+  (apply > (for [arg args]
+             (if (number? arg)
+               arg
+               (.lastModified (if (string? arg) (file arg) arg))))))
 
 (defn update-task [task deps doc actions]
   {:pre [(every? symbol? deps) (every? fn? actions)]}
@@ -91,8 +98,9 @@
           (doseq [action (:actions task)] (action)))
         (set! run? (assoc run? name true))))))
 
-(defmacro invoke [name]
-  `(run-task '~name))
+(defmacro invoke [name & [opts]]
+  `(binding [*opts* (or ~opts *opts*)]
+     (run-task '~name)))
 
 (defn- bake-connect [port]
   (loop []
@@ -111,23 +119,24 @@
        (conj v form)))
    [] bindings))
 
-(def *bake-port* nil)
+(defn bake-port []
+  (Integer/parseInt
+   (second (.split (slurp (file ".cake" "bake.pid")) "\n"))))
 
 (defn bake* [ns-forms bindings body]
-  (if (nil? *bake-port*)
-    (println "bake not supported. perhaps you don't have a project.clj")
+  (if-let [port (bake-port)]
     (let [ns     (symbol (str "bake.task." (name *current-task*)))
           body  `(~'let ~(quote-if odd? bindings) ~@body)
-          socket (bake-connect (int *bake-port*))
+          socket (bake-connect port)
           reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (OutputStreamWriter. (.getOutputStream socket))]
       (doto writer
         (.write (prn-str [ns ns-forms body] *vars*))
         (.flush))
-      (while-let [line (.readLine reader)]
-        (println line))
+      (while-let [line (.readLine reader)] (println line))
       (flush)
-      (.close socket))))
+      (.close socket))
+    (println "bake not supported. perhaps you don't have a project.clj")))
 
 (defmacro bake
   "Execute code in a separate jvm with the classpath of your projects. Bindings allow passing
@@ -137,12 +146,18 @@
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
+(defn cake-exec [& args]
+  (ant/ant ExecTask {:executable *script* :dir *root* :failonerror true}
+    (ant/args (conj (vec args) (str "--project=" *root*)))))
+
+(defn bake-restart []
+  (ant/log "Restarting project jvm.")
+  (cake-exec "restart" "project"))
+
 (def *readline-marker* nil)
 
-(defn process-command [[task bake-port readline-marker]]
-  (binding [*bake-port*       bake-port            
-            *readline-marker* readline-marker
-            run?              {}]
+(defn process-command [[task readline-marker]]
+  (binding [*readline-marker* readline-marker, run? {}]
     (ant/in-project
      (doseq [dir ["lib" "classes" "build"]]
        (.mkdirs (file dir)))

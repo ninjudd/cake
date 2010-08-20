@@ -9,12 +9,10 @@
     (or (namespace project) (name project))))
 
 (defn create [project-name version opts]
-  (let [root (.getParent (File. *file*))
-        artifact (name project-name)]
+  (let [artifact (name project-name)]
     (-> opts
         (assoc :artifact-id artifact
                :group-id    (group project-name)
-               :root        root
                :aot         (or (:aot opts) (:namespaces opts))
                :version     version)
         (assoc-or :name artifact))))

@@ -79,8 +79,9 @@
 (defn fetch-subprojects [deps dest]
   (doseq [[dep _ & opts] deps :let [opts (apply array-map opts)]]
     (when-let [path (subproject-path dep)]
-      (ant ExecTask {:executable "cake" :dir path :failonerror true} (args ["deps"]))
-      (ant ExecTask {:executable "cake" :dir path :failonerror true} (args ["jar" "--clean"]))
+      (binding [cake/*root* path]
+        (cake-exec "deps")
+        (cake-exec "jar" "--clean"))
       (let [jar (first (glob path (str (name dep) "-.*jar")))]
         (when-not (.exists jar)
           (throw (Exception. (str "unable to locate subproject jar: " (.getPath jar)))))
@@ -93,7 +94,7 @@
     (ant Copy {:todir dest :flatten true}
          (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))))
 
-(defn fetch-deps [deps dest]
+(defn fetch [deps dest]
   (fetch-subprojects deps dest)  
   (when-let [deps (seq (remove subproject? deps))]
     (let [ref-id (str "cake.deps.fileset." (.getName dest))]
@@ -115,12 +116,26 @@
       (add-dependencies (:dependencies *project*)))
     (ant WritePomTask {:pom-ref-id refid :file file})))
 
-(deftask deps "Fetch dependencies and create pom.xml."
+(defn fetch-deps []
   (log "Fetching dependencies...")
-  (fetch-deps (:dependencies *project*) (file "build/lib"))
+  (fetch (:dependencies *project*) (file "build/lib"))
   (binding [*exclusions* ['clojure 'clojure-contrib]]
-    (fetch-deps (:dev-dependencies *project*) (file "build/lib/dev")))
+    (fetch (:dev-dependencies *project*) (file "build/lib/dev")))
   (when (.exists (file "build/lib"))
     (ant Delete {:dir "lib"})
     (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
-  (make-pom))
+  (invoke clean {})
+  (make-pom)
+  (bake-restart))
+
+(defn stale-deps? []
+  (let [libs (fileset-seq {:dir "lib" :includes "**/*.jar"})]
+    (or (empty? libs)
+        (some (partial newer? "project.clj")
+              (conj libs "pom.xml")))))
+
+(deftask deps "Fetch dependencies and create pom.xml. Use 'cake deps force' to refetch dependencies."
+  (if (or (stale-deps?) (= ["force"] (:deps *opts*)))
+    (fetch-deps)
+    (when (= ["force"] (:compile *opts*))
+      (invoke clean {}))))

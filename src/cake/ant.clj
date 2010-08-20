@@ -108,7 +108,7 @@
      (make Environment$Variable {:key (name key) :value val}))))
 
 (defn init-project []
-  (make Project {:basedir (:root *project*)}
+  (make Project {:basedir *root*}
         (.init)
         (.addBuildListener
          (make NoBannerLogger

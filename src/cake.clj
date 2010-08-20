@@ -5,10 +5,12 @@
 (def *current-task* nil)
 (def *project*      nil)
 (def *config*       nil)
+(def *script*       nil)
 (def *opts*         nil)
 (def *pwd*          nil)
 (def *env*          nil)
 (def *vars*         nil)
+(def *root* (System/getProperty "cake.project"))
 
 (def *ins*  nil)
 (def *outs* nil)

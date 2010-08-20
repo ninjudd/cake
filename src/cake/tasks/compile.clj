@@ -6,7 +6,8 @@
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
 (defn compile-java []
-  (let [src (file "src" "jvm")]
+  (let [start (System/currentTimeMillis)
+        src   (file "src" "jvm")]
     (when (.exists src)
       (ant Javac {:destdir     (file "classes")
                   :classpath   (classpath)
@@ -14,13 +15,16 @@
                   :fork        true
                   :debug       true
                   :debug-level "source,lines"
-                  :failonerror true}))))
+                  :failonerror true}))
+    (when (some #(newer? % start) (file-seq (file "classes")))
+      (bake-restart))))
 
-(defn stale? [sourcefile classfile]
-  (> (.lastModified sourcefile) (.lastModified classfile)))
-
-(defn classfile [namespace]
-  (str (.. (str namespace) (replace "-" "_") (replace "." "/")) "__init.class"))
+(defn classfile [ns]
+  (file "classes"
+    (.. (str ns)
+        (replace "-" "_")
+        (replace "." "/")
+        (concat "__init.class"))))
 
 (defn stale-namespaces []
   (let [compile?
@@ -32,16 +36,17 @@
                   (include? namespace aot)))))]
     (remove nil?
       (for [sourcefile (find-clojure-sources-in-dir (file "src"))]
-        (let [namespace  (second (read-file-ns-decl sourcefile))
-              classfile (file "classes" (classfile namespace))]
-          (when (and (compile? namespace) (stale? sourcefile classfile))
+        (let [namespace (second (read-file-ns-decl sourcefile))
+              classfile (classfile namespace)]
+          (when (and (compile? namespace) (newer? sourcefile classfile))
             namespace))))))
 
 (defn compile-clojure []
   (when-let [stale (seq (stale-namespaces))]
     (bake [libs stale]
       (doseq [lib libs]
-        (compile lib)))))
+        (compile lib)))
+    (bake-restart)))
 
 (defn add-native-libs [task dir libs]
   (doseq [lib libs]
@@ -57,8 +62,8 @@
     (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}
          (add-native-libs "build/native/lib" libs))))
 
-(deftask compile #{compile-native}
-  "Compile all clojure and java source files."
+(deftask compile #{deps compile-native}
+  "Compile all clojure and java source files. Use 'cake compile force' to recompile all files."
   (copy-native)
   (compile-java)
   (compile-clojure))
