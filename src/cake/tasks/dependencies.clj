@@ -134,7 +134,7 @@
         (some (partial newer? "project.clj")
               (conj libs "pom.xml")))))
 
-(deftask deps "Fetch dependencies and create pom.xml. Use 'cake deps force' to refetch dependencies."
+(deftask deps "Fetch dependencies and create pom.xml. Use 'cake deps force' to refetch."
   (if (or (stale-deps?) (= ["force"] (:deps *opts*)))
     (fetch-deps)
     (when (= ["force"] (:compile *opts*))

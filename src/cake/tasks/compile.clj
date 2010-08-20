@@ -63,7 +63,7 @@
          (add-native-libs "build/native/lib" libs))))
 
 (deftask compile #{deps compile-native}
-  "Compile all clojure and java source files. Use 'cake compile force' to recompile all files."
+  "Compile all clojure and java source files. Use 'cake compile force' to recompile."
   (copy-native)
   (compile-java)
   (compile-clojure))

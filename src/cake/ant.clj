@@ -93,8 +93,8 @@
 (defn classpath [& paths]
   (apply path "src" "lib/*" paths))
 
-(defn args [task args]
-  (doseq [a args]
+(defn args [task & args]
+  (doseq [a (flatten args)]
     (.. task createArg (setValue a))))
 
 (defn sys [task map]

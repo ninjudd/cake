@@ -707,7 +707,7 @@ $cakedir = File.dirname(File.dirname(readlink(__FILE__)))
 $repo    = "http://clojars.org/repo/cake/cake"
 $confdir = ".cake"
 $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
-$vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => __FILE__}.to_clj
+$vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
 
 Dir.chdir($bakedir)
 FileUtils.makedirs($confdir)

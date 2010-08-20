@@ -148,9 +148,9 @@
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
-(defn cake-exec [& args]
-  (ant/ant ExecTask {:executable *script* :dir *root* :failonerror true}
-    (ant/args (conj (vec args) (str "--project=" *root*)))))
+(defn cake-exec [& args]  
+  (ant/ant ExecTask {:executable "ruby" :dir *root* :failonerror true}
+    (ant/args *script* args (str "--project=" *root*))))
 
 (defn bake-restart []
   (ant/log "Restarting project jvm.")
