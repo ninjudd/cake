@@ -6,4 +6,5 @@ pom.xml
 gem/
 lib/
 classes/
+build/
 .*
