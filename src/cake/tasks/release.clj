@@ -97,7 +97,7 @@
             (copy ext *outs*))))))
 
 (defn upload-to-clojars [jar]
-  (log "Uploading" jar "to clojars")
+  (log "Releasing jar:" jar)
   (ssh-session {:host "clojars.org" :username "clojars"}
     (upload ["pom.xml" (jarfile)])))
 
