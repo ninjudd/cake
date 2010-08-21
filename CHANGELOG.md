@@ -1,4 +1,4 @@
-### `0.4.3` - August 20, 2010
+### `0.4.3` - August 21, 2010
 - switch to clojure 1.2.0
 - support restarting of project jvm from clojure using `cake.core/bake-restart` function
 - restart project jvm after fetching new deps or compiling new `.class` files
@@ -10,6 +10,7 @@
 - change `clean` to not remove deps; use `clean deps` to remove deps too
 - allow `invoke` function to override `*opts*`, though a given task will still only be executed once
 - improved debugging messages for java compilation
+- improved `release` task now prints clojars [INFO] messages
 
 ### `0.4.0` - August 18, 2010
 - full Windows support, including repl and readline; [install instructions](http://wiki.github.com/ninjudd/cake/cake-on-windows)
