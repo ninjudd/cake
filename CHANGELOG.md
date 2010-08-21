@@ -1,4 +1,4 @@
-### `0.4.3` - August 21, 2010
+### `0.4.4` - August 21, 2010
 - switch to clojure 1.2.0
 - support restarting of project jvm from clojure using `cake.core/bake-restart` function
 - restart project jvm after fetching new deps or compiling new `.class` files
