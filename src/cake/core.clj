@@ -12,7 +12,7 @@
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (apply hash-map task-opts)]
     `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
-         (require '~'[cake.tasks help run jar test compile dependencies swank clean version])
+         (require '~'[cake.tasks help run jar test compile dependencies release swank clean version])
          ~@(for [ns tasks]
              `(try (require '~ns)
                    (catch java.io.FileNotFoundException e#
@@ -179,9 +179,13 @@
   (binding [clojure.core/load-file (skip-task-files load-file)]
     (server/reload-files)))
 
+(defn repl []
+  (binding [*current-task* "repl"]
+    (ant/in-project (server/repl))))
+
 (defn prompt-read [prompt & opts]
   (let [opts (apply hash-map opts)
-        echo (if (false? (:echo opts)) "@" "")]
+        echo (if (false? (:echo opts)) "@" "")]    
     (println (str echo *readline-marker* prompt))
     (read-line)))
 
@@ -196,5 +200,5 @@
     (undeftask test autotest jar uberjar war uberwar install release)
     (require '[cake.tasks new]))
   (server/redirect-to-log ".cake/cake.log")
-  (server/create port process-command :reload reload-files)
+  (server/create port process-command :reload reload-files :repl repl)
   nil)

@@ -2,7 +2,6 @@
   (:use cake cake.core cake.ant ordered-set
         [useful :only [absorb]])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete]
-           [org.apache.tools.ant.taskdefs.optional.ssh Scp]
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]
            [org.apache.maven.plugins.shade DefaultShader]
@@ -121,19 +120,3 @@
   (let [refid "cake.pom"]
     (ant Pom {:file "pom.xml" :id refid})
     (ant InstallTask {:file (jarfile) :pom-ref-id refid})))
-
-(defn keyfile [files]
-  (let [sshdir (File. (System/getProperty "user.home") ".ssh")]
-    (first
-      (filter #(.exists %)
-        (map #(File. sshdir %) files)))))
-
-(defn release-to-clojars [jar]
-  (log "Releasing to clojars:" jar)
-  (ant Scp {:todir "clojars@clojars.org:" :trust true :keyfile (keyfile ["id_rsa" "id_dsa" "identity"])}
-       (add-fileset {:file (file "pom.xml")})
-       (add-fileset {:file jar})))
-
-(deftask release #{jar}
-  "Release project jar to clojars."
-  (release-to-clojars (jarfile)))

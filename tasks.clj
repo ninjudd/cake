@@ -1,7 +1,8 @@
 (ns user
   (:use cake cake.core cake.ant
         [useful :only [abort]]
-        [cake.tasks.jar :only [release-to-clojars uberjarfile]])
+        [cake.tasks.jar :only [uberjarfile]]
+        [cake.tasks.release :only [upload-to-clojars]])
   (:import [org.apache.tools.ant.taskdefs Jar Copy Move ExecTask]
            [java.io File]))
 
@@ -50,4 +51,4 @@
   (let [uberjarfile (uberjarfile)
         jarfile     (file "cake.jar")]
     (ant Copy {:file uberjarfile :tofile jarfile})
-    (release-to-clojars jarfile)))
+    (upload-to-clojars jarfile)))

@@ -18,6 +18,9 @@
 (defn verbose? []
   (boolean (or (:v *opts*) (:verbose *opts*))))
 
+(defn debug? []
+  (boolean (or (:d *opts*) (:debug *opts*))))
+
 (defn read-config [file]
   (if (.exists file)
     (with-open [f (FileInputStream. file)]
