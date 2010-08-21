@@ -5,7 +5,7 @@ Gem::Specification.new do |s|
   s.authors = ['Justin Balthrop', 'Lance Bradley']
   s.date = Time.now
   s.default_executable = 'cake'
-  s.summary = 'The cake stands alone.'
+  s.summary = 'A tasty build tool and concurrent repl for Clojure.'
   s.description = "Save your fork, there's cake!"
   s.email = 'code@justinbalthrop.com'
   s.executables = ['cake']
