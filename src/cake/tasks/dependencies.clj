@@ -95,7 +95,7 @@
          (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))))
 
 (defn fetch [deps dest]
-  (fetch-subprojects deps dest)  
+  (fetch-subprojects deps dest)
   (when-let [deps (seq (remove subproject? deps))]
     (let [ref-id (str "cake.deps.fileset." (.getName dest))]
       (ant DependenciesTask {:fileset-id ref-id :path-id (:name *project*)}
@@ -128,14 +128,14 @@
   (make-pom)
   (bake-restart))
 
-(defn stale-deps? []
-  (let [libs (fileset-seq {:dir "lib" :includes "**/*.jar"})]
-    (or (empty? libs)
-        (some (partial newer? "project.clj")
-              (conj libs "pom.xml")))))
+(defn stale-deps? [deps-str deps-file]
+  (or (not (.exists deps-file)) (not= deps-str (slurp deps-file))))
 
 (deftask deps "Fetch dependencies and create pom.xml. Use 'cake deps force' to refetch."
-  (if (or (stale-deps?) (= ["force"] (:deps *opts*)))
-    (fetch-deps)
-    (when (= ["force"] (:compile *opts*))
-      (invoke clean {}))))
+  (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :dev-dependencies])))
+        deps-file (file "lib" "deps.clj")]
+    (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
+      (do (fetch-deps)
+          (spit deps-file deps-str))
+      (when (= ["force"] (:compile *opts*))
+        (invoke clean {})))))
