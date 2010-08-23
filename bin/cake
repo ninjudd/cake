@@ -260,10 +260,12 @@ rescue OpenURI::HTTPError => e
 end
 
 def current_version
-  open("#{$repo}/maven-metadata.xml") do |file|
+  version = open("#{$repo}/maven-metadata.xml") do |file|
     doc = REXML::Document.new file
     doc.elements['metadata'].elements['versioning'].elements['versions'].elements.to_a('version').last.get_text.to_s
   end
+  log(:deps, "most recent clojars version is #{version}") if debug?
+  version
 end
 
 def snapshot(version)
@@ -721,15 +723,15 @@ end
 lib = "#{$cakedir}/lib"
 if File.exists?("#{$cakedir}/.gitignore") and File.exists?("#{$cakedir}/project.clj")
   $version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
+  log(:deps, "project.clj version is #{$version}") if debug?
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
+    log(:cake, "git checkout install") if debug?
     begin
       version = $version
-      log(:deps, "project.clj version is #{version}") if debug?
       cakejar = get_cake(version, lib, :raise => true)
     rescue OpenURI::HTTPError => e
       version = current_version
-      log(:deps, "most recent clojars version is #{version}") if debug?
       cakejar = get_cake(version, lib)
     end
     extract(cakejar, "bake-#{version}.jar", "#{lib}/dev")
@@ -742,14 +744,16 @@ else
   bakejar = "#{lib}/bake.jar"
   if File.exists?(cakejar) and File.exists?(bakejar)
     # Inside a gem install.
+    log(:cake, "gem install") if debug?
     $version = File.basename(File.dirname(lib)).split('-')[1]
     cakepath = cakejar
     bakepath = bakejar
   else
-    # Naked script.
-    $version  = current_version
-    cakepath = get_cake(version)
-    bakepath = extract(cakepath, "bake-#{version}.jar")
+    # Standalone script.
+    log(:cake, "standalone script install") if debug?
+    $version = current_version
+    cakepath = get_cake($version)
+    bakepath = extract(cakepath, "bake-#{$version}.jar")
   end
 end
 
