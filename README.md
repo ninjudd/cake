@@ -63,6 +63,7 @@ Cake provides default tasks for most of the things you probably do on a regular 
     cake uberjar   ;; Create a standalone jar containing all project dependencies.
     cake install   ;; Install jar to local repository.
     cake release   ;; Release project jar to clojars.
+    cake release   ;; Deploy war to a group of servers.
     cake eval      ;; Eval the given forms in the project JVM.
     cake filter    ;; Thread each line in stdin through the given forms, printing the results.
     cake war       ;; Create a web archive containing project source and class files.

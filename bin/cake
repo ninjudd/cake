@@ -449,7 +449,7 @@ class JVM
       else
         Find.find(path) do |f|
           Find.prune if f == "#{$bakedir}/src/jvm"
-          files << f if f =~ /\.(clj|class)$/ and File.exists?(f) and not File.directory?(f)
+          files << f if f =~ /\.(clj|class|jar)$/ and File.exists?(f) and not File.directory?(f)
         end if File.exists?(path)
       end
     end
