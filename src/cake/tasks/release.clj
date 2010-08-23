@@ -41,7 +41,7 @@
   (prompt-read (format "Enter passphrase for key '%s'" (.getPath keyfile)) :echo false))
 
 (defn- prompt-password []
-  (prompt-read "Password:" :echo false))
+  (prompt-read "Password" :echo false))
 
 (defn start-session [{:keys [host port username] :as opts}]
   (or (first (remove nil?
@@ -96,10 +96,10 @@
             (.close out)
             (copy ext *outs*))))))
 
-(defn upload-to-clojars [jar]
-  (log "Releasing jar:" jar)
+(defn upload-to-clojars [jarfile]
+  (log "Releasing jar:" jarfile)
   (ssh-session {:host "clojars.org" :username "clojars"}
-    (upload ["pom.xml" (jarfile)])))
+    (upload ["pom.xml" jarfile])))
 
 (deftask release #{jar}
   "Release project jar to clojars."
