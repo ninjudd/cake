@@ -234,8 +234,8 @@ def get_cake(version, dest = nil, opts = {})
   path = "#{repo}/#{jar}"
 
   if not File.exists?(path)
-    log(:deps, "fetching cake libraries. this may take a moment...") unless @logged; @logged = true
     url = "#{$repo}/#{version}/#{jar}"
+    log(:deps, "fetching cake libraries. this may take a moment...") unless @logged; @logged = true
     log(:deps, "downloading #{url}") if verbose?
     FileUtils.makedirs(repo)
     open(url) do |jarfile|
@@ -723,12 +723,13 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?("#{$cakedir}/project.
   $version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
-    log(:deps, "read version #{$version} from project.clj") if verbose?
     begin
       version = $version
+      log(:deps, "project.clj version is #{version}") if debug?
       cakejar = get_cake(version, lib, :raise => true)
     rescue OpenURI::HTTPError => e
       version = current_version
+      log(:deps, "most recent clojars version is #{version}") if debug?
       cakejar = get_cake(version, lib)
     end
     extract(cakejar, "bake-#{version}.jar", "#{lib}/dev")
