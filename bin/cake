@@ -723,6 +723,7 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?("#{$cakedir}/project.
   $version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
+    log(:deps, "read version #{$version} from project.clj") if verbose?
     begin
       version = $version
       cakejar = get_cake(version, lib, :raise => true)
