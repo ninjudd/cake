@@ -1,11 +1,11 @@
 (ns test-test
   (:use clojure.test))
 
-(deftest #^:foo tag-foo
+(deftest #^{:tags [:foo]} tag-foo
   (comment println "tag :foo")
   (is (= 1 1)))
 
-(deftest #^:bar tag-bar
+(deftest #^{:tags [:bar]} tag-bar
   (comment println "tag :bar")
   (is (= 1 1)))
 

@@ -11,7 +11,7 @@
       (and (:test (meta f))
            (or (:all opts)
                (namespaces ns)
-               (some tags (:tags (meta f))) (tags (:tag (meta f)))
+               (some tags (:tags (meta f)))
                (functions (symbol (str ns "/" name))))))))
 
 (defn run-project-tests [opts]
