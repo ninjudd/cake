@@ -112,7 +112,7 @@
         (.init)
         (.addBuildListener
          (make NoBannerLogger
-               {:message-output-level (if (verbose?) Project/MSG_VERBOSE Project/MSG_INFO)
+               {:message-output-level (if (debug?) Project/MSG_VERBOSE Project/MSG_INFO)
                 :output-print-stream  *outs*
                 :error-print-stream   *outs*}))))
 

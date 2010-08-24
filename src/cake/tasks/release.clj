@@ -11,10 +11,15 @@
 (def *session-opts* nil)
 
 (defn keyfiles []
-  (if-let [id (or (:identity *opts*) (:i *opts*))]
+  (if-let [id (or (first (:identity *opts*)) (*config* "release.identity"))]
     [(file id)]
     (for [id ["id_rsa" "id_dsa" "identity"] :let [keyfile (file "~/.ssh" id)] :when (.exists keyfile)]
       keyfile)))
+
+(defn- log-auth [username host keyfile message]
+  (when (verbose?)
+    (let [auth (if keyfile (.getPath keyfile) "password")]
+      (log (format "Authenticating %s@%s using %s: %s" username host auth message)))))
 
 (defn- session-connect [{:keys [host port username password passphrase keyfile] :as opts}]
   (let [jsch (JSch.)]
@@ -36,11 +41,13 @@
                 (showMessage      [_])))
              (.connect))
            (set! *session-opts* opts)
+           (log-auth username host keyfile "Auth success")
            session)
-         (catch JSchException e
+         (catch JSchException e           
+           (log-auth username host keyfile (.getMessage e))
            (case (.getMessage e)
-             "Auth cancel" nil
-             "Auth fail" false)))))
+                 "Auth cancel" nil
+                 "Auth fail" false)))))
 
 (defn- prompt-passphrase [keyfile]
   (or (:passphrase *session-opts*)
@@ -58,7 +65,8 @@
             (if (false? session) nil
                 (or session
                     (session-connect (assoc opts :passphrase (prompt-passphrase keyfile)))))))))
-      (session-connect (assoc opts :password (prompt-password)))))
+      (session-connect (assoc opts :password (prompt-password)))
+      (throw (Exception. (format "unable to start session to %s@%s" username host)))))
 
 (defn ssh-session* [opts f]
   (let [hosts (or (:hosts opts) [(:host opts)])
@@ -66,8 +74,8 @@
     (binding [*session-opts* nil]
       (doseq [opts (map (partial assoc opts :host) hosts)]
         (binding [*session* (start-session opts)]
-           (try (f)
-                (finally (.disconnect *session*))))))))
+          (try (f)
+               (finally (.disconnect *session*))))))))
 
 (defmacro ssh-session [opts & forms]
   `(ssh-session* ~opts (fn [] ~@forms)))
