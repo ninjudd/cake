@@ -228,6 +228,17 @@ rescue NotImplementedError, Errno::EINVAL
   file
 end
 
+def download(url, path)
+  log(:deps, "downloading #{url}")
+  open(url) do |remote|
+    open(path, "wb") do |local|
+      while (buf = remote.read(8192))
+        local.write buf
+      end
+    end
+  end
+end
+
 def get_cake(version, dest = nil, opts = {})
   jar  = version =~ /(.*)-SNAPSHOT/ ? "cake-#{$1}-#{snapshot(version)}.jar" : "cake-#{version}.jar"
   repo = File.expand_path("~/.m2/repository/cake/cake/#{version}")
@@ -236,15 +247,8 @@ def get_cake(version, dest = nil, opts = {})
   if not File.exists?(path)
     url = "#{$repo}/#{version}/#{jar}"
     log(:deps, "fetching cake libraries. this may take a moment...") unless @logged; @logged = true
-    log(:deps, "downloading #{url}") if verbose?
     FileUtils.makedirs(repo)
-    open(url) do |jarfile|
-      open(path, "wb") do |file|
-        while (buf = jarfile.read(8192))
-          file.write buf
-        end
-      end
-    end
+    download(url, path)
   end
   return path unless dest
 
@@ -722,11 +726,16 @@ end
 # Bootstrap cake dependencies.
 lib = "#{$cakedir}/lib"
 if File.exists?("#{$cakedir}/.gitignore") and File.exists?("#{$cakedir}/project.clj")
+  log(:cake, "running from git checkout") if verbose?
+  if $command == :upgrade
+    log(:upgrade, "pulling latest code from git")
+    system('git pull')
+  end
+
   $version = IO.read("#{$cakedir}/project.clj").split("\n").first.match(/defproject cake \"(.*)\"/)[1]
   log(:deps, "project.clj version is #{$version}") if debug?
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
-    log(:cake, "git checkout install") if debug?
     begin
       version = $version
       cakejar = get_cake(version, lib, :raise => true)
@@ -744,18 +753,26 @@ else
   bakejar = "#{lib}/bake.jar"
   if File.exists?(cakejar) and File.exists?(bakejar)
     # Inside a gem install.
-    log(:cake, "gem install") if debug?
+    log(:cake, "running from gem") if verbose?
+    if $command == :upgrade
+      log(:upgrade, "checking for updates to cake gem")
+      system('gem update cake')
+    end
+
     $version = File.basename(File.dirname(lib)).split('-')[1]
     cakepath = cakejar
     bakepath = bakejar
   else
     # Standalone script.
-    log(:cake, "standalone script install") if debug?
+    log(:cake, "running from standalone script") if verbose?
+    download("http://github.com/ninjudd/cake/raw/master/bin/cake", __FILE__) if $command == :upgrade
+
     $version = current_version
     cakepath = get_cake($version)
     bakepath = extract(cakepath, "bake-#{$version}.jar")
   end
 end
+exec("cake deps") if $command == :upgrade
 
 cake = Cake.new(
   [cakepath, "src", "src/clj", $config['cake.claspath'], "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
