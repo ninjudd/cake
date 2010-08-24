@@ -134,7 +134,7 @@
 (deftask deps "Fetch dependencies and create pom.xml. Use 'cake deps force' to refetch."
   (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :dev-dependencies])))
         deps-file (file "lib" "deps.clj")]
-    (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
+    (if (or (stale-deps? deps-str deps-file) (not (.exists (file "pom.xml"))) (= ["force"] (:deps *opts*)))
       (do (fetch-deps)
           (spit deps-file deps-str))
       (when (= ["force"] (:compile *opts*))
