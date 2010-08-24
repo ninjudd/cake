@@ -139,6 +139,3 @@
           (spit deps-file deps-str))
       (when (= ["force"] (:compile *opts*))
         (invoke clean {})))))
-
-(deftask upgrade #{deps}
-  "Upgrade cake to the most current version.")
