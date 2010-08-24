@@ -178,9 +178,11 @@ def admin_command?
   [:start, :stop, :reload, :restart].include?($command)
 end
 
-def log(command, *message)
-  message.each do |line|
-    printf("%11s %s\n", "[#{command}]", line)
+def log(command, *messages)
+  messages.each do |message|
+    message.split("\n").each do |line|
+      printf("%11s %s\n", "[#{command}]", line) unless line.empty?
+    end
   end
 end
 
@@ -661,14 +663,16 @@ private
 
   def prompt(prompt, opts = {})
     if opts[:echo] == false
-      echo_off = system("stty -echo 2&> /dev/null")
+      output = `stty -echo 2>&1`
+      log($command, output) if verbose?
+      echo_off = $?.exitstatus == 0
       prompt << " (WARNING, input will be visible on console!)" unless echo_off
     end
     input = Readline.readline(prompt + ": ") || ''
     input + "\n"
   ensure
     if echo_off
-      system("stty echo 2&> /dev/null")
+      system('stty echo')
       puts
     end
   end
