@@ -12,7 +12,7 @@
 (defonce num-connections (atom 0))
 
 (defn print-stacktrace [e]
-  (stacktrace/print-stack-trace e)
+  (stacktrace/print-cause-trace e)
   (.flush *out*))
 
 (defn read-seq []
@@ -73,7 +73,7 @@
 
 (defn eval-verbose [form]
   (try (eval form)
-       (catch Exception e
+       (catch Throwable e
          (println "evaluating form:" (prn-str form))
          (throw e))))
 
@@ -121,8 +121,7 @@
                   *ins*  ins
                   *outs* (PrintStream. outs)]
           (try
-            (let [form (read)
-                  vars (read)]
+            (let [form (read), vars (read)]
               (clojure.main/with-bindings
                 (set! *command-line-args* (:args vars))
                 (binding [*vars*   vars
@@ -134,9 +133,9 @@
                     (when-let [command (or (commands form) (default-commands form))]
                       (command))                
                     (f form)))))
-            (catch Exception e
+            (catch Throwable e
               (print-stacktrace e)
-              (when (fatal? e) (System/exit 1))))))      
+              (when (fatal? e) (System/exit 1))))))
       0 (InetAddress/getByName "localhost"))))
 
 (defn redirect-to-log [logfile]

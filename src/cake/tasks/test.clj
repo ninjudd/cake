@@ -2,20 +2,16 @@
   (:use cake cake.core)
   (:import [java.io File]))
 
+(defn test-opts []
+  (group-by
+   #(cond (keyword?  %) :tags
+          (namespace %) :functions
+          :else         :namespaces)
+   (map read-string (:test *opts*))))
+
 (deftask test #{compile}
   "Run project tests."
-  (bake (:use bake.test) []
-    (let [nses (all-test-namespaces)]
-      (doseq [ns nses] (require ns))
-      (binding [clojure.test/*test-out* *out*]
-        (let [grouped-tests (get-grouped-tests nses *opts*)]
-          (let [results (if (:auto *opts*)
-                          (run-tests-for-auto grouped-tests (:report *opts*))
-                          (concat
-                           (run-tests-for-fns  grouped-tests)
-                           (run-tests-for-nses grouped-tests)
-                           (run-tests-for-tags grouped-tests nses)))]
-            (if (> (count results) 1)
-              (-> (apply merge-with + results) (assoc :type :summary) clojure.test/report))))))))
+  (bake (:use bake.test) [opts (test-opts)]
+    (run-tests opts)))
 
 (deftask autotest "Automatically run tests whenever your project code changes.")
