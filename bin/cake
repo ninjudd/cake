@@ -79,7 +79,7 @@ class IO
       end
       input_wait -= interval
       return if finished
-      
+
       while input.ready?
         return if input.eof?
         write(input.gets)
@@ -325,7 +325,7 @@ class JVM
   end
 
   def refresh
-    @pid, @port, @version = IO.read(pidfile).split("\n"); @pid = @pid.to_i; @port = @port.to_i    
+    @pid, @port, @version = IO.read(pidfile).split("\n"); @pid = @pid.to_i; @port = @port.to_i
     Process.kill(0, @pid) # make sure pid is valid
     TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
 
@@ -822,21 +822,14 @@ elsif [:start, :reload, :restart].include?($command)
   end
 else
   if $command == :autotest
-    cake.send_command(:autotest)
-    interval = $opts[:autotest].last.to_i if $opts[:autotest]
-    interval = interval || ($config['autotest.interval'].to_i if $config['autotest.interval']) || 1
-    run_tests = true
-    ran = false
+    cake.send_command(:test)
+    interval = ($opts[:interval].first if $opts[:interval]) || $config['autotest.interval'] || 5
     while true
-      args = ["--auto"]
-      if ran == false
-        args << "--report"
-        ran = true
-      end
-      cake.send_command(:test, args) if run_tests
-      run_tests = bake.reload
+      sleep(interval.to_i)
+      cake.send_command(:autotest)
+      $stdout.print_flush('.')
+      bake.reload
       cake.reload
-      sleep(interval)
     end
   else
     cake.send_command($command)
