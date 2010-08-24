@@ -42,13 +42,13 @@
 (undeftask release)
 (deftask release #{uberjar gem}
   "Release project jar to clojars and gem package to rubygems."
+  (let [uberjarfile (uberjarfile)
+        jarfile     (file "cake.jar")]
+    (ant Copy {:file uberjarfile :tofile jarfile})
+    (upload-to-clojars jarfile))
   (let [version (:version *project*)]
     (when-not (snapshot? version)
       (let [gem (str "cake-" version ".gem")]
         (log "Releasing gem:" gem)
         (ant ExecTask {:executable "gem" :dir (file "gem")}
-             (args ["push" gem])))))
-  (let [uberjarfile (uberjarfile)
-        jarfile     (file "cake.jar")]
-    (ant Copy {:file uberjarfile :tofile jarfile})
-    (upload-to-clojars jarfile)))
+             (args ["push" gem]))))))
