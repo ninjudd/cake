@@ -12,8 +12,8 @@
 
 (defn keyfiles []
   (if-let [id (or (first (:identity *opts*)) (*config* "release.identity"))]
-    [(file id)]
-    (for [id ["id_rsa" "id_dsa" "identity"] :let [keyfile (file "~/.ssh" id)] :when (.exists keyfile)]
+    (list (file id))
+    (for [id (list "id_rsa" "id_dsa" "identity") :let [keyfile (file "~/.ssh" id)] :when (.exists keyfile)]
       keyfile)))
 
 (defn- log-auth [username host keyfile message]
@@ -45,9 +45,7 @@
            session)
          (catch JSchException e           
            (log-auth username host keyfile (.getMessage e))
-           (case (.getMessage e)
-                 "Auth cancel" nil
-                 "Auth fail" false)))))
+           nil))))
 
 (defn- prompt-passphrase [keyfile]
   (or (:passphrase *session-opts*)
@@ -62,9 +60,8 @@
         (for [keyfile (keyfiles)]
           (let [opts (assoc opts :keyfile keyfile)
                 session (session-connect opts)]
-            (if (false? session) nil
-                (or session
-                    (session-connect (assoc opts :passphrase (prompt-passphrase keyfile)))))))))
+            (or session
+                (session-connect (assoc opts :passphrase (prompt-passphrase keyfile))))))))
       (session-connect (assoc opts :password (prompt-password)))
       (throw (Exception. (format "unable to start session to %s@%s" username host)))))
 
