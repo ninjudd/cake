@@ -1,5 +1,6 @@
 (ns cake.tasks.test
-  (:use cake cake.core)
+  (:use cake cake.core
+        [cake.contrib.find-namespaces :only [find-namespaces-in-dir]])
   (:import [java.io File]))
 
 (defn test-opts []
@@ -11,14 +12,18 @@
                        :else         :namespaces)
                 (map read-string args)))))
 
+(defn run-project-tests [& opts]
+  (bake (:use bake.test)
+    [namespaces (find-namespaces-in-dir (java.io.File. "test"))
+     opts       (merge (test-opts) (apply hash-map opts))]
+    (run-project-tests namespaces opts)))
+
 (deftask test #{compile}
   "Run project tests."
   "Specify which tests to run as arguments like: namespace, namespace/function, or :tag"
-  (bake (:use bake.test) [opts (test-opts)]
-    (run-project-tests opts)))
+  (run-project-tests))
 
 (deftask autotest #{compile}
   "Automatically run tests whenever your project code changes."
   "Specify tests to run just like the test task. Specify the interval with --interval."
-  (bake (:use bake.test) [opts (test-opts)]
-    (run-project-tests (assoc opts :quiet true))))
+  (run-project-tests :quiet true))

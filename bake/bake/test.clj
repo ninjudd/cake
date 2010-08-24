@@ -1,6 +1,5 @@
 (ns bake.test
-  (:use clojure.test
-        [cake.contrib.find-namespaces :only [find-namespaces-in-dir]])
+  (:use clojure.test)
   (:import [java.io StringWriter]))
 
 (defn test-pred [opts]
@@ -14,10 +13,10 @@
                (some tags (:tags (meta f)))
                (functions (symbol (str ns "/" name))))))))
 
-(defn run-project-tests [opts]
+(defn run-project-tests [namespaces opts]
   (let [start (System/nanoTime)
         run?  (test-pred opts)]
-    (doseq [ns (find-namespaces-in-dir (java.io.File. "test"))]
+    (doseq [ns namespaces]
       (require ns)
       (when-let [tests (seq (filter (partial run? ns) (ns-publics ns)))]
         (let [ns-meta (meta (find-ns ns))
