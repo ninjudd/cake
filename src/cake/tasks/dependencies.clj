@@ -125,16 +125,19 @@
     (ant Delete {:dir "lib"})
     (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
   (invoke clean {})
-  (make-pom)
   (bake-restart))
 
 (defn stale-deps? [deps-str deps-file]
   (or (not (.exists deps-file)) (not= deps-str (slurp deps-file))))
 
-(deftask deps "Fetch dependencies and create pom.xml. Use 'cake deps force' to refetch."
+(deftask pom "Generate pom.xml from project.clj."
+  (make-pom))
+
+(deftask deps #{pom}
+  "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
   (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :dev-dependencies])))
         deps-file (file "lib" "deps.clj")]
-    (if (or (stale-deps? deps-str deps-file) (not (.exists (file "pom.xml"))) (= ["force"] (:deps *opts*)))
+    (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
       (do (fetch-deps)
           (spit deps-file deps-str))
       (when (= ["force"] (:compile *opts*))
