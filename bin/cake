@@ -308,10 +308,10 @@ class JVM
   attr_reader :type, :classpath, :libpath, :port, :pid, :pidfile, :load_time
 
   def initialize(classpath, libpath)
-    @type       = self.class.name.downcase
-    @classpath  = make_path(classpath)
-    @libpath    = make_path(libpath)
-    @pidfile    = "#{$confdir}/#{type}.pid"
+    @type      = self.class.name.downcase
+    @classpath = make_path(classpath)
+    @libpath   = make_path(libpath)
+    @pidfile   = "#{$confdir}/#{type}.pid"
     @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
     refresh
   end
@@ -545,7 +545,7 @@ private
     File.exists?(file) and File.mtime(file) > load_time
   end
 
-  def with_socket(retries = 20)
+  def with_socket(retries = $timeout)
     return unless port
     socket = TCPSocket.new("localhost", port)
     result = yield(socket)
@@ -553,9 +553,11 @@ private
   rescue Errno::ECONNREFUSED, Errno::EBADF => e
     sleep 1
     if retries
-      retry if (retries -= 1) >= 0
-      log($command, "timeout while connecting to #{type} jvm")
-      exit
+      if (retries -= 1) == 0
+        log :cake, "connection to #{type} jvm is taking a long time...",
+                   "you can use ^C to abort and use 'cake kill' or 'cake kill -9' to force the jvm to restart"
+      end
+      retry
     end
   ensure
     socket.close if socket
@@ -717,6 +719,7 @@ $cakedir = File.dirname(File.dirname(readlink(__FILE__)))
 $repo    = "http://clojars.org/repo/cake/cake"
 $confdir = ".cake"
 $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
+$timeout = ($config['connect.timeout'] || 20).to_i
 $vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
 
 Dir.chdir($bakedir)
