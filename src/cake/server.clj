@@ -3,17 +3,17 @@
         [clojure.main :only [skip-whitespace]]
         [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.contrib.server-socket :as server-socket]
-            [clojure.stacktrace :as stacktrace]
+            [clj-stacktrace.repl :as stacktrace]
             complete)
-  (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream FileOutputStream ByteArrayInputStream StringReader]
+  (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream
+                    FileOutputStream ByteArrayInputStream StringReader FileNotFoundException]
            [clojure.lang LineNumberingPushbackReader LispReader$ReaderException]
            [java.net InetAddress]))
 
 (defonce num-connections (atom 0))
 
 (defn print-stacktrace [e]
-  (stacktrace/print-cause-trace e)
-  (.flush *out*))
+  (stacktrace/pst-on *out* (boolean (*config* "stacktrace.color")) e))
 
 (defn read-seq []
   (lazy-seq
@@ -66,7 +66,7 @@
   (let [marker (read)]
     (try (swap! num-connections inc)
          (clojure.main/repl
-          :init   #(in-ns 'user)
+          :init   #(ns user (:use clj-stacktrace.repl))
           :caught #(do (reset-in) (clojure.main/repl-caught %))
           :prompt #(println (str marker (ns-name *ns*))))
          (finally (swap! num-connections dec)))))
