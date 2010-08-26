@@ -1,4 +1,5 @@
 (ns cake
+  (:require [clj-stacktrace.repl :as stacktrace])
   (:import [java.io File FileInputStream]
            [java.util Properties]))
 
@@ -29,3 +30,6 @@
 
 (def *config* (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
                      (read-config (File. ".cake/config"))))
+
+(defn print-stacktrace [e]
+  (stacktrace/pst-on *out* (boolean (*config* "stacktrace.color")) e))

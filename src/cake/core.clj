@@ -3,7 +3,7 @@
   (:require cake.project
             [cake.ant :as ant]
             [cake.server :as server])
-  (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader FileNotFoundException]
+  (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader]
            [org.apache.tools.ant.taskdefs ExecTask]
            [java.net Socket ConnectException]))
 
@@ -34,9 +34,9 @@
 
 (defmacro try-load [form]
   `(try ~form
-        (catch FileNotFoundException e#
+        (catch Exception e#
           (when (seq (.listFiles (file "lib")))
-            (println "warning:" (.getMessage e#))))))
+            (print-stacktrace e#)))))
 
 (defmacro defproject [name version & args]
   (let [opts (apply hash-map args)
