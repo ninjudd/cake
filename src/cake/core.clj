@@ -3,21 +3,9 @@
   (:require cake.project
             [cake.ant :as ant]
             [cake.server :as server])
-  (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader]
+  (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader FileNotFoundException]
            [org.apache.tools.ant.taskdefs ExecTask]
            [java.net Socket ConnectException]))
-
-(defmacro defproject [name version & args]
-  (let [opts (apply hash-map args)
-        [tasks task-opts] (split-with symbol? (:tasks opts))
-        task-opts (apply hash-map task-opts)]
-    `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
-         (require '~'[cake.tasks help run jar test compile dependencies release swank clean version])
-         ~@(for [ns tasks]
-             `(try (require '~ns)
-                   (catch java.io.FileNotFoundException e#
-                     (println "warning: could not load" '~ns))))
-         (undeftask ~@(:exclude task-opts)))))
 
 (defn expand-path [& path]
   (cond (instance? File (first path))
@@ -43,6 +31,22 @@
              (if (number? arg)
                arg
                (.lastModified (if (string? arg) (file arg) arg))))))
+
+(defmacro try-load [form]
+  `(try ~form
+        (catch FileNotFoundException e#
+          (when (seq (.listFiles (file "lib")))
+            (println "warning:" (.getMessage e#))))))
+
+(defmacro defproject [name version & args]
+  (let [opts (apply hash-map args)
+        [tasks task-opts] (split-with symbol? (:tasks opts))
+        task-opts (apply hash-map task-opts)]
+    `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
+         (require '~'[cake.tasks help run jar test compile dependencies release swank clean version])
+         ~@(for [ns tasks]
+             `(try-load (require '~ns)))
+         (undeftask ~@(:exclude task-opts)))))
 
 (defn update-task [task deps doc actions]
   {:pre [(every? symbol? deps) (every? fn? actions)]}
@@ -149,7 +153,7 @@
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
-(defn cake-exec [& args]  
+(defn cake-exec [& args]
   (ant/ant ExecTask {:executable "ruby" :dir *root* :failonerror true}
     (ant/args *script* args (str "--project=" *root*))))
 
@@ -186,13 +190,14 @@
 
 (defn prompt-read [prompt & opts]
   (let [opts (apply hash-map opts)
-        echo (if (false? (:echo opts)) "@" "")]    
+        echo (if (false? (:echo opts)) "@" "")]
     (println (str echo *readline-marker* prompt))
     (read-line)))
 
 (defn start-server [port]
   (in-ns 'cake.core)
-  (cake.project/init "project.clj" "tasks.clj")
+  (cake.project/init "project.clj")
+  (try-load (cake.project/init "tasks.clj"))
   (let [global-project (File. (System/getProperty "user.home") ".cake")]
     (when-not (= (.getPath global-project) (System/getProperty "cake.project"))
       (cake.project/init (.getPath (File. global-project "tasks.clj")))))

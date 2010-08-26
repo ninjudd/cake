@@ -17,6 +17,6 @@
                :version     version)
         (assoc-or :name artifact))))
 
-(defn init [& files]
-  (doseq [file files :when (.exists (File. file))]
+(defn init [file]
+  (when (.exists (File. file))
     (load-file file)))
