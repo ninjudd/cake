@@ -17,6 +17,7 @@
 
 (deftask new
   "Create scaffolding for a new project."
+  "You can put a default project template in ~/.cake/project.template.clj with %s in place of the project name."
   (let [project (symbol (first (:new *opts*)))
         name    (name project)
         root    (file *pwd* name)]
