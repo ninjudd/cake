@@ -1,5 +1,6 @@
 (ns cake.core
-  (:use cake useful)
+  (:use cake useful
+        [clojure.string :only [join]])
   (:require cake.project
             [cake.ant :as ant]
             [cake.server :as server])
@@ -8,18 +9,14 @@
            [java.net Socket ConnectException]))
 
 (defn expand-path [& path]
-  (cond (instance? File (first path))
-        (cons (.getPath (first path)) (rest path))
-
-        (when-let [fp (first path)] (.startsWith fp "~"))
-        (apply list (System/getProperty "user.home")
-               (.substring (first path) 1)
-               (rest path))
-
-        :else (cons *root* path)))
+  (let [root (or (first path) "")]
+    (cond (instance? File root)  (cons (.getPath root) (rest path))
+          (.startsWith root "/") path
+          (.startsWith root "~") (cons (.replace root "~" (System/getProperty "user.home")) (rest path))
+          :else                  (cons *root* path))))
 
 (defn file-name [& path]
-  (apply str (interpose (File/separator) (apply expand-path path))))
+  (join (File/separator) (apply expand-path path)))
 
 (defn file
   "Create a File object from a string or seq"

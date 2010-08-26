@@ -1,6 +1,7 @@
 (ns cake.ant
   "Lancet-inspired ant helpers."
-  (:use cake)
+  (:use cake
+        [clojure.string :only [join]])
   (:import [org.apache.tools.ant Project NoBannerLogger]
            [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]
            [org.apache.tools.ant.taskdefs Echo Javac Manifest Manifest$Attribute]
@@ -121,7 +122,7 @@
      ~@forms))
 
 (defn log [& message]
-  (ant Echo {:message (apply str (interpose " " message))}))
+  (ant Echo {:message (join " " message)}))
 
 (defmethod coerce [java.io.File String] [_ str] (java.io.File. str))
 (defmethod coerce :default [type val]

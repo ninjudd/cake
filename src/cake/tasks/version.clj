@@ -1,6 +1,7 @@
 (ns cake.tasks.version
   (:use cake cake.core cake.ant
-        [useful :only [update]])
+        [useful :only [update]]
+        [clojure.string :only [join]])
   (:import [org.apache.tools.ant.taskdefs Replace]))
 
 (def version-levels [:major :minor :patch])
@@ -15,7 +16,7 @@
                     (.split version "\\."))))))
 
 (defn version-str [version]
-  (str (apply str (interpose "." (or (map version version-levels) 0)))
+  (str (join "." (map #(or (version %) 0) version-levels))
        (when (version :snapshot) "-SNAPSHOT")))
 
 (defn bump
@@ -30,7 +31,7 @@
           (reduce dissoc (update version level inc)
                   (conj (take-while (partial not= level) (reverse version-levels)) snapshot))
           (dissoc version snapshot)))))
-  
+
 (defn update-version [action]
   (let [new-version (if (= "bump" action) (version-str (bump)) action)]
     (ant Replace {:file "project.clj"
