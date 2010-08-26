@@ -739,7 +739,7 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   log(:cake, "running from git checkout") if verbose?
   if $command == :upgrade
     log(:upgrade, "pulling latest code from git")
-    system('git pull')
+    Dir.chdir($cakedir) { system('git pull') }
   end
 
   $version = IO.read(project).split("\n").first.match(/defproject cake \"(.*)\"/)[1]
