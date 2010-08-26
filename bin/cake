@@ -731,19 +731,20 @@ if debug?
 end
 
 # Bootstrap cake dependencies.
-lib = "#{$cakedir}/lib"
-if File.exists?("#{$cakedir}/.gitignore") and File.exists?("#{$cakedir}/project.clj")
+lib     = "#{$cakedir}/lib"
+project = "#{$cakedir}/project.clj"
+
+if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   log(:cake, "running from git checkout") if verbose?
   if $command == :upgrade
     log(:upgrade, "pulling latest code from git")
     system('git pull')
   end
 
-  project  = "#{$cakedir}/project.clj"
   $version = IO.read(project).split("\n").first.match(/defproject cake \"(.*)\"/)[1]
   log(:deps, "project.clj version is #{$version}") if debug?
 
-  FileUtils.remove_dir("lib", true) if newer?(project, lib)
+  FileUtils.remove_dir(lib, true) if newer?(project, lib)
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
     begin
