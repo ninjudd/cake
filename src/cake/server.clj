@@ -3,7 +3,6 @@
         [clojure.main :only [skip-whitespace]]
         [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.contrib.server-socket :as server-socket]
-            [clj-stacktrace.repl :as stacktrace]
             complete)
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream
                     FileOutputStream ByteArrayInputStream StringReader FileNotFoundException]
@@ -11,9 +10,6 @@
            [java.net InetAddress]))
 
 (defonce num-connections (atom 0))
-
-(defn print-stacktrace [e]
-  (stacktrace/pst-on *out* (boolean (*config* "stacktrace.color")) e))
 
 (defn read-seq []
   (lazy-seq

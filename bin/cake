@@ -95,6 +95,7 @@ class Object
       case self
       when Array  then return collect {|i| i.to_clj(true)}.join(' ')
       when String then return self
+      when nil    then return ''
       end
     end
     case self
@@ -499,7 +500,7 @@ class JVM
     forms = forms.collect do |form|
       form == '-' ? $stdin.gets(nil) : form
     end.join(' ')
-    forms = "(doall (map println [#{forms}]))" if $opts[:p]
+    forms = "(doall (map println [#{forms}]))" unless $opts[:q]
     with_socket do |socket|
       log(:eval, forms) if debug?
       socket.write(":eval #{$vars} #{forms} :cake/EOF ")
@@ -512,7 +513,7 @@ class JVM
     with_socket do |socket|
       socket.write %(:filter #{$vars} "#{EOL}")
       while line = $stdin.gets
-        socket.write [line, ~forms].to_clj
+        socket.write [line.chomp, ~forms].to_clj
         while (line = socket.gets)
           break if line.start_with?(EOL)
           puts line
