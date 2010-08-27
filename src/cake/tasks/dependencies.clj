@@ -62,9 +62,6 @@
   (when *config*
     (*config* (str "subproject." (name dep)))))
 
-(defn subproject? [[dep version & opts]]
-  (not (nil? (subproject-path dep))))
-
 (defn add-jarset [task path exclusions]
   (let [exclusions (map #(re-pattern (str % "-\\d.*")) exclusions)]
     (doseq [jar (fileset-seq {:dir path :includes "*.jar"}) :let [name (.getName jar)]]
@@ -76,18 +73,13 @@
         match?  #(re-matches pattern (.getName %))]
     (filter match? (.listFiles (File. dir)))))
 
-(defn fetch-subprojects [deps dest]
-  (doseq [[dep _ & opts] deps :let [opts (apply array-map opts)]]
-    (when-let [path (subproject-path dep)]
+(defn install-subprojects []
+  (seq (doall
+    (for [type [:dependencies :dev-dependencies]
+          [dep _ & opts] (*project* type)
+          :let [opts (apply array-map opts), path (subproject-path dep)] :when path]
       (binding [cake/*root* path]
-        (cake-exec "deps")
-        (cake-exec "jar" "--clean"))
-      (let [jar (first (glob path (str (name dep) "-.*jar")))]
-        (when-not (.exists jar)
-          (throw (Exception. (str "unable to locate subproject jar: " (.getPath jar)))))
-        (ant Copy {:todir dest}
-             (add-fileset {:file jar})
-             (add-jarset (File. path "lib") (concat *exclusions* (:exclusions opts))))))))
+        (cake-exec "install" "--clean"))))))
 
 (defn extract-native [jars dest]
   (doseq [jar jars]
@@ -95,8 +87,7 @@
          (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))))
 
 (defn fetch [deps dest]
-  (fetch-subprojects deps dest)
-  (when-let [deps (seq (remove subproject? deps))]
+  (when (seq deps)
     (let [ref-id (str "cake.deps.fileset." (.getName dest))]
       (ant DependenciesTask {:fileset-id ref-id :path-id (:name *project*)}
            (add-repositories (into repositories (:repositories *project*)))
@@ -137,7 +128,7 @@
   "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
   (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :dev-dependencies])))
         deps-file (file "lib" "deps.clj")]
-    (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
+    (if (or (install-subprojects) (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
       (do (fetch-deps)
           (spit deps-file deps-str))
       (when (= ["force"] (:compile *opts*))
