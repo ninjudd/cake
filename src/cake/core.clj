@@ -158,6 +158,12 @@
   (ant/log "Restarting project jvm.")
   (cake-exec "restart" "project"))
 
+(defn git [& args]
+  (if (.exists (file ".git"))
+    (ant/ant ExecTask {:executable "git" :dir *root* :failonerror true}
+      (ant/args args))
+    (println "warning:" *root* "is not a git repository")))
+
 (def *readline-marker* nil)
 
 (defn process-command [[task readline-marker]]

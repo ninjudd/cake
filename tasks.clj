@@ -30,7 +30,7 @@
   "Build standalone gem package."
   (let [version (:version *project*)]
     (if (snapshot? version)
-      (println "will not make gem since this is a snapshot version:" version)
+      (println "refusing to make gem since this is a snapshot version:" version)
       (do (run-task 'uberjar)
           (ant Copy {:file (uberjarfile) :tofile (file "gem/lib/cake.jar")})
           (ant Copy {:file (bakejar)     :tofile (file "gem/lib/bake.jar")})

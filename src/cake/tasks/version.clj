@@ -48,3 +48,11 @@
              (:artifact-id *project*)
              (update-version action))
     (println (:artifact-id *project*) (:version *project*))))
+
+(deftask tag
+  "Create a git tag for the current version."
+  (let [version (:version *project*)]
+    (if (.endsWith version "SNAPSHOT")
+      (println "refusing to create tag for snapshot version:" version)
+      (do (git "tag" version)
+          (log "created git tag" version)))))
