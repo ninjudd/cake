@@ -398,8 +398,8 @@ class JVM
   end
 
   def vm_opts
-    opts = '-client'
-    opts << ' -d32' unless $win
+    `java -d32 -version 2>&1`
+    '-client -d32' if $? == 0
   end
 
   MIN_PORT = 2**14
