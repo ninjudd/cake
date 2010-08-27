@@ -35,19 +35,23 @@
           (string? m) (add-zipfileset task (file-mapping m m))
           (vector? m) (add-zipfileset task (apply file-mapping m)))))
 
+(defn add-source-files [task]
+  (when-not (:omit-source *project*)
+    (let [src (file "src" "clj")
+          src (if (.exists src) src (file "src"))]
+      (add-fileset task {:dir src                :includes "**/*.clj"})
+      (add-fileset task {:dir (file "src" "jvm") :includes "**/*.java"}))))
+
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
-        cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))
-        src   (file "src" "clj")
-        src   (if (.exists src) src (file "src"))]
+        cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))]
     (ant Jar {:dest-file (jarfile)}
          (add-manifest (manifest))
          (add-license)
+         (add-source-files)
          (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
-         (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
-         (add-fileset    {:dir src                  :includes "**/*.clj"})
-         (add-fileset    {:dir (file "src" "jvm")   :includes "**/*.java"})
+         (add-fileset    {:dir (file "classes")     :includes "**/*.class"})         
          (add-zipfileset {:dir (file "native") :prefix "native"})
          (add-file-mappings (:jar-files *project*)))))
 
@@ -96,6 +100,7 @@
   (ant War {:dest-file (warfile)}
          (add-manifest (manifest))
          (add-license)
+         (add-source-files)
          (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})
          (add-zipfileset {:dir (file "classes")   :prefix classes :includes "**/*.class"})
          (add-zipfileset {:dir (file "resources") :prefix classes :includes "*"})

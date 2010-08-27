@@ -119,7 +119,8 @@
           (try
             (let [form (read), vars (read)]
               (clojure.main/with-bindings
-                (set! *command-line-args* (:args vars))
+                (set! *command-line-args*  (:args vars))
+                (set! *warn-on-reflection* (:warn-on-reflection *project*))
                 (binding [*vars*   vars
                           *pwd*    (:pwd vars)
                           *env*    (:env vars)
