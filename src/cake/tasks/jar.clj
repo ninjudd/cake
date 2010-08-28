@@ -122,6 +122,5 @@
 
 (deftask install #{jar}
   "Install jar to local repository."
-  (let [refid "cake.pom"]
-    (ant Pom {:file "pom.xml" :id refid})
-    (ant InstallTask {:file (jarfile) :pom-ref-id refid})))
+  (ant Pom {:file "pom.xml" :id "cake.pom"})
+  (ant InstallTask {:file (jarfile) :pom-ref-id "cake.pom"}))

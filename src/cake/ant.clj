@@ -16,13 +16,13 @@
                (replaceAll "-$1")
                toLowerCase)))
 
-(defn property-setters [class]
+(defn- property-setters [class]
   (reduce
    (fn [map property]
      (assoc map (property-key property) (.getWriteMethod property)))
    {} (.getPropertyDescriptors (Introspector/getBeanInfo class)))  )
 
-(defn set-attributes! [instance attrs]
+(defn- set-attributes! [instance attrs]
   (let [setters (property-setters (class instance))]
     (doseq [[key val] attrs]
       (if-let [setter (setters key)]

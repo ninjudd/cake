@@ -74,12 +74,11 @@
     (filter match? (.listFiles (File. dir)))))
 
 (defn install-subprojects []
-  (seq (doall
-    (for [type [:dependencies :dev-dependencies]
-          [dep _ & opts] (*project* type)
-          :let [opts (apply array-map opts), path (subproject-path dep)] :when path]
+  (doseq [type [:dependencies :dev-dependencies]
+          [dep _ & opts] (*project* type) :let [opts (apply array-map opts)]]
+    (when-let [path (subproject-path dep)]
       (binding [cake/*root* path]
-        (cake-exec "install" "--clean"))))))
+        (cake-exec "install")))))
 
 (defn extract-native [jars dest]
   (doseq [jar jars]
@@ -122,14 +121,17 @@
   (or (not (.exists deps-file)) (not= deps-str (slurp deps-file))))
 
 (deftask pom "Generate pom.xml from project.clj."
-  (make-pom))
+  (when (or (newer? (file "project.clj") (file "pom.xml")) (= ["force"] (:pom *opts*)))
+    (log "creating pom.xml")
+    (make-pom)))
 
 (deftask deps #{pom}
   "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
   (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :dev-dependencies])))
         deps-file (file "lib" "deps.clj")]
-    (if (or (install-subprojects) (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
-      (do (fetch-deps)
+    (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
+      (do (install-subprojects)
+          (fetch-deps)
           (spit deps-file deps-str))
       (when (= ["force"] (:compile *opts*))
         (invoke clean {})))))
