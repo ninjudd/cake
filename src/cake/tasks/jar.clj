@@ -51,7 +51,8 @@
          (add-source-files)
          (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
-         (add-fileset    {:dir (file "classes")     :includes "**/*.class"})         
+         (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
+         (add-fileset    {:dir (file "resources")})
          (add-zipfileset {:dir (file "native") :prefix "native"})
          (add-file-mappings (:jar-files *project*)))))
 
