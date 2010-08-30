@@ -77,7 +77,7 @@
   (doseq [type [:dependencies :dev-dependencies]
           [dep _ & opts] (*project* type) :let [opts (apply array-map opts)]]
     (when-let [path (subproject-path dep)]
-      (binding [cake/*root* path]
+      (binding [*root* path]
         (cake-exec "install")))))
 
 (defn extract-native [jars dest]

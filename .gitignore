@@ -7,4 +7,5 @@ gem/
 lib/
 classes/
 build/
+releases/
 .*

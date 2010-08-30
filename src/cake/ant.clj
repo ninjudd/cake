@@ -95,7 +95,7 @@
   (apply path "src" "lib/*" paths))
 
 (defn args [task & args]
-  (doseq [a (flatten args)]
+  (doseq [a (remove nil? (flatten args))]
     (.. task createArg (setValue a))))
 
 (defn sys [task map]

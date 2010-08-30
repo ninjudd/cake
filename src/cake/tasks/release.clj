@@ -81,7 +81,7 @@
   (let [code (.read in)]
     (when-not (= 0 code)
       (copy in *outs*)
-      (throw (Exception. (case code 1 "ssh error" 2 "ssh fatal error"))))))
+      (throw (Exception. (case code 1 "ssh error" 2 "ssh fatal error" -1 "disconnect error" "unknown error"))))))
 
 (defn- send-ack [out]
   (.write out (byte-array [(byte 0)]))

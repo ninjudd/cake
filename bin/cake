@@ -2,7 +2,6 @@
 # Save your fork, there's cake!"
 require 'find'
 require 'open-uri'
-require 'rexml/document'
 require 'socket'
 require 'timeout'
 require 'fileutils'
@@ -244,12 +243,12 @@ def download(url, path)
 end
 
 def get_cake(version, dest = nil, opts = {})
-  jar  = version =~ /(.*)-SNAPSHOT/ ? "cake-#{$1}-#{snapshot(version)}.jar" : "cake-#{version}.jar"
+  jar  = "cake-#{version}.jar"
   repo = File.expand_path("~/.m2/repository/cake/cake/#{version}")
   path = "#{repo}/#{jar}"
 
   if not File.exists?(path)
-    url = "#{$repo}/#{version}/#{jar}"
+    url = "#{$repo}/#{jar}"
     log(:deps, "fetching cake libraries. this may take a moment...") unless @logged; @logged = true
     FileUtils.makedirs(repo)
     download(url, path)
@@ -268,22 +267,9 @@ rescue OpenURI::HTTPError => e
 end
 
 def current_version
-  version = open("#{$repo}/maven-metadata.xml") do |file|
-    doc = REXML::Document.new file
-    doc.elements['metadata'].elements['versioning'].elements['versions'].elements.to_a('version').last.get_text.to_s
-  end
-  log(:deps, "most recent clojars version is #{version}") if debug?
+  version = open("#{$repo}/version").gets
+  log(:deps, "most recent standalone version is #{version}") if debug?
   version
-end
-
-def snapshot(version)
-  open("#{$repo}/#{version}/maven-metadata.xml") do |file|
-    doc = REXML::Document.new file
-    snapshot  = doc.elements['metadata'].elements['versioning'].elements['snapshot'].elements
-    timestamp = snapshot['timestamp'].get_text
-    build_num = snapshot['buildNumber'].get_text
-    "#{timestamp}-#{build_num}"
-  end
 end
 
 def extract(jar, file, dest = File.dirname(jar))
@@ -670,9 +656,10 @@ private
       output = `stty -echo 2>&1`
       log($command, output) if verbose?
       echo_off = $?.exitstatus == 0
-      prompt << " (WARNING, input will be visible on console!)" unless echo_off
+      prompt << ' (WARNING, input will be visible on console!)' unless echo_off
+      prompt << ':'
     end
-    input = Readline.readline(prompt + ": ") || ''
+    input = Readline.readline(prompt + ' ') || ''
     input + "\n"
   ensure
     if echo_off
@@ -718,7 +705,7 @@ $script  = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd     = Dir.getwd
 $bakedir = project_dir($pwd)
 $cakedir = File.dirname(File.dirname(readlink(__FILE__)))
-$repo    = "http://clojars.org/repo/cake/cake"
+$repo    = "http://github.com/ninjudd/cake-standalone/raw/master"
 $confdir = ".cake"
 $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
 $timeout = ($config['connect.timeout'] || 20).to_i
