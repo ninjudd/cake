@@ -1,6 +1,6 @@
 (ns cake.core
   (:use cake useful
-        [clojure.string :only [join]])
+        [clojure.string :only [join trim]])
   (:require cake.project
             [cake.ant :as ant]
             [cake.server :as server])
@@ -125,7 +125,7 @@
 
 (defn bake-port []
   (Integer/parseInt
-   (second (.split (slurp (file ".cake" "bake.pid")) "\n"))))
+   (trim (second (.split (slurp (file ".cake" "bake.pid")) "\n")))))
 
 (defn bake* [ns-forms bindings body]
   (if-let [port (bake-port)]

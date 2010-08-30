@@ -11,6 +11,7 @@ require 'pp'
 
 if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   begin
+    require 'rubygems' rescue nil
     require 'win32/process'
   rescue LoadError
     puts 'cake requires win32/process. use "gem install win32-process" to install'
