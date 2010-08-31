@@ -88,6 +88,9 @@
 (defmacro undeftask [& names]
   `(swap! tasks dissoc ~@(map #(list 'quote %) names)))
 
+(defmacro remove-dep! [task dep]
+  `(swap! tasks update-in ['~task :deps] disj '~dep))
+
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
   [form]
