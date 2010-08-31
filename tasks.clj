@@ -39,23 +39,31 @@
                (env {"CAKE_VERSION" version})
                (args ["build" "cake.gemspec"]))))))
 
+(defn ftime [string time]
+  (format (apply str (map #(str "%1$t" %) string)) time))
+
+(defn snapshot-timestamp [version]
+  (if (snapshot? version)
+    (let [t (java.util.Calendar/getInstance)]
+      (.replaceAll version "SNAPSHOT" (str (ftime "Ymd" t) "." (ftime "HMS" t))))
+    version))
+
 (undeftask release)
 (deftask release #{uberjar gem}
   "Release project jar to github and gem package to rubygems."
-  (let [version (:version *project*)
-        amend?  (= version (slurp "releases/current"))]
-    (if (and amend? (not (snapshot? version)))
-      (println "cannot replace non-snapshot version:" version)
-      (let [jar (format "cake-%s.jar" version)]
-        (ant Copy {:file (uberjarfile) :tofile  (file "releases" jar)})
-        (spit (file "releases/current") version)
-        (binding [*root* "releases"]
-          (git "add" jar "version")
-          (git "commit" (when amend? "--amend") "-m" (format "'release cake %s'" version))
-          (git "push" (when amend? "-f")))
-        (when-not (snapshot? version)
-          (spit (file "releases/stable") version)
-          (let [gem (str "cake-" version ".gem")]
-            (log "Releasing gem:" gem)
-            (ant ExecTask {:executable "gem" :dir (file "gem")}
-                 (args ["push" gem]))))))))
+  (let [version   (:version *project*)
+        snapshot? (snapshot? version)
+        version   (if snapshot? (snapshot-timestamp version) version)
+        jar       (format "jars/cake-%s.jar" version)]
+    (ant Copy {:file (uberjarfile) :tofile  (file "releases" jar)})
+    (spit (file "releases/current") version)    
+    (when-not snapshot? (spit (file "releases/stable") version))
+    (binding [*root* "releases"]
+      (git "add" jar "current" "stable")
+      (git "commit" "-m" (format "'release cake %s'" (:version *project*)))
+      (comment git "push"))
+    (when-not snapshot?
+      (let [gem (str "cake-" version ".gem")]
+        (log "Releasing gem:" gem)
+        (ant ExecTask {:executable "gem" :dir (file "gem")}
+             (args ["push" gem]))))))

@@ -248,7 +248,7 @@ def get_cake(version, dest = nil, opts = {})
   path = "#{repo}/#{jar}"
 
   if not File.exists?(path)
-    url = "#{$repo}/#{jar}"
+    url = "#{$repo}/jars/#{jar}"
     log(:deps, "fetching cake libraries. this may take a moment...") unless @logged; @logged = true
     FileUtils.makedirs(repo)
     download(url, path)
@@ -727,7 +727,10 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   log(:cake, "running from git checkout") if verbose?
   if $command == :upgrade
     log(:upgrade, "pulling latest code from git")
-    Dir.chdir($cakedir) { system('git pull') }
+    Dir.chdir($cakedir) do
+      system('git pull')
+      remove_dir('lib')
+    end
   end
 
   $version = IO.read(project).split("\n").first.match(/defproject cake \"(.*)\"/)[1]
@@ -743,7 +746,8 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
       version = current_version
       cakejar = get_cake(version, lib)
     end
-    extract(cakejar, "bake-#{version}.jar", "#{lib}/dev")
+    bake_version = version.gsub(/\d{8}\.\d{6}/, "SNAPSHOT")
+    extract(cakejar, "bake-#{bake_version}.jar", "#{lib}/dev")
   end
 
   cakepath = ["#{$cakedir}/src", "#{lib}/*:#{lib}/dev/*"].join(PATH_SEP)
