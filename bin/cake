@@ -323,10 +323,7 @@ class JVM
     Process.kill(0, @pid) # make sure pid is valid
     TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
 
-    if @version != $version
-      kill
-      reset!
-    end
+    kill if @version != $version
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Process::Error => e
     if e.kind_of?(Errno::ECONNREFUSED)
       log(:start, "defunct #{type} jvm") if debug?
@@ -428,11 +425,14 @@ class JVM
   end
 
   def kill
-    return unless pid
-    signal = $opts[:"9"] ? KILL : TERM
-    log(:kill, "sending #{signal} signal to #{type} jvm") if debug?
-    Process.kill(signal, pid)
-    reset!
+    if pid
+      signal = $opts[:"9"] ? KILL : TERM
+      log(:kill, "sending #{signal} signal to #{type} jvm") if debug?
+      Process.kill(signal, pid)
+      reset!
+    else
+      log(:kill, "#{type} jvm not running") if $command == :kill
+    end
   end
 
   def files
@@ -787,11 +787,13 @@ if $command == :default and $opts[:version]
   puts "cake #{$version}"
   exit
 elsif $command == :kill
-  if $opts[:all]
-    ps.each do |line|
+  if $opts[:all] or $opts[:kill] == ['all']
+    puts "'cake kill --all' is deprecated, in the future use 'cake kill all' instead" if $opts[:all]
+    num = ps.each do |line|
       pid = line.split(' ').first.to_i
       Process.kill($opts[:"9"] ? KILL : TERM, pid)
-    end
+    end.size
+    puts "No matching processes belonging to you were found" if num == 0
   else
     cake.kill
     bake.kill
