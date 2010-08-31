@@ -43,17 +43,18 @@
 (deftask release #{uberjar gem}
   "Release project jar to github and gem package to rubygems."
   (let [version (:version *project*)
-        amend?  (= version (slurp "releases/version"))]
+        amend?  (= version (slurp "releases/current"))]
     (if (and amend? (not (snapshot? version)))
       (println "cannot replace non-snapshot version:" version)
       (let [jar (format "cake-%s.jar" version)]
         (ant Copy {:file (uberjarfile) :tofile  (file "releases" jar)})
-        (spit (file "releases/version") version)
+        (spit (file "releases/current") version)
         (binding [*root* "releases"]
           (git "add" jar "version")
           (git "commit" (when amend? "--amend") "-m" (format "'release cake %s'" version))
           (git "push" (when amend? "-f")))
         (when-not (snapshot? version)
+          (spit (file "releases/stable") version)
           (let [gem (str "cake-" version ".gem")]
             (log "Releasing gem:" gem)
             (ant ExecTask {:executable "gem" :dir (file "gem")}

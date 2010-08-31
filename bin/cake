@@ -266,8 +266,8 @@ rescue OpenURI::HTTPError => e
   exit
 end
 
-def current_version
-  version = open("#{$repo}/version").gets
+def current_version(tag = :current)
+  version = open("#{$repo}/#{tag}").gets
   log(:deps, "most recent standalone version is #{version}") if debug?
   version
 end
@@ -767,7 +767,7 @@ else
     log(:cake, "running from standalone script") if verbose?
     download("http://github.com/ninjudd/cake/raw/master/bin/cake", __FILE__) if $command == :upgrade
 
-    $version = current_version
+    $version = current_version(:stable)
     cakepath = get_cake($version)
     bakepath = extract(cakepath, "bake-#{$version}.jar")
   end
