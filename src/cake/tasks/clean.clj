@@ -4,9 +4,9 @@
 
 (defn clean-dir [dir]
   (when (seq (rest (file-seq dir)))
-    (log "Deleting" (str (.getPath dir) "/*"))
-    (ant Delete {:include-empty-dirs true}
-      (add-fileset {:dir dir :includes "**/*"}))))
+    (log "Deleting" (.getPath dir))
+    (ant Delete {:dir dir})
+    (.mkdirs dir)))
 
 (deftask clean
   "Remove cake build artifacts."

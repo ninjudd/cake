@@ -1,5 +1,6 @@
 (ns cake.tasks.dependencies
   (:use cake cake.core cake.ant
+        [useful :only [defm]]
         [cake.project :only [group]]
         [clojure.java.shell :only [sh]])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
@@ -15,7 +16,7 @@
    ["clojure-snapshots" "http://build.clojure.org/snapshots"]
    ["clojars"           "http://clojars.org/repo/"]])
 
-(defn os-name []
+(defm os-name []
   (let [name (System/getProperty "os.name")]
     (condp #(.startsWith %2 %1) name
       "Linux"    "linux"
@@ -24,12 +25,13 @@
       "Windows"  "windows"
       "unknown")))
 
-(defn os-arch []
-  (let [arch (System/getProperty "os.arch")]
-    (condp = arch
-      "amd64" "x86_64"
-      "i386"  "x86"
-      arch)))
+(defm os-arch []
+  (or (first (:arch *opts*))
+      (let [arch (if (bake-port) (bake [] (System/getProperty "os.arch")) (System/getProperty "os.arch"))]
+        (case arch
+          "amd64" "x86_64"
+          "i386"  "x86"
+          arch))))
 
 (defn add-license [task attrs]
   (when attrs

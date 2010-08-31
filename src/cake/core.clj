@@ -4,7 +4,7 @@
   (:require cake.project
             [cake.ant :as ant]
             [cake.server :as server])
-  (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader]
+  (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader FileNotFoundException]
            [org.apache.tools.ant.taskdefs ExecTask]
            [java.net Socket ConnectException]))
 
@@ -124,11 +124,14 @@
    [] bindings))
 
 (defn bake-port []
-  (Integer/parseInt
-   (trim (second (.split (slurp (file ".cake" "bake.pid")) "\n")))))
+  (try (Integer/parseInt
+        (trim (second (.split (slurp (file ".cake" "bake.pid")) "\n"))))
+       (catch FileNotFoundException e
+         nil)))
 
 (defn bake* [ns-forms bindings body]
-  (if-let [port (bake-port)]
+  (let [port (bake-port)]
+    (verify port "bake not supported. perhaps you don't have a project.clj")
     (let [ns     (symbol (str "bake.task." (name *current-task*)))
           body  `(~'let ~(quote-if odd? bindings) ~@body)
           socket (bake-connect port)
@@ -144,8 +147,7 @@
       (let [result (read-string (.readLine reader))]
         (flush)
         (.close socket)
-        result))
-    (println "bake not supported. perhaps you don't have a project.clj")))
+        result))))
 
 (defmacro bake
   "Execute code in a separate jvm with the classpath of your projects. Bindings allow passing
