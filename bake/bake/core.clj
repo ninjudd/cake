@@ -20,7 +20,9 @@
     (println "refusing to quit because there are active swank connections")))
 
 (defn project-eval [[ns ns-forms body]]
-  (server/eval-multi `[(~'ns ~ns (:use ~'cake) ~@ns-forms) ~body]))
+  (let [result (server/eval-multi `[(~'ns ~ns (:use ~'cake) ~@ns-forms) ~body])]
+    (println ::result)
+    (println (pr-str result))))
 
 (defn start-server [port]
   (in-ns 'bake.core)

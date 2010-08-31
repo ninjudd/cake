@@ -77,8 +77,9 @@
   ([] (eval-multi (doall (read-seq))))
   ([forms]
      (in-ns 'user)
-     (doseq [form forms]
-       (eval-verbose form))))
+     (last
+      (for [form forms]
+        (eval-verbose form)))))
 
 (defn eval-filter []
   (let [end (read)]

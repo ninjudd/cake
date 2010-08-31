@@ -11,8 +11,8 @@
 
 (deftask bar
   (bake (:use useful)
-        [foo (prompt-read "enter foo")
-         bar (prompt-read "enter bar")
+        [foo (prompt-read "enter foo:")
+         bar (prompt-read "enter bar:")
          pw  (prompt-read "enter password" :echo false)]
         (println "project:" *project*)
         (println "opts:" *opts*)
@@ -22,4 +22,6 @@
         (println "baz!")
         (Thread/sleep 2000)
         (println "done sleeping!")
-        (verify true "true is false!")))
+        (verify true "true is false!"))
+  (let [n (bake [] {:foo (rand) :bar (rand)})]
+    (println (class n) n)))

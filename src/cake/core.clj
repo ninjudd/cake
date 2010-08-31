@@ -137,9 +137,14 @@
       (doto writer
         (.write (prn-str [ns ns-forms body] *vars*))
         (.flush))
-      (while-let [line (.readLine reader)] (println line))
-      (flush)
-      (.close socket))
+      (loop [line (.readLine reader)]
+        (when-not (= ":bake.core/result" line)
+          (println line)
+          (recur (.readLine reader))))
+      (let [result (read-string (.readLine reader))]
+        (flush)
+        (.close socket)
+        result))
     (println "bake not supported. perhaps you don't have a project.clj")))
 
 (defmacro bake
