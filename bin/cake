@@ -775,7 +775,7 @@ else
     bakepath = extract(cakepath, "bake-#{$version}.jar")
   end
 end
-exec("cake deps") if $command == :upgrade
+exit if $command == :upgrade
 
 cake = Cake.new(
   [cakepath, "src", "src/clj", $config['cake.claspath'], "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
