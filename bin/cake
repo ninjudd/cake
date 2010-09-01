@@ -392,10 +392,10 @@ class JVM
   def start
     return unless enabled?
     if running?
-      log(:start, "#{type} jvm already running") if $command == :start
+      log(:start, "#{type} jvm already running") if $command == :start and not $opts[:silent]
       return
     else
-      log(:start, "starting #{type} jvm") if verbose? or $command == :start
+      log(:start, "starting #{type} jvm") if verbose? or ($command == :start and not $opts[:silent])
       @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
       @pid = daemon %{java #{vm_opts} -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(use '#{type}.core) (start-server #{port})"}
       File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
@@ -775,7 +775,11 @@ else
     bakepath = extract(cakepath, "bake-#{$version}.jar")
   end
 end
-exec($0, '--version') if $command == :upgrade
+
+if $command == :upgrade
+  system($0, "start", "--silent")
+  exec($0, "--version")
+end
 
 cake = Cake.new(
   [cakepath, "src", "src/clj", $config['cake.claspath'], "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
