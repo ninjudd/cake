@@ -4,8 +4,8 @@ Cake has the following features:
 * a persistent JVM, eliminating start-up overhead
 * a dependency based task model, making it simple to define your own tasks and extend existing ones
 * a large library of built in tasks
-* compatibility with most lein project.clj's
-* cross platform (linux, os x, windows, commodore 64)
+* compatibile with most lein project.clj files
+* cross platform (Linux, OS X, Windows, Commodore 64)
 * an enhanced REPL with readline and tab completion
 
 _This software is a pre-release, please submit an issue on github if you run into any problems._
