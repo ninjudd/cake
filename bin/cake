@@ -727,16 +727,15 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   log(:cake, "running from git checkout") if verbose?
   if $command == :upgrade
     log(:upgrade, "pulling latest code from git")
-    Dir.chdir($cakedir) do
-      system('git pull')
-      remove_dir('lib')
-    end
+    Dir.chdir($cakedir) { system('git pull') }
   end
 
   $version = IO.read(project).split("\n").first.match(/defproject cake \"(.*)\"/)[1]
   log(:deps, "project.clj version is #{$version}") if debug?
 
-  FileUtils.remove_dir(lib, true) if newer?(project, lib)
+  # Force new cake libs if cake's project.clj has changed.
+  FileUtils.remove_dir(lib) if newer?(project, lib) and not $config['cake.disable-auto-deps']
+
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
     begin
