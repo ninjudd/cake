@@ -759,7 +759,7 @@ else
     log(:cake, "running from gem") if verbose?
     if $command == :upgrade
       log(:upgrade, "checking for updates to cake gem")
-      system('gem update cake')
+      system('gem update cake --no-ri --no-rdoc')
     end
 
     $version = File.basename(File.dirname(lib)).split('-')[1]
