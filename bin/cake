@@ -229,50 +229,52 @@ rescue NotImplementedError, Errno::EINVAL
   file
 end
 
-def download(url, dir, dest = nil)
-  path = "#{dir}/#{File.basename(url)}"
-  if dest.nil? or not File.exists?(path)
+def download(url, dir, opts = {})
+  file = File.basename(url)
+  path = "#{dir}/#{file}"
+
+  if opts[:force] or not File.exists?(path)
     FileUtils.makedirs(dir)
     open(url, progress_bar(url)) do |remote|
       open(path, "wb") do |local|
-        while (buf = remote.read(8192))
-          local.write buf
-        end
-        puts
+        while (buf = remote.read(8192)); local.write buf; end
       end
-    end
+    end; puts
   end
-  copy(path, dest)
+  return path unless opts[:dest]
+
+  dir  = File.expand_path(opts[:dest])
+  dest = "#{dir}/#{file}"
+  if opts[:force] or not File.exists?(dest)
+    FileUtils.makedirs(dir)
+    FileUtils.copy(path, dest)
+  end
+  dest
 rescue OpenURI::HTTPError
   raise "resource not found: #{url}"
 end
 
-def get_cake(version, dest = nil)
-  download("#{$github}/jars/cake-#{version}.jar", "#{$m2}/cake/cake/#{snapshot(version)}", dest)
+def get_cake(opts = {})
+  log(:deps, "Fetching cake dependencies...") unless @got_cake; @got_cake = true
+  version = cake_version(opts[:version] || :current)
+  download("#{$github}/jars/cake-#{version}.jar", "#{$m2}/cake/cake/#{snapshot(version)}", opts)
 end
 
-def get_clojure(dest = nil, repo = "http://build.clojure.org/releases", version = "1.2.0")
-  path = "org/clojure/clojure/#{version}"
-  download("#{repo}/#{path}/clojure-#{version}.jar", "#{$m2}/#{path}", dest)
+def get_clojure(opts = {})
+  version = opts[:version] || "1.2.0"
+  repo    = opts[:repo]    || "http://build.clojure.org/releases"
+  path    = "org/clojure/clojure/#{version}"
+  download("#{repo}/#{path}/clojure-#{version}.jar", "#{$m2}/#{path}", opts)
 end
 
-def progress_bar(label, ch = '=', bg = '', width = nil, out = $stdout, progress = 0, total = nil)
-  width ||= [`stty size 2>&1`.split[1].to_i, 80].max - (label.size + 4)
+def progress_bar(label, ch = '=', bg = '', width = 77, out = $stdout, progress = 0, total = nil)
   { :progress_proc => lambda {|c| progress += ((width * c/total).to_i - progress).times { out.print_flush(ch) }},
-    :content_length_proc => lambda {|t| printf("%1$s [%2$#{width}s]\r%1$s [", label, bg); total = t}}
+    :content_length_proc => lambda {|t| printf("%s\n[%#{width}s]\r[", label, bg); total = t}}
 end
 
-def copy(src, dest)
-  return src unless dest
-  return unless File.exists?(src)
-  dest = File.expand_path(dest)
-  FileUtils.makedirs(dest)
-  FileUtils.copy(src, dest)
-  "#{dest}/#{File.basename(src)}"
-end
-
-def cake_current(tag = :current)
-  version = open("#{$github}/#{tag}").gets
+def cake_version(version)
+  return version unless version.kind_of?(Symbol)
+  version = open("#{$github}/#{version}").gets
   log(:deps, "most recent standalone version is #{version}") if debug?
   version
 end
@@ -751,12 +753,11 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   FileUtils.remove_dir(lib, true) if newer?(project, lib) and not $config['cake.disable-auto-deps']
 
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
-    # In a new git checkout, need to fetch dependencies.
-    log(:deps, "Fetching cake dependencies...")
-    cakejar = get_cake($version, lib) rescue get_cake(cake_current, lib)
+    # In a new git checkout, need to fetch dependencies.    
+    cakejar = get_cake(:version => $version, :dest => lib) rescue get_cake(:version => :current, :dest => lib)
     extract(cakejar, "bake.jar", "#{lib}/dev")
   end
-  $clojure = get_clojure(lib)
+  $clojure = get_clojure(:dest => lib)
 
   cakepath = ["#{$cakedir}/src", "#{lib}/*:#{lib}/dev/*"]
   bakepath = ["#{$cakedir}/bake", "#{lib}/dev/*"]
@@ -779,10 +780,10 @@ else
   else
     # Standalone script.
     log(:cake, "running from standalone script") if verbose?
-    download("#{$github}/cake", __FILE__) if $command == :upgrade
+    download("#{$github}/cake", __FILE__, :force => true) if $command == :upgrade
 
-    $version = cake_current(:stable)
-    cakejar  = get_cake($version)
+    $version = cake_version(:stable)
+    cakejar  = get_cake(:version => $version)
     $clojure = get_clojure
 
     cakepath = [cakejar, $clojure]
