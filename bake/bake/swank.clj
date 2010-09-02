@@ -1,4 +1,4 @@
-(ns cake.swank
+(ns bake.swank
   (:use cake)
   (:import [java.io File StringWriter PrintWriter]))
 

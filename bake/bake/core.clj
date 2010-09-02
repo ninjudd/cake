@@ -2,7 +2,7 @@
   (:use cake)
   (:require clojure.main            
             cake.project
-            [cake.swank :as swank]
+            [bake.swank :as swank]
             [cake.server :as server])
   (:import [java.io FileOutputStream PrintStream PrintWriter]))
 
