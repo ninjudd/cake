@@ -1,5 +1,6 @@
 (ns cake.tasks.jar
   (:use cake cake.core cake.ant ordered-set
+        [clojure.string :only [join]]
         [useful :only [absorb]])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete]
            [org.apache.tools.ant.types FileSet ZipFileSet]
@@ -68,18 +69,18 @@
 (defn uberjarfile []
   (file (format "%s-%s-standalone.jar" (:artifact-id *project*) (:version *project*))))
 
-(defn jars []
-  (let [jar (jarfile)]
+(defn jars [& opts]
+  (let [opts (apply hash-map opts)
+        jar  (jarfile)]
     (into (ordered-set jar)
-          (fileset-seq {:dir "lib" :includes "*.jar"}))))
+          (fileset-seq {:dir "lib" :includes "*.jar" :excludes (join "," (:excludes opts))}))))
 
 (defn rebuild-uberjar? [jarfile jars]
   (let [last-mod (.lastModified jarfile)]
     (some #(< last-mod (.lastModified %)) jars)))
 
-(defn build-uberjar []
-  (let [jars    (jars)
-        jarfile (uberjarfile)]
+(defn build-uberjar [jars]
+  (let [jarfile (uberjarfile)]
     (when (rebuild-uberjar? jarfile jars)
       (log "Building jar:" jarfile)
       (doto (DefaultShader.)
@@ -88,7 +89,7 @@
 
 (deftask uberjar #{jar}
   "Create a standalone jar containing all project dependencies."
-  (build-uberjar))
+  (build-uberjar (jars)))
 
 (defn warfile []
   (file (format "%s-%s.war" (:artifact-id *project*) (:version *project*))))

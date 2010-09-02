@@ -3,10 +3,8 @@
 require 'find'
 require 'open-uri'
 require 'socket'
-require 'timeout'
 require 'fileutils'
 require 'io/wait'
-require 'pp'
 
 if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   begin
@@ -231,45 +229,56 @@ rescue NotImplementedError, Errno::EINVAL
   file
 end
 
-def download(url, path)
-  log(:deps, "downloading #{url}")
-  open(url) do |remote|
-    open(path, "wb") do |local|
-      while (buf = remote.read(8192))
-        local.write buf
+def download(url, dir, dest = nil)
+  path = "#{dir}/#{File.basename(url)}"
+  if dest.nil? or not File.exists?(path)
+    FileUtils.makedirs(dir)
+    open(url, progress_bar(url)) do |remote|
+      open(path, "wb") do |local|
+        while (buf = remote.read(8192))
+          local.write buf
+        end
+        puts
       end
     end
   end
+  copy(path, dest)
+rescue OpenURI::HTTPError
+  raise "resource not found: #{url}"
 end
 
-def get_cake(version, dest = nil, opts = {})
-  jar  = "cake-#{version}.jar"
-  repo = File.expand_path("~/.m2/repository/cake/cake/#{version}")
-  path = "#{repo}/#{jar}"
+def get_cake(version, dest = nil)
+  download("#{$github}/jars/cake-#{version}.jar", "#{$m2}/cake/cake/#{snapshot(version)}", dest)
+end
 
-  if not File.exists?(path)
-    url = "#{$repo}/jars/#{jar}"
-    log(:deps, "fetching cake libraries. this may take a moment...") unless @logged; @logged = true
-    FileUtils.makedirs(repo)
-    download(url, path)
-  end
-  return path unless dest
+def get_clojure(dest = nil, repo = "http://build.clojure.org/releases", version = "1.2.0")
+  path = "org/clojure/clojure/#{version}"
+  download("#{repo}/#{path}/clojure-#{version}.jar", "#{$m2}/#{path}", dest)
+end
 
+def progress_bar(label, ch = '=', bg = '', width = nil, out = $stdout, progress = 0, total = nil)
+  width ||= [`stty size 2>&1`.split[1].to_i, 80].max - (label.size + 4)
+  { :progress_proc => lambda {|c| progress += ((width * c/total).to_i - progress).times { out.print_flush(ch) }},
+    :content_length_proc => lambda {|t| printf("%1$s [%2$#{width}s]\r%1$s [", label, bg); total = t}}
+end
+
+def copy(src, dest)
+  return src unless dest
+  return unless File.exists?(src)
   dest = File.expand_path(dest)
   FileUtils.makedirs(dest)
-  FileUtils.copy(path, dest)
-  "#{dest}/#{jar}"
-rescue OpenURI::HTTPError => e
-  raise if opts[:raise]
-  log(:deps, "unable to find cake version #{version} on clojars.")
-  log(:deps, "please check http://github.com/ninjudd/cake for latest install instructions.")
-  exit
+  FileUtils.copy(src, dest)
+  "#{dest}/#{File.basename(src)}"
 end
 
-def current_version(tag = :current)
-  version = open("#{$repo}/#{tag}").gets
+def cake_current(tag = :current)
+  version = open("#{$github}/#{tag}").gets
   log(:deps, "most recent standalone version is #{version}") if debug?
   version
+end
+
+def snapshot(version)
+  version.gsub(/\d{8}\.\d{6}$/, "SNAPSHOT")
 end
 
 def extract(jar, file, dest = File.dirname(jar))
@@ -299,7 +308,7 @@ class JVM
     @type      = self.class.name.downcase
     @classpath = make_path(classpath)
     @libpath   = make_path(libpath)
-    @pidfile   = "#{$confdir}/#{type}.pid"
+    @pidfile   = ".cake/#{type}.pid"
     @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
     refresh
   end
@@ -475,7 +484,8 @@ class JVM
     save_history
   end
 
-  def run(file = $script)
+  def run
+    file = File.expand_path($opts[:run].first)
     with_socket do |socket|
       log(:run, "running file #{file}") if debug?
       socket.write(":run #{$vars} #{file.inspect}")
@@ -483,8 +493,8 @@ class JVM
     end
   end
 
-  def eval(forms = $opts[:eval])
-    forms = forms.collect do |form|
+  def eval
+    forms = $opts[:eval].collect do |form|
       form == '-' ? $stdin.gets(nil) : form
     end.join(' ')
     forms = "(doall (map println [#{forms}]))" unless $opts[:q]
@@ -496,7 +506,8 @@ class JVM
   end
 
   EOL = "EOL__#{rand}"
-  def filter(forms = $opts[:filter])
+  def filter
+    forms = $opts[:filter]
     with_socket do |socket|
       socket.write %(:filter #{$vars} "#{EOL}")
       while line = $stdin.gets
@@ -646,7 +657,8 @@ class Cake < JVM
   end
 
   def java_opts
-    [ENV['CAKE_JAVA_OPTS'], $config['cake.java_opts'], super].compact.join(' ')
+    bootclasspath = %{-Xbootclasspath/a:"#{$clojure}"}
+    [ENV['CAKE_JAVA_OPTS'], $config['cake.java_opts'], bootclasspath, super].compact.join(' ')
   end
 
 private
@@ -675,16 +687,16 @@ class Bake < JVM
   end
 
   def enabled?
-    Dir["lib/*.jar"].any?
+    Dir['lib/*.jar'].any?
   end
 end
 
-#==================================
-
-FileUtils.makedirs("#{$home}/.cake")
-project_clj = "#{$home}/.cake/project.clj"
-File.open(project_clj, 'w') do |file|
-  file.write <<END
+def initialize_cake_dirs
+  FileUtils.makedirs("#{$bakedir}/.cake")
+  FileUtils.makedirs("#{$home}/.cake")
+  project_clj = "#{$home}/.cake/project.clj"
+  File.open(project_clj, 'w') do |file|
+    file.write <<END
 (defproject global "0.0.0"
   :description "Don't rename this project, but you can change the version if you want."
   :dependencies [[clojure "1.2.0"]
@@ -698,21 +710,23 @@ File.open(project_clj, 'w') do |file|
 ;;  4. Configuration options in ~/.cake/config are used in all projects.
 ;;--------------------
 END
-end unless File.exists?(project_clj)
+  end unless File.exists?(project_clj)
+end
+
+#==================================
 
 parse_opts!
-$script  = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd     = Dir.getwd
 $bakedir = project_dir($pwd)
 $cakedir = File.dirname(File.dirname(readlink(__FILE__)))
-$repo    = "http://github.com/ninjudd/cake-standalone/raw/master"
-$confdir = ".cake"
+$github  = "http://github.com/ninjudd/cake-standalone/raw/master"
+$m2      = "#{$home}/.m2/repository"
 $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
-$timeout = ($config['connect.timeout'] || 20).to_i
 $vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
+$timeout = ($config['connect.timeout'] || 20).to_i
 
 Dir.chdir($bakedir)
-FileUtils.makedirs($confdir)
+initialize_cake_dirs
 
 if debug?
   puts "config: #{$config.inspect}"
@@ -738,19 +752,14 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
 
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
-    begin
-      version = $version
-      cakejar = get_cake(version, lib, :raise => true)
-    rescue OpenURI::HTTPError => e
-      version = current_version
-      cakejar = get_cake(version, lib)
-    end
-    bake_version = version.gsub(/\d{8}\.\d{6}/, "SNAPSHOT")
-    extract(cakejar, "bake-#{bake_version}.jar", "#{lib}/dev")
+    log(:deps, "Fetching cake dependencies...")
+    cakejar = get_cake($version, lib) rescue get_cake(cake_current, lib)
+    extract(cakejar, "bake.jar", "#{lib}/dev")
   end
+  $clojure = get_clojure(lib)
 
-  cakepath = ["#{$cakedir}/src", "#{lib}/*:#{lib}/dev/*"].join(PATH_SEP)
-  bakepath = ["#{$cakedir}/bake", "#{lib}/dev/*"].join(PATH_SEP)
+  cakepath = ["#{$cakedir}/src", "#{lib}/*:#{lib}/dev/*"]
+  bakepath = ["#{$cakedir}/bake", "#{lib}/dev/*"]
 else
   cakejar = "#{lib}/cake.jar"
   bakejar = "#{lib}/bake.jar"
@@ -763,16 +772,21 @@ else
     end
 
     $version = File.basename(File.dirname(lib)).split('-')[1]
-    cakepath = cakejar
+    $clojure = "#{lib}/clojure.jar"
+
+    cakepath = [cakejar, $clojure]
     bakepath = bakejar
   else
     # Standalone script.
     log(:cake, "running from standalone script") if verbose?
-    download("http://github.com/ninjudd/cake/raw/master/bin/cake", __FILE__) if $command == :upgrade
+    download("#{$github}/cake", __FILE__) if $command == :upgrade
 
-    $version = current_version(:stable)
-    cakepath = get_cake($version)
-    bakepath = extract(cakepath, "bake-#{$version}.jar")
+    $version = cake_current(:stable)
+    cakejar  = get_cake($version)
+    $clojure = get_clojure
+
+    cakepath = [cakejar, $clojure]
+    bakepath = extract(cakejar, "bake.jar")
   end
 end
 
