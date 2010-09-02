@@ -5,6 +5,7 @@ require 'open-uri'
 require 'socket'
 require 'fileutils'
 require 'io/wait'
+require 'pp'
 
 if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   begin
@@ -487,10 +488,9 @@ class JVM
   end
 
   def run
-    file = File.expand_path($opts[:run].first)
     with_socket do |socket|
-      log(:run, "running file #{file}") if debug?
-      socket.write(":run #{$vars} #{file.inspect}")
+      log(:run, "running file #{$script}") if debug?
+      socket.write(":run #{$vars} #{$script.inspect}")
       socket.duplex($stdin, $stdout)
     end
   end
@@ -718,6 +718,7 @@ end
 #==================================
 
 parse_opts!
+$script  = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd     = Dir.getwd
 $bakedir = project_dir($pwd)
 $cakedir = File.dirname(File.dirname(readlink(__FILE__)))
