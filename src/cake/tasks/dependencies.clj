@@ -10,10 +10,10 @@
 (def *exclusions* nil)
 
 (def repositories
-  [["central"           "http://repo1.maven.org/maven2"]
-   ["clojure"           "http://build.clojure.org/releases"]
+  [["clojure"           "http://build.clojure.org/releases"]
    ["clojure-snapshots" "http://build.clojure.org/snapshots"]
-   ["clojars"           "http://clojars.org/repo/"]])
+   ["clojars"           "http://clojars.org/repo"]
+   ["maven"             "http://repo1.maven.org/maven2"]])
 
 (defn os-name []
   (let [name (System/getProperty "os.name")]
@@ -52,12 +52,12 @@
     (.addDependency task dep)))
 
 (defn add-dependencies [task deps]
-  (doseq [[dep version & opts] deps :let [opts (apply array-map opts)]]
+  (doseq [[dep opts] deps]
     (add-dep task
       (make Dependency
         {:group-id    (group dep)
          :artifact-id (name dep)
-         :version     version
+         :version     (:version opts)
          :exclusions  (map exclusion (concat *exclusions* (:exclusions opts)))}))))
 
 (defn subproject-path [dep]
@@ -70,14 +70,8 @@
       (when (not-any? #(re-matches % name) exclusions)
         (add-fileset task {:file jar})))))
 
-(defn glob [dir pattern]
-  (let [pattern (re-pattern pattern)
-        match?  #(re-matches pattern (.getName %))]
-    (filter match? (.listFiles (File. dir)))))
-
 (defn install-subprojects []
-  (doseq [type [:dependencies :dev-dependencies]
-          [dep _ & opts] (*project* type) :let [opts (apply array-map opts)]]
+  (doseq [type [:dependencies :dev-dependencies], [dep opts] (*project* type)]
     (when-let [path (subproject-path dep)]
       (binding [*root* path]
         (cake-exec "install")))))
