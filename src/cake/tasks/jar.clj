@@ -36,12 +36,12 @@
           (string? m) (add-zipfileset task (file-mapping m m))
           (vector? m) (add-zipfileset task (apply file-mapping m)))))
 
-(defn add-source-files [task]
+(defn add-source-files [task & [prefix]]
   (when-not (:omit-source *project*)
     (let [src (file "src" "clj")
           src (if (.exists src) src (file "src"))]
-      (add-fileset task {:dir src                :includes "**/*.clj"})
-      (add-fileset task {:dir (file "src" "jvm") :includes "**/*.java"}))))
+      (add-zipfileset task {:dir src                :prefix prefix :includes "**/*.clj"})
+      (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"}))))
 
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
@@ -102,7 +102,7 @@
   (ant War {:dest-file (warfile)}
          (add-manifest (manifest))
          (add-license)
-         (add-source-files)
+         (add-source-files "WEB-INF/src")
          (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})
          (add-zipfileset {:dir (file "classes")   :prefix classes :includes "**/*.class"})
          (add-zipfileset {:dir (file "resources") :prefix classes :includes "*"})
