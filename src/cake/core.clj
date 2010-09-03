@@ -97,12 +97,13 @@
   (let [[deps body] (if (set? (first body))
                       [(first body) (rest body)]
                       [#{} body])
-        [sources deps] (for [pred [string? symbol?]]
-                         (set (filter pred deps)))]
-    `(deftask ~name ~deps
+        [files tasks] (for [pred [string? symbol?]]
+                        (set (filter pred deps)))]
+    `(deftask ~name ~files
        (let [f# (file ~name)]
          (when (or (not (.exists f#))
-                   (seq (filter #(< (.lastModified f#) (.lastModified (file %))) ~sources)))
+                   (seq (filter #(< (.lastModified f#) (.lastModified (file %))) ~files))
+                   (nil? (seq ~deps)))
            ~@body)))))
 
 (defmacro undeftask [& names]
