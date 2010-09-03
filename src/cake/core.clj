@@ -40,7 +40,7 @@
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (apply hash-map task-opts)]
     `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
-         (require '~'[cake.tasks help jar test compile dependencies release swank clean version])
+         (require '~'[cake.tasks help jar test compile dependencies release swank core version])
          ~@(for [ns tasks]
              `(try-load (require '~ns)))
          (undeftask ~@(:exclude task-opts)))))

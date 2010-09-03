@@ -43,5 +43,3 @@
   (if-let [names (:help *opts*)]
     (apply task-doc (map symbol names))
     (list-all-tasks)))
-
-(deftask default #{help})
