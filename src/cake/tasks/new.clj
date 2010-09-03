@@ -29,7 +29,7 @@
           (spit (file root "project.clj") (project-contents project))
           (log "Created file: project.clj")
           (spit (file root ".gitignore")
-                (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build"] (repeat "\n"))))
+                (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" name] (repeat "\n"))))
           (log "Created file: .gitignore")
           (extract-resource "LICENSE" root)
           (log "Created default LICENSE file (Eclipse Public License)")))))

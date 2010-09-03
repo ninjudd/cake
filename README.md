@@ -61,12 +61,13 @@ Cake provides default tasks for most of the things you probably do on a regular 
     cake compile   ;; Compile all clojure and java source files.
     cake jar       ;; Build a jar file containing project source and class files.
     cake uberjar   ;; Create a standalone jar containing all project dependencies.
+    cake bin       ;; Create a standalone console executable for your project.
     cake install   ;; Install jar to local repository.
     cake release   ;; Release project jar to clojars.
     cake deploy    ;; Deploy war to a group of servers.
     cake upgrde    ;; Upgrade cake to the most current version.
     cake eval      ;; Eval the given forms in the project JVM.
-    cake filter    ;; Thread each line in stdin through the given forms, printing the results.
+    cake filter    ;; Thread each stdin line through the given forms, printing the results.
     cake war       ;; Create a web archive containing project source and class files.
     cake uberwar   ;; Create a web archive containing all project dependencies.
     cake swank     ;; Report status of swank server and start it if not running.

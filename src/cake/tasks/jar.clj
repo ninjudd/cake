@@ -1,14 +1,15 @@
 (ns cake.tasks.jar
   (:use cake cake.core cake.ant ordered-set
+        [clojure.java.io :only [copy]]
         [clojure.string :only [join]]
         [useful :only [absorb]])
-  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete]
+  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod]
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]
            [org.apache.maven.plugins.shade DefaultShader]
            [org.apache.maven.plugins.shade.resource ComponentsXmlResourceTransformer]
            [org.apache.maven.artifact.ant InstallTask Pom]
-           [java.io File]))
+           [java.io File FileOutputStream]))
 
 (defn jarfile []
   (file (format "%s-%s.jar" (:artifact-id *project*) (:version *project*))))
@@ -90,6 +91,20 @@
 (deftask uberjar #{jar}
   "Create a standalone jar containing all project dependencies."
   (build-uberjar (jars)))
+
+(deftask bin #{uberjar}
+  "Create a standalone console executable for your project."
+  "Add :main to your project.clj to specify the namespace that contains your -main function."
+  (if (:main *project*)
+    (let [binfile (file (:artifact-id *project*))
+          uberjar (uberjarfile)]
+      (when (newer? uberjar binfile)
+        (log "Creating standalone executable:" (.getPath binfile))
+        (with-open [bin (FileOutputStream. binfile)]
+          (.write bin (.getBytes "#!/usr/bin/env java -jar\n"))
+          (copy uberjar bin))
+        (ant Chmod {:file binfile :perm "+x"})))
+    (println "Cannot create bin without :main namespace in project.clj")))
 
 (defn warfile []
   (file (format "%s-%s.war" (:artifact-id *project*) (:version *project*))))
