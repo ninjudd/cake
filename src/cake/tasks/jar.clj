@@ -102,7 +102,7 @@
   (ant War {:dest-file (warfile)}
          (add-manifest (manifest))
          (add-license)
-         (add-source-files "WEB-INF/src")
+         (add-source-files "WEB-INF/classes")
          (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})
          (add-zipfileset {:dir (file "classes")   :prefix classes :includes "**/*.class"})
          (add-zipfileset {:dir (file "resources") :prefix classes :includes "*"})
