@@ -34,6 +34,7 @@
 
 (defn print-stacktrace [e]
   (if-let [pst-color (*config* "clj-stacktrace")]
-    (clj-stacktrace/pst-on *out* (= "color" pst-color) e)
+    (do (printf "%s: %s" (.getName (class e)) (.getMessage e))
+        (clj-stacktrace/pst-on *out* (= "color" pst-color) e))
     (do (stacktrace/print-cause-trace e)
         (flush))))
