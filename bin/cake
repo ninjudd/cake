@@ -659,8 +659,8 @@ class Cake < JVM
   end
 
   def java_opts
-    bootclasspath = %{-Xbootclasspath/a:"#{$clojure}"}
-    [ENV['CAKE_JAVA_OPTS'], $config['cake.java_opts'], bootclasspath, super].compact.join(' ')
+    # bootclasspath = %{-Xbootclasspath/a:"#{$clojure}"}
+    [ENV['CAKE_JAVA_OPTS'], $config['cake.java_opts'], super].compact.join(' ')
   end
 
 private
