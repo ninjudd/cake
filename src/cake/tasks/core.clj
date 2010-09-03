@@ -21,3 +21,7 @@
       (add-fileset {:dir (file) :includes "pom.xml"}))))
 
 (deftask default #{help})
+
+(deftask file
+  "Invoke a file task."
+  (run-task (first (:file *opts*))))
