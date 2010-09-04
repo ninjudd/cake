@@ -168,7 +168,7 @@
         (.write (prn-str [ns ns-forms body] *vars*))
         (.flush))
       (loop [line (.readLine reader)]
-        (when-not (= ":bake.core/result" line)
+        (when-not (or (nil? line) (= ":bake.core/result" line))
           (println line)
           (recur (.readLine reader))))
       (let [result (read-string (.readLine reader))]
