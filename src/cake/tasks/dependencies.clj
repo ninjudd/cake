@@ -58,6 +58,7 @@
         {:group-id    (group dep)
          :artifact-id (name dep)
          :version     (:version opts)
+         :classifier  (:classifier opts)
          :exclusions  (map exclusion (concat *exclusions* (:exclusions opts)))}))))
 
 (defn subproject-path [dep]
