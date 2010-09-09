@@ -70,7 +70,7 @@
       (spit (file "releases/stable") version))
     (binding [*root* "releases"]
       (git "add" jar "cake" "current" "stable")
-      (git "commit" "-m" (format "'release cake %s'" (:version *project*)))
+      (git "commit" "--allow-empty" "-m" (format "'release cake %s'" (:version *project*)))
       (git "push"))
     (when-not snapshot?
       (let [gem (str "cake-" version ".gem")]
