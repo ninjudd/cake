@@ -108,6 +108,10 @@
   (and (instance? clojure.lang.Compiler$CompilerException e)
        (instance? UnsatisfiedLinkError (.getCause e))))
 
+(defn get-env [vars]
+  (keyword (or (get-in vars [:opts :env 0])
+               (get *config* "env"))))
+
 (defn create [port f & commands]
   (let [commands (apply hash-map commands)]
     (server-socket/create-server port
@@ -122,11 +126,12 @@
               (clojure.main/with-bindings
                 (set! *command-line-args*  (:args vars))
                 (set! *warn-on-reflection* (:warn-on-reflection *project*))
-                (binding [*vars*   vars
-                          *pwd*    (:pwd vars)
-                          *env*    (:env vars)
-                          *opts*   (:opts vars)
-                          *script* (:script vars)]
+                (binding [*vars*      vars
+                          *pwd*       (:pwd vars)
+                          *shell-env* (:shellenv vars)
+                          *opts*      (:opts vars)
+                          *script*    (:script vars)
+                          *env*       (get-in *project* [:environments (get-env vars)])]
                   (if (keyword? form)
                     (when-let [command (or (commands form) (default-commands form))]
                       (command))                
