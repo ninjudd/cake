@@ -101,7 +101,7 @@
       (when (newer? uberjar binfile)
         (log "Creating standalone executable:" (.getPath binfile))
         (with-open [bin (FileOutputStream. binfile)]
-          (.write bin (.getBytes "#!/usr/bin/env java -jar\n"))
+          (.write bin (.getBytes "#!/usr/bin/env sh\nexec java -jar $0 $@\n"))
           (copy uberjar bin))
         (ant Chmod {:file binfile :perm "+x"})))
     (println "Cannot create bin without :main namespace in project.clj")))
