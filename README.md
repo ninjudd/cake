@@ -21,7 +21,7 @@ you're new, that's what we recommend.
 
 ### Standalone script
 
-1. [Download the script](https://github.com/ninjudd/cake/raw/master/bin/cake)
+1. [Download the script](http://github.com/ninjudd/cake-standalone/raw/master/cake)
 2. Put it somewhere in your path and `chmod +x cake` to make it executable
 
 ### Git repository
