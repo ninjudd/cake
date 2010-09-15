@@ -802,7 +802,7 @@ cake = Cake.new(
   [$config['cake.library.path'], "lib/dev/native"]
 )
 bake = Bake.new(
-  [bakepath, "src", "src/clj", "classes", "test", $config['project.classpath'], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [bakepath, "src", "src/clj", "classes", "test", $config['project.classpath'], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*", "dev"],
   [$config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 
