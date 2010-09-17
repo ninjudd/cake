@@ -5,14 +5,14 @@
         [cake.contrib.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
-(defn compile-java []
-  (let [start (System/currentTimeMillis)
-        src   (file "src" "jvm")]
+(defn compile-java [src]
+  (let [start (System/currentTimeMillis)]
     (when (.exists src)
       (ant Javac {:destdir     (file "classes")
                   :classpath   (classpath)
                   :srcdir      (path src)
                   :fork        true
+                  :verbose     (verbose?)
                   :debug       true
                   :debug-level "source,lines"
                   :failonerror true}))
@@ -65,7 +65,7 @@
 (deftask compile #{deps compile-native}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
   (copy-native)
-  (compile-java)
+  (compile-java (file "src" "jvm"))
   (compile-clojure))
 
 ;; add actions to compile-native if you need to compile native libraries
