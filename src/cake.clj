@@ -17,6 +17,7 @@
 
 (def *ins*  nil)
 (def *outs* nil)
+(def *errs* nil)
 
 (defn verbose? []
   (boolean (or (:v *opts*) (:verbose *opts*))))

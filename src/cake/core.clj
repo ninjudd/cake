@@ -6,7 +6,7 @@
             [cake.server :as server])
   (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader FileNotFoundException]
            [org.apache.tools.ant.taskdefs ExecTask]
-           [java.net Socket ConnectException]))
+           [java.net Socket SocketException]))
 
 (defn expand-path [& path]
   (let [root (or (first path) "")]
@@ -112,7 +112,7 @@
 
 (defn- bake-connect [port]
   (loop []
-    (if-let [socket (try (Socket. "localhost" (int port)) (catch ConnectException e))]
+    (if-let [socket (try (Socket. "localhost" (int port)) (catch SocketException e))]
       socket
       (recur))))
 
@@ -219,6 +219,6 @@
   (when (= "global" (:artifact-id *project*))
     (undeftask test autotest jar uberjar war uberwar install release)
     (require '[cake.tasks new]))
-  (server/redirect-to-log ".cake/cake.log")
+  (server/init-multi-out ".cake/cake.log")
   (server/create port process-command :reload reload-files :repl repl)
   nil)

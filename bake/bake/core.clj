@@ -27,7 +27,7 @@
 (defn start-server [port]
   (in-ns 'bake.core)
   (cake.project/init "project.clj")
-  (server/redirect-to-log ".cake/project.log")
+  (server/init-multi-out ".cake/project.log")
   (try (doseq [ns (:require *project*)]
          (require ns))
        (eval (:startup *project*))
