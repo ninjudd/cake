@@ -3,5 +3,4 @@
   :dependencies [[clojure "1.2.0"]
                  [clojure-contrib "1.2.0"]
                  [clojure-csv/clojure-csv "1.1.0"]]
-  :omit-source true
   :main uberjar)
