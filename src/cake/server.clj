@@ -1,6 +1,7 @@
 (ns cake.server
   (:use cake
         [clojure.main :only [skip-whitespace]]
+        [useful.io :only [multi-outstream with-outstream]]
         [cake.contrib.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.contrib.server-socket :as server-socket]
             complete)
@@ -116,37 +117,38 @@
   (let [commands (apply hash-map commands)]
     (server-socket/create-server port
       (fn [ins outs]
-        (binding [*in*   (LineNumberingPushbackReader. (InputStreamReader. ins))
-                  *out*  (OutputStreamWriter. outs)
-                  *err*  (PrintWriter. #^OutputStream outs true)
-                  *ins*  ins
-                  *outs* (PrintStream. outs)]
-          (try
-            (let [form (read), vars (read)]
-              (clojure.main/with-bindings
-                (set! *command-line-args*  (:args vars))
-                (set! *warn-on-reflection* (:warn-on-reflection *project*))
-                (binding [*vars*      vars
-                          *pwd*       (:pwd vars)
-                          *shell-env* (:shellenv vars)
-                          *opts*      (:opts vars)
-                          *script*    (:script vars)
-                          *env*       (get-in *project* [:environments (get-env vars)])]
-                  (if (keyword? form)
-                    (when-let [command (or (commands form) (default-commands form))]
-                      (command))                
-                    (f form)))))
-            (catch Throwable e
-              (print-stacktrace e)
-              (when (fatal? e) (System/exit 1))))))
+        (with-outstream [*outs* outs, *errs* outs]
+          (binding [*in*  (LineNumberingPushbackReader. (InputStreamReader. ins))
+                    *out* (OutputStreamWriter. outs)
+                    *err* (PrintWriter. #^OutputStream outs true)
+                    *ins* ins]
+            (try
+              (let [form (read), vars (read)]
+                (clojure.main/with-bindings
+                  (set! *command-line-args*  (:args vars))
+                  (set! *warn-on-reflection* (:warn-on-reflection *project*))
+                  (binding [*vars*      vars
+                            *pwd*       (:pwd vars)
+                            *shell-env* (:shellenv vars)
+                            *opts*      (:opts vars)
+                            *script*    (:script vars)
+                            *env*       (get-in *project* [:environments (get-env vars)])]
+                    (if (keyword? form)
+                      (when-let [command (or (commands form) (default-commands form))]
+                        (command))
+                      (f form)))))
+              (catch Throwable e
+                (print-stacktrace e)
+                (when (fatal? e) (System/exit 1)))))))
       0 (InetAddress/getByName "localhost"))))
 
-(defn redirect-to-log [logfile]
-  (let [null-stream (ByteArrayInputStream. (byte-array []))
-        null-writer (LineNumberingPushbackReader. (StringReader. ""))
-        log-stream  (PrintStream. (FileOutputStream. logfile) true)
-        log-writer  (PrintWriter. log-stream true)]
-    (System/setIn  null-stream)
-    (System/setOut log-stream)
-    (alter-var-root #'*in*  (fn [_] null-writer))
-    (alter-var-root #'*out* (fn [_] log-writer))))
+(defn init-multi-out [logfile]
+  (let [outs (multi-outstream *outs*)
+        errs (multi-outstream *errs*)
+        log  (FileOutputStream. logfile true)]
+    (alter-var-root #'*outs* (fn [_] (atom (list log))))
+    (alter-var-root #'*errs* (fn [_] (atom (list log))))
+    (alter-var-root #'*out*  (fn [_] (PrintWriter. outs)))
+    (alter-var-root #'*err*  (fn [_] (PrintWriter. errs)))
+    (System/setOut outs)
+    (System/setErr errs)))

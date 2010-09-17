@@ -7,5 +7,5 @@
                  [org.clojars.ninjudd/maven-ant-tasks "2.1.0" :exclusions [ant/ant]]
                  [org.apache.maven.plugins/maven-shade-plugin "1.3.3"]]
   :dev-dependencies [[clojure-complete "0.1.3"]
-                     [clojure-useful   "0.2.8"]
+                     [clojure-useful   "0.2.9"]
                      [clj-stacktrace   "0.1.3"]])
