@@ -2,8 +2,8 @@
   (:use cake
         [clojure.main :only [skip-whitespace]]
         [useful.io :only [multi-outstream with-outstream]]
-        [cake.contrib.find-namespaces :only [read-file-ns-decl]])
-  (:require [cake.contrib.server-socket :as server-socket]
+        [cake.utils.find-namespaces :only [read-file-ns-decl]])
+  (:require [cake.utils.server-socket :as server-socket]
             complete)
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream
                     FileOutputStream ByteArrayInputStream StringReader FileNotFoundException]
