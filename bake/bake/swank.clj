@@ -1,18 +1,10 @@
 (ns bake.swank
-  (:use cake)
+  (:use cake
+        [useful :only [if-ns]])
   (:import [java.io File StringWriter PrintWriter]))
 
 (def current-port (atom nil))
 (defn running? [] (not (nil? @current-port)))
-
-(defmacro if-ns [ns-reference then-form else-form]
-  "Try to load a namespace reference. If sucessful, evaluate then-form otherwise evaluate else-form."
-  `(try (ns ~(.getName *ns*) ~ns-reference)
-        (eval '~then-form)
-        (catch Exception e#
-          (when (not (instance? java.io.FileNotFoundException e#))
-            (println "Error loading swank:" (.getMessage e#)))
-          (eval '~else-form))))
 
 (if-ns (:use [swank.swank :only [start-repl]]
              [swank.core.server :only [*connections*]])

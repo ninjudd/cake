@@ -1,6 +1,6 @@
 (ns cake
-  (:require [clojure.stacktrace :as stacktrace]
-            [clj-stacktrace.repl :as clj-stacktrace])
+  (:use [useful :only [if-ns]])
+  (:require [clojure.stacktrace :as stacktrace])
   (:import [java.io File FileInputStream]
            [java.util Properties]))
 
@@ -33,9 +33,15 @@
 (def *config* (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
                      (read-config (File. ".cake/config"))))
 
-(defn print-stacktrace [e]
-  (if-let [pst-color (*config* "clj-stacktrace")]
-    (do (printf "%s: " (.getName (class e)))
-        (clj-stacktrace/pst-on *out* (= "color" pst-color) e))
-    (do (stacktrace/print-cause-trace e)
-        (flush))))
+(if-ns (:require [clj-stacktrace.repl :as clj-stacktrace])
+  (do
+    (defn print-stacktrace [e]
+      (if-let [pst-color (*config* "clj-stacktrace")]
+        (do (printf "%s: " (.getName (class e)))
+            (clj-stacktrace/pst-on *out* (= "color" pst-color) e))
+        (do (stacktrace/print-cause-trace e)
+            (flush)))))
+  (do
+    (defn print-stacktrace [e]
+      (stacktrace/print-cause-trace e)
+      (flush))))
