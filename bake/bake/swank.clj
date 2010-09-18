@@ -1,6 +1,6 @@
 (ns bake.swank
   (:use cake
-        [useful :only [if-ns]])
+        [cake.utils.useful :only [if-ns]])
   (:import [java.io File StringWriter PrintWriter]))
 
 (def current-port (atom nil))

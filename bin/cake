@@ -753,15 +753,14 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   # Force new cake libs if cake's project.clj has changed.
   FileUtils.remove_dir(lib, true) if newer?(project, lib) and not $config['cake.disable-auto-deps']
 
-  if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
+  if Dir["#{lib}/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.    
     cakejar = get_cake(:version => $version, :dest => lib) rescue get_cake(:version => :current, :dest => lib)
-    extract(cakejar, "bake.jar", "#{lib}/dev")
   end
   $clojure = get_clojure(:dest => lib)
 
-  cakepath = ["#{$cakedir}/src", "#{lib}/*:#{lib}/dev/*"]
-  bakepath = ["#{$cakedir}/bake", "#{lib}/dev/*"]
+  cakepath = ["#{$cakedir}/src", "#{lib}/*"]
+  bakepath = ["#{$cakedir}/bake"]
 else
   cakejar = "#{lib}/cake.jar"
   bakejar = "#{lib}/bake.jar"
@@ -798,11 +797,11 @@ if $command == :upgrade
 end
 
 cake = Cake.new(
-  [cakepath, "src", "src/clj", $config['cake.claspath'], "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [cakepath, "src", "src/clj", $config['cake.claspath'], "#{$home}/.cake/lib/dev/*"],
   [$config['cake.library.path'], "lib/dev/native"]
 )
 bake = Bake.new(
-  [bakepath, "src", "src/clj", "classes", "dev", "test", $config['project.classpath'], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [bakepath, "src", "src/clj", "classes", "dev", "test", $config['project.classpath'], "lib/*", "#{$home}/.cake/lib/dev/*"],
   [$config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 

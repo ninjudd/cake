@@ -1,6 +1,6 @@
 (ns cake.project
   (:use cake
-        [useful :only [assoc-or update]])
+        [cake.utils.useful :only [assoc-or update]])
   (:import [java.io File]))
 
 (defn group [project]

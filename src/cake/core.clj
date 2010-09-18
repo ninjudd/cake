@@ -1,5 +1,5 @@
 (ns cake.core
-  (:use cake useful
+  (:use cake cake.utils.useful
         [clojure.string :only [join trim]])
   (:require cake.project
             [cake.ant :as ant]

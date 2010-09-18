@@ -1,10 +1,10 @@
 (ns cake.server
   (:use cake
         [clojure.main :only [skip-whitespace]]
-        [useful.io :only [multi-outstream with-outstream]]
+        [cake.utils.io :only [multi-outstream with-outstream]]
         [cake.utils.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.utils.server-socket :as server-socket]
-            complete)
+            [cake.utils.complete :as complete])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream
                     FileOutputStream ByteArrayInputStream StringReader FileNotFoundException]
            [clojure.lang LineNumberingPushbackReader LispReader$ReaderException]
@@ -63,7 +63,7 @@
   (let [marker (read)]
     (try (swap! num-connections inc)
          (clojure.main/repl
-          :init   #(ns user (:use clj-stacktrace.repl))
+          :init   #(ns user)
           :caught #(do (reset-in) (clojure.main/repl-caught %))
           :prompt #(println (str marker (ns-name *ns*))))
          (finally (swap! num-connections dec)))))
