@@ -2,7 +2,7 @@
   (:use cake cake.core cake.ant
         [cake.project :only [group]]
         [clojure.string :only [join]]
-        [useful.io :only [extract-resource]])
+        [cake.utils.io :only [extract-resource]])
   (:import [org.apache.tools.ant.taskdefs Mkdir]))
 
 (def default-template

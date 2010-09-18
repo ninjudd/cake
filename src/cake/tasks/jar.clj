@@ -2,7 +2,7 @@
   (:use cake cake.core cake.ant ordered-set
         [clojure.java.io :only [copy]]
         [clojure.string :only [join]]
-        [useful :only [absorb]])
+        [cake.utils.useful :only [absorb]])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod]
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]

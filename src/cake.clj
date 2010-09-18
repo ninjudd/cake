@@ -1,5 +1,5 @@
 (ns cake
-  (:use [useful :only [if-ns]])
+  (:use [cake.utils.useful :only [if-ns]])
   (:require [clojure.stacktrace :as stacktrace])
   (:import [java.io File FileInputStream]
            [java.util Properties]))

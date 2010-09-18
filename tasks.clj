@@ -1,6 +1,5 @@
 (ns user
   (:use cake cake.core cake.ant
-        [useful :only [abort]]
         [cake.tasks.jar :only [build-uberjar jars uberjarfile]]
         [cake.tasks.release :only [upload-to-clojars]])
   (:import [org.apache.tools.ant.taskdefs Jar Copy Move ExecTask]
@@ -8,10 +7,6 @@
 
 (defn bakejar []
   (file "bake.jar"))
-
-(defn add-dev-jars [task]
-  (doseq [jar (fileset-seq {:dir "lib/dev" :includes "*.jar"})]
-    (add-zipfileset task {:src jar :includes "**/*.clj" :excludes "META-INF/**/project.clj"})))
 
 (defn clojure-jar []
   (str "clojure-" (.replace (clojure-version) "SNAPSHOT" "*") ".jar"))
@@ -23,11 +18,9 @@
   (let [jarfile (uberjarfile)
         bakejar (bakejar)]
     (ant Jar {:dest-file bakejar}
-         (add-fileset {:dir "bake"})
-         (add-dev-jars))
+         (add-fileset {:dir "bake"}))
     (ant Jar {:dest-file jarfile :update true}
-         (add-fileset {:file bakejar})
-         (add-dev-jars))))
+         (add-fileset {:file bakejar}))))
 
 (defn snapshot? [version]
   (.endsWith version "SNAPSHOT"))

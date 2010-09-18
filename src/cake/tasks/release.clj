@@ -2,7 +2,7 @@
   (:use cake cake.core
         [cake.tasks.jar :only [jarfile warfile]]
         [clojure.java.io :only [copy]]
-        [useful :only [verify assoc-or]]
+        [cake.utils.useful :only [verify assoc-or]]
         [cake.ant :only [log]])
   (:import [com.jcraft.jsch JSch ChannelExec Logger UserInfo JSchException]
            [java.io FileInputStream]))
