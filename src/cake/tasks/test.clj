@@ -1,6 +1,6 @@
 (ns cake.tasks.test
   (:use cake cake.core
-        [cake.contrib.find-namespaces :only [find-namespaces-in-dir]])
+        [cake.utils.find-namespaces :only [find-namespaces-in-dir]])
   (:import [java.io File]))
 
 (defn test-opts []
