@@ -26,6 +26,10 @@
         (replace "." "/")
         (concat "__init.class"))))
 
+(defn source-dir []
+  (let [src (file "src" "clj")]
+    (if (.exists src) src (file "src"))))
+
 (defn stale-namespaces []
   (let [compile?
         (let [aot (:aot *project*)]
@@ -35,7 +39,7 @@
               (or (= namespace (:main *project*))
                   (include? namespace aot)))))]
     (remove nil?
-      (for [sourcefile (find-clojure-sources-in-dir (file "src"))]
+      (for [sourcefile (find-clojure-sources-in-dir (source-dir))]
         (let [namespace (second (read-file-ns-decl sourcefile))
               classfile (classfile namespace)]
           (when (and (compile? namespace) (newer? sourcefile classfile))
