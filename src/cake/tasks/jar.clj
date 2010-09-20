@@ -2,6 +2,7 @@
   (:use cake cake.core cake.ant ordered-set
         [clojure.java.io :only [copy]]
         [clojure.string :only [join]]
+        [cake.tasks.compile :only [source-dir]]
         [cake.utils.useful :only [absorb]])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod]
            [org.apache.tools.ant.types FileSet ZipFileSet]
@@ -39,10 +40,8 @@
 
 (defn add-source-files [task & [prefix]]
   (when-not (:omit-source *project*)
-    (let [src (file "src" "clj")
-          src (if (.exists src) src (file "src"))]
-      (add-zipfileset task {:dir src                :prefix prefix :includes "**/*.clj"})
-      (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"}))))
+    (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
+    (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"})))
 
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))

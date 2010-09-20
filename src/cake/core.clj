@@ -154,8 +154,9 @@
         result))))
 
 (defmacro bake
-  "Execute code in a separate jvm with the classpath of your projects. Bindings allow passing
-   state to the project jvm. Namespace forms like use and require must be specified before bindings."
+  "Execute code in a separate jvm with the classpath of your projects. Bindings allow
+   passing state to the project jvm. Namespace forms like use and require must be
+   specified before bindings."
   {:arglists '([ns-forms* bindings body*])}
   [& forms]
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
