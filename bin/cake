@@ -231,12 +231,12 @@ rescue NotImplementedError, Errno::EINVAL
   file
 end
 
-def download(url, dir, opts = {})
+def download(url, path, opts = {})
   file = File.basename(url)
-  path = "#{dir}/#{file}"
+  path = "#{path}/#{file}" if File.directory?(path)
 
   if opts[:force] or not File.exists?(path)
-    FileUtils.makedirs(dir)
+    FileUtils.makedirs(File.dirname(path))
     open(url, progress_bar(url)) do |remote|
       open(path, "wb") do |local|
         while (buf = remote.read(8192)); local.write buf; end
@@ -257,7 +257,6 @@ rescue OpenURI::HTTPError
 end
 
 def get_cake(opts = {})
-  log(:deps, "Fetching cake dependencies...") unless @got_cake; @got_cake = true
   version = cake_version(opts[:version] || :current)
   download("#{$github}/jars/cake-#{version}.jar", "#{$m2}/cake/cake/#{snapshot(version)}", opts)
 end
@@ -274,10 +273,10 @@ def progress_bar(label, ch = '=', bg = '', width = 77, out = $stdout, progress =
     :content_length_proc => lambda {|t| printf("%s\n[%#{width}s]\r[", label, bg); total = t}}
 end
 
-def cake_version(version)
-  return version unless version.kind_of?(Symbol)
-  version = open("#{$github}/#{version}").gets
-  log(:deps, "most recent standalone version is #{version}") if debug?
+def cake_version(version_type)
+  return version_type unless version_type.kind_of?(Symbol)
+  version = open("#{$github}/#{version_type}").gets
+  log(:deps, "most recent #{version_type} version is #{version}") if debug?
   version
 end
 
@@ -755,7 +754,7 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   FileUtils.remove_dir(lib, true) if newer?(project, lib) and not $config['cake.disable-auto-deps']
 
   if Dir["#{lib}/*.jar"].empty?
-    # In a new git checkout, need to fetch dependencies.    
+    # In a new git checkout, need to fetch dependencies.
     cakejar = get_cake(:version => $version, :dest => lib) rescue get_cake(:version => :current, :dest => lib)
   end
   $clojure = get_clojure(:dest => lib)
@@ -783,7 +782,14 @@ else
     log(:cake, "running from standalone script") if verbose?
     download("#{$github}/cake", __FILE__, :force => true) if $command == :upgrade
 
-    $version = cake_version(:stable)
+    version_file = "#{$home}/.cake/stable_version"
+    if File.exists?(version_file) and $command != :upgrade
+      $version = IO.read(version_file)
+    else
+      $version = cake_version(:stable)
+      File.open(version_file, "w") {|f| f.write($version)}
+    end
+
     cakejar  = get_cake(:version => $version)
     $clojure = get_clojure
 
