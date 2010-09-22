@@ -729,6 +729,16 @@ $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
 $vars    = {:shellenv => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
 $timeout = ($config['connect.timeout'] || 20).to_i
 
+if !File.directory?($bakedir)
+  if File.exist?($bakedir)
+    puts "Unable to create bakedir #{$bakedir}, file already exists and is not a directory."
+    exit 1
+  else
+    puts "Bakedir #{$bakedir} does not exist, creating."
+    Dir.mkdir($bakedir)
+  end
+end
+
 Dir.chdir($bakedir)
 initialize_cake_dirs
 
