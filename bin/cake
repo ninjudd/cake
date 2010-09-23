@@ -729,8 +729,8 @@ $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
 $vars    = {:shellenv => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
 $timeout = ($config['connect.timeout'] || 20).to_i
 
-Dir.chdir($bakedir)
 initialize_cake_dirs
+Dir.chdir($bakedir)
 
 if debug?
   puts "config: #{$config.inspect}"
