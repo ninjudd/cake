@@ -3,4 +3,4 @@
   (:gen-class))
 
 (defn -main [& args]
-  (println "Running main:" args))
+  (println "Running main:" (pr-str args)))

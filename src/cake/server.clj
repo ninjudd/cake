@@ -28,7 +28,6 @@
               "incomplete"
               "invalid"))))))
 
-
 (defn completions []
   (let [[prefix ns] (read)]
     (doseq [completion (complete/completions prefix ns)]
