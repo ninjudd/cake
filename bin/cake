@@ -101,7 +101,7 @@ class Object
     when Hash   then '{' + collect {|k,v| k.to_clj + ' ' + v.to_clj}.join(' ') + '}'
     when Array  then '[' + collect {|i| i.to_clj}.join(' ') + ']'
     when Symbol then ":#{to_s}"
-    else             inspect.gsub(/(\\a|\\e|\\v|\\x)/) {|c| CLJ_SUB[c]}
+    else             inspect.gsub(/(\\a|\\e|\\v|\\x|\\#)/) {|c| CLJ_SUB[c]}
     end
   end
 
@@ -109,6 +109,7 @@ class Object
     '\a' => '\007',
     '\e' => '\033',
     '\v' => '\013',
+    '\#' => '#',
     '\x' => 'x', # This will mangle some strings in ruby 1.9.1, but it is better than breaking altogether.
   }
 
