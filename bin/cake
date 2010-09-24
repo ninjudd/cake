@@ -701,8 +701,8 @@ class Bake < JVM
 end
 
 def initialize_cake_dirs
-  FileUtils.makedirs("#{$bakedir}/.cake")
-  FileUtils.makedirs("#{$home}/.cake")
+  FileUtils.makedirs("#{$bakedir}/.cake/run")
+  FileUtils.makedirs("#{$home}/.cake/run")
   project_clj = "#{$home}/.cake/project.clj"
   File.open(project_clj, 'w') do |file|
     file.write <<END
