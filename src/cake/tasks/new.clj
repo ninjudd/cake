@@ -1,5 +1,5 @@
 (ns cake.tasks.new
-  (:use cake cake.core cake.ant
+  (:use cake cake.core cake.ant cake.file
         [cake.project :only [group]]
         [clojure.string :only [join]]
         [cake.utils.io :only [extract-resource]])

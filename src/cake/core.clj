@@ -1,5 +1,5 @@
 (ns cake.core
-  (:use cake cake.utils.useful
+  (:use cake cake.utils.useful cake.file
         [clojure.string :only [join trim]])
   (:require cake.project
             [cake.ant :as ant]
@@ -7,21 +7,6 @@
   (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader FileNotFoundException]
            [org.apache.tools.ant.taskdefs ExecTask]
            [java.net Socket SocketException]))
-
-(defn expand-path [& path]
-  (let [root (or (first path) "")]
-    (cond (instance? File root)  (cons (.getPath root) (rest path))
-          (.startsWith root "/") path
-          (.startsWith root "~") (cons (.replace root "~" (System/getProperty "user.home")) (rest path))
-          :else                  (cons *root* path))))
-
-(defn file-name [& path]
-  (join (File/separator) (apply expand-path path)))
-
-(defn file
-  "Create a File object from a string or seq"
-  [& path]
-  (File. (apply file-name path)))
 
 (defn newer? [& args]
   (apply > (for [arg args]

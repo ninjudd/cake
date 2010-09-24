@@ -1,5 +1,5 @@
 (ns cake.tasks.jar
-  (:use cake cake.core cake.ant ordered-set
+  (:use cake cake.core cake.ant ordered-set cake.file
         [clojure.java.io :only [copy]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
