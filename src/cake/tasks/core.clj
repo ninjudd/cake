@@ -17,7 +17,7 @@
     (clean-dir (file dir)))
   (when (= ["deps"] (:clean *opts*))
     (clean-dir (file "lib"))
-    (ant Delete {:verbose}
+    (ant Delete {:verbose true}
       (add-fileset {:dir (file) :includes "pom.xml"}))))
 
 (deftask default #{help})
