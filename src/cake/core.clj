@@ -64,7 +64,7 @@
    'reload   ["Reload any .clj files that have changed or restart."]
    'upgrade  ["Upgrade cake to the most current version."]
    'ps       ["List running cake jvm processes for all projects."]
-   'kill     ["Kill running cake jvm processes. Use -9 to force or --all for all projects."]
+   'kill     ["Kill running cake jvm processes. Use -9 to force or all for all projects."]
    'eval     ["Eval the given forms in the project JVM." "Read forms from stdin if - is provided."]
    'run      ["Execute a script in the project jvm."]
    'filter   ["Thread each line in stdin through the given forms, printing the results."
