@@ -75,6 +75,7 @@
    be broken up among multiple deftask calls and even multiple files:
    (deftask foo #{bar baz} ; a set of prerequisites for this task
      \"Documentation for task.\"
+     {foo :foo} ; destructuring of *opts*
      (do-something)
      (do-something-else))"
   [name & body]
@@ -82,8 +83,11 @@
   (let [[deps body] (if (set? (first body))
                       [(first body) (rest body)]
                       [#{} body])
-        [doc actions] (split-with string? body)
-        actions (vec (map #(list 'fn [] %) actions))]
+        [doc body] (split-with string? body)
+        [destruct actions] (if (map? (first body))
+                             [(first body) (rest body)]
+                             [{} body])
+        actions (vec (map #(list 'fn [destruct] %) actions))]
     `(swap! tasks update '~name update-task '~deps '~doc ~actions)))
 
 (defmacro undeftask [& names]
@@ -103,7 +107,7 @@
           (set! run? (assoc run? name :in-progress))
           (doseq [dep (:deps task)] (run-task dep))
           (binding [*current-task* name]
-            (doseq [action (:actions task)] (action)))
+            (doseq [action (:actions task)] (action *opts*)))
           (set! run? (assoc run? name true)))))))
 
 (defmacro invoke [name & [opts]]
