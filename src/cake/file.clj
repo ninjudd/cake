@@ -29,8 +29,8 @@
   (ant Move {:file (file from)
              :tofile (file to)}))
 
-(defn touch [f]
-  (ant Touch {:file (file f)}))
+(defn touch [& args]
+  (ant Touch {:file (apply file args)}))
 
 (defn rm [f]
   (ant Delete {:file (file f)}))
