@@ -474,7 +474,7 @@ class JVM
 
   REPL_PROMPT = "REPL_PROMPT__#{rand}"
   def repl
-    puts ";; cannot find readline, your repl won't be very awesome without it" if $no_readline
+    puts ";; cannot find readline; your repl won't be very awesome without it" if $no_readline
     load_history
     loop do
       with_socket do |socket|
