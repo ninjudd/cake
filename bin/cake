@@ -615,7 +615,11 @@ private
         Readline::HISTORY.push(input.join(' '))
         return input.join("\n")
       end
-      prompt[-2] = ?*
+      if $config['repl.disable-secondary-prompt'] == 'true'
+        prompt = ' ' * prompt.length
+      else
+        prompt[-2] = ?*
+      end
     end
   rescue Interrupt => e
     return nil if input.empty?
