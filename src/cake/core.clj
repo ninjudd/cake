@@ -45,13 +45,13 @@
              `(try-load (require '~ns)))
          (undeftask ~@(:exclude task-opts)))))
 
-(defn update-task [task deps doc actions]
-  {:pre [(every? symbol? deps) (every? fn? actions)]}
+(defn update-task [task deps doc action]
+  {:pre [(every? symbol? deps) (fn? action)]}
   (let [task (or task {:actions [] :deps #{} :doc []})]
     (-> task
         (update :deps    into deps)
         (update :doc     into doc)
-        (update :actions into actions))))
+        (update :actions conj action))))
 
 (defonce tasks (atom {}))
 (def run? nil)
@@ -86,9 +86,8 @@
         [doc body] (split-with string? body)
         [destruct actions] (if (vector? (first body))
                              [(ffirst body) (rest body)]
-                             [{} body])
-        actions (vec (map #(list 'fn [] (list 'let [destruct '*opts*] %)) actions))]
-    `(swap! tasks update '~name update-task '~deps '~doc ~actions)))
+                             [{} body])]
+    `(swap! tasks update '~name update-task '~deps '~doc (fn [~destruct] ~@actions))))
 
 (defmacro undeftask [& names]
   `(swap! tasks dissoc ~@(map #(list 'quote %) names)))
@@ -107,7 +106,7 @@
           (set! run? (assoc run? name :in-progress))
           (doseq [dep (:deps task)] (run-task dep))
           (binding [*current-task* name]
-            (doseq [action (:actions task)] (action)))
+            (doseq [action (:actions task)] (action *opts*)))
           (set! run? (assoc run? name true)))))))
 
 (defmacro invoke [name & [opts]]

@@ -9,7 +9,8 @@
   :dev-dependencies [[clojure-complete "0.1.0"]
                      [autodoc "0.7.1"]])
 
-(deftask bar
+(deftask bar [{[opt1 opt2 opt3] :optional}]
+  (println opt1 opt2 opt3)
   (bake (:use useful)
         [foo (prompt-read "enter foo:")
          bar (prompt-read "enter bar:")
