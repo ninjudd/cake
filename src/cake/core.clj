@@ -151,7 +151,9 @@
         (when-not (or (nil? line) (= ":bake.core/result" line))
           (println line)
           (recur (.readLine reader))))
-      (let [result (read-string (.readLine reader))]
+      (let [line   (.readLine reader)
+            result (try (read-string line)
+                        (catch Exception e, line))]
         (flush)
         (.close socket)
         result))))
