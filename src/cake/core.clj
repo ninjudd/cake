@@ -1,5 +1,6 @@
 (ns cake.core
   (:use cake cake.utils.useful
+        [cake.utils.useful :only [rescue]]
         [clojure.string :only [join trim]])
   (:require cake.project
             [cake.ant :as ant]
@@ -152,8 +153,7 @@
           (println line)
           (recur (.readLine reader))))
       (let [line   (.readLine reader)
-            result (try (read-string line)
-                        (catch Exception e, line))]
+            result (rescue (read-string line) line)]
         (flush)
         (.close socket)
         result))))
