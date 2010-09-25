@@ -133,6 +133,7 @@ end
 begin
   require 'readline'
 rescue LoadError
+  $no_readline = true
   module Readline
     HISTORY = []
     attr_accessor :basic_word_break_characters, :completion_proc
@@ -473,6 +474,7 @@ class JVM
 
   REPL_PROMPT = "REPL_PROMPT__#{rand}"
   def repl
+    puts ";; cannot find readline, your repl won't be very awesome without it" if $no_readline
     load_history
     loop do
       with_socket do |socket|
