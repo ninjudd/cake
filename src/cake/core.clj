@@ -1,5 +1,6 @@
 (ns cake.core
-  (:use cake cake.utils.useful
+  (:use cake
+        [cake.utils.useful :only [rescue]]
         [clojure.string :only [join trim]])
   (:require cake.project
             [cake.ant :as ant]
@@ -45,13 +46,13 @@
              `(try-load (require '~ns)))
          (undeftask ~@(:exclude task-opts)))))
 
-(defn update-task [task deps doc actions]
-  {:pre [(every? symbol? deps) (every? fn? actions)]}
+(defn update-task [task deps doc action]
+  {:pre [(every? symbol? deps) (fn? action)]}
   (let [task (or task {:actions [] :deps #{} :doc []})]
     (-> task
         (update :deps    into deps)
         (update :doc     into doc)
-        (update :actions into actions))))
+        (update :actions conj action))))
 
 (defonce tasks (atom {}))
 (def run? nil)
@@ -64,7 +65,7 @@
    'reload   ["Reload any .clj files that have changed or restart."]
    'upgrade  ["Upgrade cake to the most current version."]
    'ps       ["List running cake jvm processes for all projects."]
-   'kill     ["Kill running cake jvm processes. Use -9 to force or --all for all projects."]
+   'kill     ["Kill running cake jvm processes. Use -9 to force or all for all projects."]
    'eval     ["Eval the given forms in the project JVM." "Read forms from stdin if - is provided."]
    'run      ["Execute a script in the project jvm."]
    'filter   ["Thread each line in stdin through the given forms, printing the results."
@@ -75,6 +76,7 @@
    be broken up among multiple deftask calls and even multiple files:
    (deftask foo #{bar baz} ; a set of prerequisites for this task
      \"Documentation for task.\"
+     [{foo :foo}] ; destructuring of *opts*
      (do-something)
      (do-something-else))"
   [name & body]
@@ -82,9 +84,11 @@
   (let [[deps body] (if (set? (first body))
                       [(first body) (rest body)]
                       [#{} body])
-        [doc actions] (split-with string? body)
-        actions (vec (map #(list 'fn [] %) actions))]
-    `(swap! tasks update '~name update-task '~deps '~doc ~actions)))
+        [doc body] (split-with string? body)
+        [destruct actions] (if (vector? (first body))
+                             [(ffirst body) (rest body)]
+                             [{} body])]
+    `(swap! tasks update '~name update-task '~deps '~doc (fn [~destruct] ~@actions))))
 
 (declare *File*)
 
@@ -126,7 +130,7 @@
           (set! run? (assoc run? name :in-progress))
           (doseq [dep (:deps task)] (run-task dep))
           (binding [*current-task* name]
-            (doseq [action (:actions task)] (action)))
+            (doseq [action (:actions task)] (action *opts*)))
           (set! run? (assoc run? name true)))))))
 
 (defmacro invoke [name & [opts]]
@@ -171,7 +175,8 @@
         (when-not (or (nil? line) (= ":bake.core/result" line))
           (println line)
           (recur (.readLine reader))))
-      (let [result (read-string (.readLine reader))]
+      (let [line   (.readLine reader)
+            result (rescue (read-string line) line)]
         (flush)
         (.close socket)
         result))))

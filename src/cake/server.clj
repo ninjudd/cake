@@ -126,12 +126,12 @@
                 (clojure.main/with-bindings
                   (set! *command-line-args*  (:args vars))
                   (set! *warn-on-reflection* (:warn-on-reflection *project*))
-                  (binding [*vars*      vars
-                            *pwd*       (:pwd vars)
-                            *shell-env* (:shellenv vars)
-                            *opts*      (:opts vars)
-                            *script*    (:script vars)
-                            *env*       (get-in *project* [:environments (get-env vars)])]
+                  (binding [*vars*    vars
+                            *pwd*     (:pwd vars)
+                            *env*     (:env vars)
+                            *opts*    (:opts vars)
+                            *script*  (:script vars)
+                            *context* (get-in *project* [:environments (get-env vars)])]]
                     (if (keyword? form)
                       (when-let [command (or (commands form) (default-commands form))]
                         (command))

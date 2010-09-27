@@ -10,7 +10,8 @@
                      [autodoc "0.7.1"]]
   :environments {:qa {:foo 1 :bar 2}})
 
-(deftask bar
+(deftask bar [{[opt1 opt2 opt3] :optional}]
+  (println opt1 opt2 opt3)
   (bake (:use useful)
         [foo (prompt-read "enter foo:")
          bar (prompt-read "enter bar:")

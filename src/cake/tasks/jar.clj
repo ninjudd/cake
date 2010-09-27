@@ -4,13 +4,13 @@
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
         [cake.utils.useful :only [absorb]])
+  (:require [clojure.xml :as xml])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod]
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]
-           [org.apache.maven.plugins.shade DefaultShader]
-           [org.apache.maven.plugins.shade.resource ComponentsXmlResourceTransformer]
            [org.apache.maven.artifact.ant InstallTask Pom]
-           [java.io File FileOutputStream]))
+           [java.io File FileOutputStream FileWriter]
+           [java.util.jar JarFile]))
 
 (defn jarfile []
   (file (format "%s-%s.jar" (:artifact-id *project*) (:version *project*))))
@@ -53,6 +53,7 @@
          (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
          (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
+         (add-fileset    {:dir (file "build" "jar")})
          (add-fileset    {:dir (file "resources")})
          (add-zipfileset {:dir (file "native") :prefix "native"})
          (add-file-mappings (:jar-files *project*)))))
@@ -75,17 +76,31 @@
     (into (ordered-set jar)
           (fileset-seq {:dir "lib" :includes "*.jar" :excludes (join "," (:excludes opts))}))))
 
-(defn rebuild-uberjar? [jarfile jars]
-  (let [last-mod (.lastModified jarfile)]
-    (some #(< last-mod (.lastModified %)) jars)))
+(defn plexus-components [jar]
+  (let [jarfile (JarFile. jar)]
+    (if-let [entry (.getEntry jarfile "META-INF/plexus/components.xml")]
+      (->> entry (.getInputStream jarfile)
+           xml/parse :content (filter #(= :components (:tag %))) first :content))))
+
+(defn merge-plexus-components [jars dest]
+  (when-let [components (seq (mapcat plexus-components jars))]
+    (.mkdirs (.getParentFile dest))
+    (with-open [file (FileWriter. dest)]
+      (binding [*out* file]
+        (xml/emit {:tag "component-set" :content [{:tag "components" :content components}]})
+        (flush)))))
+
+(defn add-jars [task jars]
+  (doseq [jar jars :let [name (.replace (.getName jar) ".jar" "")]]
+    (add-zipfileset task {:src jar :excludes "META-INF/**/*"})
+    (add-zipfileset task {:src jar :includes "META-INF/**/*" :prefix (str "META-INF/" name)})))
 
 (defn build-uberjar [jars]
-  (let [jarfile (uberjarfile)]
-    (when (rebuild-uberjar? jarfile jars)
-      (log "Building jar:" jarfile)
-      (doto (DefaultShader.)
-        (.enableLogging (ConsoleLogger. ConsoleLogger/LEVEL_WARN "uberjar"))
-        (.shade jars jarfile [] [] [(ComponentsXmlResourceTransformer.)])))))
+  (let [plexus-components (file "build/uberjar/META-INF/plexus/components.xml")]
+    (merge-plexus-components jars plexus-components)
+    (ant Jar {:dest-file (uberjarfile) :duplicate "preserve"}
+         (add-jars jars)
+         (add-fileset {:dir (file "build" "uberjar")}))))
 
 (deftask uberjar #{jar}
   "Create a standalone jar containing all project dependencies."
@@ -117,9 +132,11 @@
          (add-manifest (manifest))
          (add-license)
          (add-source-files "WEB-INF/classes")
-         (add-zipfileset {:dir (file "src")       :prefix web     :includes "*web.xml"})
-         (add-zipfileset {:dir (file "classes")   :prefix classes :includes "**/*.class"})
-         (add-zipfileset {:dir (file "resources") :prefix classes :includes "*"})
+         (add-zipfileset {:dir (file "src")         :prefix web     :includes "*web.xml"})
+         (add-zipfileset {:dir (file "classes")     :prefix classes :includes "**/*.class"})
+         (add-zipfileset {:dir (file "resources")   :prefix classes :includes "*"})
+         (add-zipfileset {:dir (file "build" "jar") :prefix classes})
+         (add-fileset    {:dir (file "build" "war")})
          (add-fileset    {:dir (file "src" "html")})
          (add-file-mappings (:war-files *project*)))))
 

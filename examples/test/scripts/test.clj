@@ -1,5 +1,5 @@
 (println "running script")
 (println (+ 43 9))
 (println *file*)
-(println bake/*pwd*)
-(println bake/*shell-env*)
+(println cake/*pwd*)
+(println cake/*env*)

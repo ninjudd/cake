@@ -101,7 +101,7 @@ class Object
     when Hash   then '{' + collect {|k,v| k.to_clj + ' ' + v.to_clj}.join(' ') + '}'
     when Array  then '[' + collect {|i| i.to_clj}.join(' ') + ']'
     when Symbol then ":#{to_s}"
-    else             inspect.gsub(/(\\a|\\e|\\v|\\x)/) {|c| CLJ_SUB[c]}
+    else             inspect.gsub(/(\\a|\\e|\\v|\\x|\\#)/) {|c| CLJ_SUB[c]}
     end
   end
 
@@ -109,6 +109,7 @@ class Object
     '\a' => '\007',
     '\e' => '\033',
     '\v' => '\013',
+    '\#' => '#',
     '\x' => 'x', # This will mangle some strings in ruby 1.9.1, but it is better than breaking altogether.
   }
 
@@ -132,6 +133,7 @@ end
 begin
   require 'readline'
 rescue LoadError
+  $no_readline = true
   module Readline
     HISTORY = []
     attr_accessor :basic_word_break_characters, :completion_proc
@@ -389,7 +391,7 @@ class JVM
 
   def java_opts
     opts =  %{-cp "#{classpath}" -Djava.library.path="#{libpath}"}
-    opts << %{ -Djava.home="#{ENV['JAVA_HOME']}" -Djava.ext.dirs="#{ENV['JAVA_HOME']}/lib"} if ENV['JAVA_HOME']
+    opts << %{ -Djava.home="#{ENV['JAVA_HOME']}"} if ENV['JAVA_HOME']
     opts
   end
 
@@ -472,6 +474,7 @@ class JVM
 
   REPL_PROMPT = "REPL_PROMPT__#{rand}"
   def repl
+    puts ";; cannot find readline; your repl won't be very awesome without it" if $no_readline
     load_history
     loop do
       with_socket do |socket|
@@ -612,7 +615,11 @@ private
         Readline::HISTORY.push(input.join(' '))
         return input.join("\n")
       end
-      prompt[-2] = ?*
+      if $config['repl.disable-secondary-prompt'] == 'true'
+        prompt = ' ' * prompt.length
+      else
+        prompt[-2] = ?*
+      end
     end
   rescue Interrupt => e
     return nil if input.empty?
@@ -728,8 +735,8 @@ $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
 $vars    = {:shellenv => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
 $timeout = ($config['connect.timeout'] || 20).to_i
 
-Dir.chdir($bakedir)
 initialize_cake_dirs
+Dir.chdir($bakedir)
 
 if debug?
   puts "config: #{$config.inspect}"
@@ -808,7 +815,7 @@ cake = Cake.new(
   [$config['cake.library.path'], "lib/dev/native"]
 )
 bake = Bake.new(
-  [bakepath, "src", "src/clj", "classes", "resources", "dev", "test", $config['project.classpath'], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [bakepath, "src", "src/clj", "classes", "resources", "dev", "test", $config['project.classpath'], $opts[:cp], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
   [$config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 
