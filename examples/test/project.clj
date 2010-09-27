@@ -7,7 +7,8 @@
                  [swank-clojure "1.2.1"]
                  [tokyocabinet "1.23-SNAPSHOT"]]
   :dev-dependencies [[clojure-complete "0.1.0"]
-                     [autodoc "0.7.1"]])
+                     [autodoc "0.7.1"]]
+  :environments {:qa {:foo 1 :bar 2}})
 
 (deftask bar
   (bake (:use useful)
