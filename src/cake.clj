@@ -10,7 +10,7 @@
 (def *opts*         nil)
 (def *pwd*          nil)
 (def *env*          nil)
-(def *shell-env*    nil)
+(def *context*      nil)
 (def *vars*         nil)
 (def *root* (System/getProperty "cake.project"))
 

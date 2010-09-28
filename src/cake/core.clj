@@ -1,6 +1,5 @@
 (ns cake.core
-  (:use cake
-        [cake.utils.useful :only [rescue]]
+  (:use cake cake.utils.useful
         [clojure.string :only [join trim]])
   (:require cake.project
             [cake.ant :as ant]
