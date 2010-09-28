@@ -32,26 +32,26 @@
             (doseq [f (filter #(.isFile %) files)]
               (spit f (.replace (slurp f) "+project+" project)))))))))
 
-(defn default-new [project]
-  (let [root (file *pwd* project)]
-    (if (.exists root)
-      (println "error:" project "already exists in this directory")
-      (do (ant Mkdir {:dir root})
-          (ant Mkdir {:dir (file root "src")})
-          (ant Mkdir {:dir (file root "test")})
-          (spit (file root "project.clj") (format default-template project))
-          (log "Created file: project.clj")
-          (spit (file root ".gitignore")
-                (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" project] (repeat "\n"))))
-          (log "Created file: .gitignore")
-          (extract-resource "LICENSE" root)
-          (log "Created default LICENSE file (Eclipse Public License)")))))
-
 (deftask new
   "Create scaffolding for a new project."
   "You can put a default project template in ~/.cake/template. Substitute +project+ anywhere
    that you want your project name to be."
   [{[project] :new}]
-  (if (.exists (file "~" ".cake" "template"))
-    (template-new project)
-    (default-new project)))
+  (let [template-dir (file "~" ".cake" "template")]
+    (if (.exists template-dir)
+      (template-new project)
+      (do
+        (log "Creating template directory: ~/.cake/template")
+        (ant Mkdir {:dir template-dir})
+        (ant Mkdir {:dir (file template-dir "src" "+project+")})
+        (spit (file template-dir "src" "+project+" "core.clj") "(ns +project+.core)")
+        (log "Created template file: src/+project+/core.clj")
+        (ant Mkdir {:dir (file template-dir "test")})
+        (spit (file template-dir "project.clj") (format default-template project))
+        (log "Created template file: project.clj")
+        (spit (file template-dir ".gitignore")
+              (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" project] (repeat "\n"))))
+        (log "Created template file: .gitignore")
+        (extract-resource "LICENSE" template-dir)
+        (log "Created template LICENSE file (Eclipse Public License)")
+        (template-new project)))))
