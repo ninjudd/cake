@@ -131,7 +131,7 @@
                             *env*     (:env vars)
                             *opts*    (:opts vars)
                             *script*  (:script vars)
-                            *context* (get-in *project* [:environments (get-env vars)])]]
+                            *context* (get-in *project* [:environments (get-env vars)])]
                     (if (keyword? form)
                       (when-let [command (or (commands form) (default-commands form))]
                         (command))
