@@ -35,25 +35,25 @@
             (spit f (.replace (slurp f) "+project+" project))))))))
 
 (defn create-default-template [project]
-  (do
-    (log "Creating template directory: ~/.cake/template")
-    (ant Mkdir {:dir template-dir})
-    (ant Mkdir {:dir (file template-dir "src" "+project+")})
-    (spit (file template-dir "src" "+project+" "core.clj") "(ns +project+.core)")
-    (log "Created template file: src/+project+/core.clj")
-    (ant Mkdir {:dir (file template-dir "test")})
-    (spit (file template-dir "project.clj") (format default-template project))
-    (log "Created template file: project.clj")
-    (spit (file template-dir ".gitignore")
-          (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" project] (repeat "\n"))))
-    (log "Created template file: .gitignore")
-    (extract-resource "LICENSE" template-dir)
-    (log "Created template LICENSE file (Eclipse Public License)")
-    (template-new project)))
+  (log "Creating template directory: ~/.cake/template")
+  (ant Mkdir {:dir template-dir})
+  (ant Mkdir {:dir (file template-dir "src" "+project+")})
+  (spit (file template-dir "src" "+project+" "core.clj") "(ns +project+.core)")
+  (log "Created template file: src/+project+/core.clj")
+  (ant Mkdir {:dir (file template-dir "test")})
+  (spit (file template-dir "project.clj") (format default-template project))
+  (log "Created template file: project.clj")
+  (spit (file template-dir ".gitignore")
+        (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" project] (repeat "\n"))))
+  (log "Created template file: .gitignore")
+  (extract-resource "LICENSE" template-dir)
+  (log "Created template LICENSE file (Eclipse Public License)"))
 
 (deftask new
   "Create scaffolding for a new project."
   "You can put a default project template in ~/.cake/template. Substitute +project+ anywhere
    that you want your project name to be."
   [{[project] :new}]
-  (if (.exists template-dir) (template-new project) (create-default-template project)))
+  (when-not (.exists template-dir)
+    (create-default-template project))
+  (template-new project))
