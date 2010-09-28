@@ -33,6 +33,9 @@
 (def *config* (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
                      (read-config (File. ".cake/config"))))
 
+(defn context [env]
+  (get-in *project* [:environments (keyword (or env (*config* "env") :dev))]))
+
 (if-ns (:require [clj-stacktrace.repl :as clj-stacktrace])
   (do
     (defn print-stacktrace [e]
