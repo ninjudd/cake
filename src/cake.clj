@@ -34,7 +34,9 @@
                      (read-config (File. ".cake/config"))))
 
 (defn context [env]
-  (get-in *project* [:environments (keyword (or env (*config* "env") :dev))]))
+  (let [env (keyword (or env (*config* "env") :dev))]
+    (assoc (get-in *project* [:environments env])
+      :env env)))
 
 (if-ns (:require [clj-stacktrace.repl :as clj-stacktrace])
   (do
