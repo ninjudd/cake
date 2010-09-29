@@ -6,12 +6,13 @@
   (:import [org.apache.tools.ant.taskdefs Mkdir Copy]))
 
 (def default-template
-"(defproject %s \"0.0.1-SNAPSHOT\"
+"(defproject +project+ \"0.0.1-SNAPSHOT\"
   :description \"TODO: add summary of your project\"
   :dependencies [[clojure \"1.2.0\"]])
 ")
 
-(def template-dir (file "~" ".cake" "template"))
+(def template-dir (file "~" ".cake" "templates"))
+(def default-template-dir (file template-dir "default"))
 
 (defn rename-dirs [root project]
   (log "Renaming directories with +project+ in their name")
@@ -21,39 +22,42 @@
           :when (not= name replaced)]
     (.renameTo old-file (file (.getParent old-file) replaced))))
 
-(defn template-new [project]
+(defn template-new [project template]
   (let [root (file *pwd* project)]
     (if (.exists root)
       (println "error:" project "already exists in this directory")
       (do
-        (log "Creating a new project based on ~/.cake/template")
-        (ant Copy {:todir root} (add-fileset {:dir (str (file "~" ".cake" "template"))}))
+        (log (str "Creating a new project based on ~/cake/templates/" template))
+        (ant Copy {:todir root} (add-fileset {:dir (str (file template-dir template))}))
         (rename-dirs root project)
         (let [files (file-seq root)]
           (log (str "Replacing +project+ with '" project "' in all files."))
           (doseq [f (filter #(.isFile %) files)]
             (spit f (.replace (slurp f) "+project+" project))))))))
 
-(defn create-default-template [project]
-  (log "Creating template directory: ~/.cake/template")
-  (ant Mkdir {:dir template-dir})
-  (ant Mkdir {:dir (file template-dir "src" "+project+")})
-  (spit (file template-dir "src" "+project+" "core.clj") "(ns +project+.core)")
+(defn create-default-template []
+  (log "Creating template directory: ~/.cake/templates/default")
+  (ant Mkdir {:dir default-template-dir})
+  (ant Mkdir {:dir (file default-template-dir "src" "+project+")})
+  (spit (file default-template-dir "src" "+project+" "core.clj") "(ns +project+.core)")
   (log "Created template file: src/+project+/core.clj")
-  (ant Mkdir {:dir (file template-dir "test")})
-  (spit (file template-dir "project.clj") (format default-template project))
+  (ant Mkdir {:dir (file default-template-dir "test")})
+  (spit (file default-template-dir "project.clj") default-template)
   (log "Created template file: project.clj")
-  (spit (file template-dir ".gitignore")
-        (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" project] (repeat "\n"))))
+  (spit (file default-template-dir ".gitignore")
+        (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" "+project+"] (repeat "\n"))))
   (log "Created template file: .gitignore")
-  (extract-resource "LICENSE" template-dir)
+  (extract-resource "LICENSE" default-template-dir)
   (log "Created template LICENSE file (Eclipse Public License)"))
 
 (deftask new
   "Create scaffolding for a new project."
-  "You can put a default project template in ~/.cake/template. Substitute +project+ anywhere
-   that you want your project name to be."
-  {[project] :new}
-  (when-not (.exists template-dir)
-    (create-default-template project))
-  (template-new project))
+  "You can put project templates in ~/.cake/templates. Each template is a directory with a default
+   template. You can specify which template to use for your project when you call this task. If
+   you don't specify which template to use, ~/.cake/templates will be used. It will be created if
+   it does not already exist.
+   Examples: cake new aproj, cake new mytemplate aproj"
+  {[one two] :new}
+  (when-not (.exists default-template-dir)
+    (create-default-template))
+  (apply template-new (or (and two [two one]) [one "default"])))
