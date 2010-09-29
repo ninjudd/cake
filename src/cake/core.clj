@@ -61,7 +61,7 @@
    be broken up among multiple deftask calls and even multiple files:
    (deftask foo #{bar baz} ; a set of prerequisites for this task
      \"Documentation for task.\"
-     [{foo :foo}] ; destructuring of *opts*
+     {foo :foo} ; destructuring of *opts*
      (do-something)
      (do-something-else))"
   [name & body]
@@ -70,8 +70,8 @@
                       [(first body) (rest body)]
                       [#{} body])
         [doc body] (split-with string? body)
-        [destruct actions] (if (vector? (first body))
-                             [(ffirst body) (rest body)]
+        [destruct actions] (if (map? (first body))
+                             [(first body) (rest body)]
                              [{} body])]
     `(swap! tasks update '~name update-task '~deps '~doc (fn [~destruct] ~@actions))))
 

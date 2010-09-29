@@ -53,7 +53,7 @@
   "Create scaffolding for a new project."
   "You can put a default project template in ~/.cake/template. Substitute +project+ anywhere
    that you want your project name to be."
-  [{[project] :new}]
+  {[project] :new}
   (when-not (.exists template-dir)
     (create-default-template project))
   (template-new project))
