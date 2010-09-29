@@ -33,10 +33,10 @@
 (def *config* (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
                      (read-config (File. ".cake/config"))))
 
-(defn context [env]
-  (let [env (keyword (or env (*config* "env") :dev))]
-    (assoc (get-in *project* [:environments env])
-      :env env)))
+(defn context [context]
+  (let [context (keyword (or context (*config* "context") :dev))]
+    (assoc (get-in *project* [:contexts context])
+      :context context)))
 
 (if-ns (:require [clj-stacktrace.repl :as clj-stacktrace])
   (do

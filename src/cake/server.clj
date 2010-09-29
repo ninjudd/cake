@@ -127,7 +127,7 @@
                             *env*     (:env vars)
                             *opts*    (:opts vars)
                             *script*  (:script vars)
-                            *context* (context (get-in vars [:opts :env 0]))]
+                            *context* (context (get-in vars [:opts :context 0]))]
                     (if (keyword? form)
                       (when-let [command (or (commands form) (default-commands form))]
                         (command))
