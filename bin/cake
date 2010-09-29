@@ -518,7 +518,7 @@ class JVM
       while line = $stdin.gets
         socket.write [line.chomp, ~forms].to_clj
         while (line = socket.gets)
-          break if line.start_with?(EOL)
+          break if line.index(EOL) == 0
           puts line
         end
       end
@@ -534,7 +534,7 @@ private
 
   def inspect(socket)
     while line = socket.gets
-      break if line.start_with?('reload-failed:') and not debug?
+      break if line.index('reload-failed:') == 0 and not debug?
       puts line
     end
   end

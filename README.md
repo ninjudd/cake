@@ -285,8 +285,8 @@ code in the global project. The file doesn't even have to end in .clj.
 
     #!/usr/bin/env cake
 
-## Inspirational Quote
+## Contributors (in order of appearance)
 
-> You are what makes Clojure great - find some cake and celebrate!
->
-> &mdash; [Rich Hickey](http://clojure.blogspot.com/2009/10/clojure-is-two.html) (taken totally out of context)
+- Justin Balthrop ([ninjudd](http://github.com/ninjudd))
+- Lance Bradley ([lancepantz](http://github.com/lancepantz))
+- Anthony Simpson ([Raynes](http://github.com/Raynes))
