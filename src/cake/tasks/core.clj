@@ -12,7 +12,8 @@
   "Remove cake build artifacts."
   (ant Delete {:verbose true}
     (add-fileset {:dir (file) :includes "*.jar"})
-    (add-fileset {:dir (file) :includes "*.war"}))
+    (add-fileset {:dir (file) :includes "*.war"})
+    (add-fileset {:dir (file ".cake" "run") :includes "*"}))
   (doseq [dir ["classes" "build"]]
     (clean-dir (file dir)))
   (when (= ["deps"] (:clean *opts*))

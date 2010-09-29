@@ -41,3 +41,6 @@
 (defn mkdir [f]
   (ant Mkdir {:dir (file f)}))
 
+(defn mtime< [a b]
+  (< (.lastModified (file a))
+     (.lastModified (file b))))

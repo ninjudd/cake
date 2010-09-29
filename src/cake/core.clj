@@ -8,6 +8,8 @@
            [org.apache.tools.ant.taskdefs ExecTask]
            [java.net Socket SocketException]))
 
+(declare *File*)
+
 (defn newer? [& args]
   (apply > (for [arg args]
              (if (number? arg)
@@ -32,7 +34,6 @@
          (undeftask ~@(:exclude task-opts)))))
 
 (defn update-task [task deps doc action]
-  {:pre [(every? symbol? deps) (fn? action)]}
   (let [task (or task {:actions [] :deps #{} :doc []})]
     (-> task
         (update :deps    into deps)
@@ -56,6 +57,23 @@
    'filter   ["Thread each line in stdin through the given forms, printing the results."
               "The line is passed as a string with a trailing newline, and println is called with the result of the final form."]})
 
+(defn parse-task-opts [forms]
+  (let [[deps forms] (if (set? (first forms))
+                      [(first forms) (rest forms)]
+                      [#{} forms])
+        deps (map #(if-not (symbol? %) (eval %) %) deps)
+        [doc forms] (split-with string? forms)]
+    {:deps deps :body forms :doc doc}))
+
+(defn parse-body [forms]
+  (let [[destruct forms] (if (map? (first forms))
+                           [(first forms) (rest forms)]
+                           [{} forms])
+        [pred forms] (if (= :when (first forms))
+                       `[~(second forms) ~(drop 2 forms)]
+                       [true forms])]
+    {:destruct destruct :pred pred :actions forms}))
+
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
    be broken up among multiple deftask calls and even multiple files:
@@ -64,18 +82,12 @@
      {foo :foo} ; destructuring of *opts*
      (do-something)
      (do-something-else))"
-  [name & body]
+  [name & forms]
   (verify (not (implicit-tasks name)) (str "Cannot redefine implicit task: " name))
-  (let [[deps body] (if (set? (first body))
-                      [(first body) (rest body)]
-                      [#{} body])
-        [doc body] (split-with string? body)
-        [destruct actions] (if (map? (first body))
-                             [(first body) (rest body)]
-                             [{} body])]
-    `(swap! tasks update '~name update-task '~deps '~doc (fn [~destruct] ~@actions))))
+  (let [{:keys [deps body doc] :as parsed-opts} (parse-task-opts forms)
+        {:keys [destruct pred actions]} (parse-body body)]
+    `(swap! tasks update '~name update-task '~deps '~doc (fn [~destruct] (when ~pred ~@actions)))))
 
-(declare *File*)
 
 (defmacro defile
   "Define a file task. Uses the same syntax as deftask, however the task name
@@ -84,19 +96,20 @@
    the file task will only be ran if the source is newer than the destination.
    (defile \"main.o\" #{\"main.c\"}
      (sh \"cc\" \"-c\" \"-o\" \"main.o\" \"main.c\"))"
-  [name & body]
-  (let [[deps body] (if (set? (first body))
-                      [(first body) (rest body)]
-                      [#{} body])
-        [files tasks] (for [pred [string? symbol?]]
-                        (set (filter pred deps)))]
-    `(deftask ~name ~tasks
-       (binding [*File* (file ~name)]
-         (let [f# (file ~name)]
-           (when (or (not (.exists f#))
-                     (seq (filter #(< (.lastModified f#) (.lastModified (file %))) ~files))
-                     (nil? (seq ~deps)))
-             ~@body))))))
+  [name & forms]
+  (let [{:keys [deps body doc]} (parse-task-opts forms)
+        {:keys [destruct pred actions]} (parse-body body)
+        {file-deps true task-deps false} (group-by string? deps)]
+    `(swap! tasks update '~name update-task '~deps '~doc
+            (fn [~destruct]
+              (let [f# (file ~name)]
+                (when (and (or (not (.exists f#))
+                               (seq (filter (partial mtime< f#)
+                                            (into ~file-deps
+                                                  (map #(file ".cake" "run" (name %))
+                                                       '~task-deps)))))
+                           ~pred)
+                  ~@actions))))))
 
 (defmacro undeftask [& names]
   `(swap! tasks dissoc ~@(map #(list 'quote %) names)))
@@ -106,17 +119,21 @@
 
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
-  [form]
-  (let [name form, task (@tasks name)]
-    (if (nil? task)
+  [name]
+  (let [task (@tasks name)]
+    (if (and (nil? task)
+             (not (string? name)))
       (println "unknown task:" name)
       (verify (not= :in-progress (run? name)) (str "circular dependency found in task: " name)
         (when-not (run? name)
           (set! run? (assoc run? name :in-progress))
           (doseq [dep (:deps task)] (run-task dep))
-          (binding [*current-task* name]
+          (binding [*current-task* name
+                    *File* (if-not (symbol? name) (file name))]
             (doseq [action (:actions task)] (action *opts*)))
-          (set! run? (assoc run? name true)))))))
+          (set! run? (assoc run? name true))
+          (if (symbol? name)
+            (touch (file ".cake" "run" name))))))))
 
 (defmacro invoke [name & [opts]]
   `(binding [*opts* (or ~opts *opts*)]

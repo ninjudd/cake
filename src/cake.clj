@@ -12,6 +12,7 @@
 (def *env*          nil)
 (def *context*      nil)
 (def *vars*         nil)
+(def *File*         nil)
 (def *root* (System/getProperty "cake.project"))
 
 (def *ins*  nil)
