@@ -1,11 +1,11 @@
 (ns cake.tasks.jar
   (:use cake cake.core cake.ant ordered-set cake.file
-        [clojure.java.io :only [copy]]
+        [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
         [cake.utils.useful :only [absorb]])
   (:require [clojure.xml :as xml])
-  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod]
+  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Mkdir]
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]
            [org.apache.maven.artifact.ant InstallTask Pom]
@@ -43,9 +43,20 @@
     (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
     (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"})))
 
+(def ^{:private true} cake-clj-fmt
+"(ns cake)
+(def *context* %s)")
+
+(defn build-context []
+  (ant Mkdir {:dir (file "build" "jar")})
+  (with-open [cake-clj (writer (file "build" "jar" "cake.clj"))]
+    (copy (format cake-clj-fmt (pr-str *context*))
+	  cake-clj)))
+
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
         cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))]
+    (build-context)
     (ant Jar {:dest-file (jarfile)}
          (add-manifest (manifest))
          (add-license)
@@ -128,7 +139,8 @@
         classes (str web "/classes")]
     (when-not (or (= :all (:aot *project*)) (= :partial (:war *project*)))
       (println "warning: some namespaces may not be included in your war, use ':aot :all' to include them"))
-  (ant War {:dest-file (warfile)}
+    (build-context)
+    (ant War {:dest-file (warfile)}
          (add-manifest (manifest))
          (add-license)
          (add-source-files "WEB-INF/classes")
