@@ -33,7 +33,7 @@
 (def *config* (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
                      (read-config (File. ".cake/config"))))
 
-(defn context [context]
+(defn get-context [context]
   (let [context (keyword (or context (*config* "context") :dev))]
     (assoc (get-in *project* [:contexts context])
       :context context)))

@@ -9,7 +9,7 @@
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]
            [org.apache.maven.artifact.ant InstallTask Pom]
-           [java.io File FileOutputStream FileWriter]
+           [java.io File FileOutputStream]
            [java.util.jar JarFile]))
 
 (defn jarfile []
@@ -43,15 +43,11 @@
     (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
     (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"})))
 
-(def ^{:private true} cake-clj-fmt
-"(ns cake)
-(def *context* %s)")
-
 (defn build-context []
   (ant Mkdir {:dir (file "build" "jar")})
   (with-open [cake-clj (writer (file "build" "jar" "cake.clj"))]
-    (copy (format cake-clj-fmt (pr-str *context*))
-	  cake-clj)))
+    (copy (format "(ns cake)\n(def *context* %s)" (pr-str *context*))
+          cake-clj)))
 
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
@@ -96,7 +92,7 @@
 (defn merge-plexus-components [jars dest]
   (when-let [components (seq (mapcat plexus-components jars))]
     (.mkdirs (.getParentFile dest))
-    (with-open [file (FileWriter. dest)]
+    (with-open [file (writer dest)]
       (binding [*out* file]
         (xml/emit {:tag "component-set" :content [{:tag "components" :content components}]})
         (flush)))))

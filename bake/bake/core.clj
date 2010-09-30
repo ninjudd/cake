@@ -10,7 +10,7 @@
   [name version & args]
   (let [opts (apply hash-map args)]
     `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
-         (alter-var-root #'*context* (fn [_#] (context nil))))))
+         (alter-var-root #'*context* (fn [_#] (get-context nil))))))
 
 (defmacro deftask "Just ignore deftask calls in bake."
   [name & body])
