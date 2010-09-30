@@ -12,7 +12,6 @@
 ")
 
 (def template-dir (file "~" ".cake" "templates"))
-(def default-template-dir (file template-dir "default"))
 
 (defn rename-dirs [root project]
   (log "Renaming directories with +project+ in their name")
@@ -36,19 +35,20 @@
             (spit f (.replace (slurp f) "+project+" project))))))))
 
 (defn create-template [template]
-  (log (str "Creating template directory: ~/.cake/templates/" (last (.split (str template) "/"))))
-  (ant Mkdir {:dir template})
-  (ant Mkdir {:dir (file template "src" "+project+")})
-  (spit (file template "src" "+project+" "core.clj") "(ns +project+.core)")
-  (log "Created template file: src/+project+/core.clj")
-  (ant Mkdir {:dir (file template "test")})
-  (spit (file template "project.clj") default-template)
-  (log "Created template file: project.clj")
-  (spit (file template ".gitignore")
-        (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" "+project+"] (repeat "\n"))))
-  (log "Created template file: .gitignore")
-  (extract-resource "LICENSE" template)
-  (log "Created template LICENSE file (Eclipse Public License)"))
+  (log (str "Creating template directory: ~/.cake/templates/" template))
+  (let [template (file template-dir template)]
+    (ant Mkdir {:dir template})
+    (ant Mkdir {:dir (file template "src" "+project+")})
+    (spit (file template "src" "+project+" "core.clj") "(ns +project+.core)")
+    (log "Created template file: src/+project+/core.clj")
+    (ant Mkdir {:dir (file template "test")})
+    (spit (file template "project.clj") default-template)
+    (log "Created template file: project.clj")
+    (spit (file template ".gitignore")
+          (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" "+project+"] (repeat "\n"))))
+    (log "Created template file: .gitignore")
+    (extract-resource "LICENSE" template)
+    (log "Created template LICENSE file (Eclipse Public License)")))
 
 (deftask new
   "Create scaffolding for a new project."
@@ -60,8 +60,8 @@
    New project based on a specified template:  cake new mytemplate aproj
    New template based on the default template: cake new template mytemplate"
   {[one two] :new}
-  (when-not (.exists default-template-dir)
-    (create-template default-template-dir))
+  (when-not (.exists (file template-dir "default"))
+    (create-template "default"))
   (if (and two (= one "template"))
-    (create-template (file template-dir two))
-    (apply template-new (or (and two [two one]) [one "default"]))))
+    (create-template two)
+    (apply template-new (if two [two one] [one "default"]))))
