@@ -3,7 +3,7 @@
 
 (deftask swank
   "Report status of swank server and start it if not running."
-  {[context :context]}
+  {[context] :context}
   (bake (:require [bake.swank :as swank]) [context (get-context context)]
         (alter-var-root #'cake/*context* (fn [_] context))
         (if (not (swank/installed?))

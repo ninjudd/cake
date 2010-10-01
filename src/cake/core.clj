@@ -8,8 +8,6 @@
            [org.apache.tools.ant.taskdefs ExecTask]
            [java.net Socket SocketException]))
 
-(declare *File*)
-
 (defn newer? [& args]
   (apply > (for [arg args]
              (if (number? arg)
@@ -87,7 +85,6 @@
   (let [{:keys [deps body doc] :as parsed-opts} (parse-task-opts forms)
         {:keys [destruct pred actions]} (parse-body body)]
     `(swap! tasks update '~name update-task '~deps '~doc (fn [~destruct] (when ~pred ~@actions)))))
-
 
 (defmacro defile
   "Define a file task. Uses the same syntax as deftask, however the task name
