@@ -97,17 +97,18 @@
   (let [{:keys [deps body doc]} (parse-task-opts forms)
         {:keys [destruct pred actions]} (parse-body body)
         {file-deps true task-deps false} (group-by string? deps)]
+    ;; TODO: fold and write some tests for this    
     `(swap! tasks update '~name update-task '~deps '~doc
             (fn [~destruct]
               (let [f# (file ~name)]
                 (when (and (or (not (.exists f#))
                                (seq (filter (partial mtime< f#)
-                                            (into ~file-deps
-                                                  (map #(file ".cake" "run" (name %))
-                                                       '~task-deps))))
-                               (nil? (seq ~deps))))
-                           ~pred)
-                  ~@actions)))))
+                                            ~(into file-deps
+                                                   (map #(file ".cake" "run" (name %))
+                                                        task-deps))))
+                               (empty? '~deps))
+                           ~pred))
+                ~@actions)))))
 
 (defmacro undeftask [& names]
   `(swap! tasks dissoc ~@(map #(list 'quote %) names)))
