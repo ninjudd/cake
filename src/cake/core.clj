@@ -104,9 +104,10 @@
                                (seq (filter (partial mtime< f#)
                                             (into ~file-deps
                                                   (map #(file ".cake" "run" (name %))
-                                                       '~task-deps)))))
+                                                       '~task-deps))))
+                               (nil? (seq ~deps))))
                            ~pred)
-                  ~@actions))))))
+                  ~@actions)))))
 
 (defmacro undeftask [& names]
   `(swap! tasks dissoc ~@(map #(list 'quote %) names)))
