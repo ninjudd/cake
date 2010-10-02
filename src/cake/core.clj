@@ -107,8 +107,8 @@
                                                    (map #(file ".cake" "run" (name %))
                                                         task-deps))))
                                (empty? '~deps))
-                           ~pred))
-                ~@actions)))))
+                           ~pred)
+                  ~@actions))))))
 
 (defmacro undeftask [& names]
   `(swap! tasks dissoc ~@(map #(list 'quote %) names)))
