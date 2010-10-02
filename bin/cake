@@ -696,7 +696,7 @@ class Bake < JVM
   end
 
   def enabled?
-    Dir['lib/*.jar'].any?
+    Dir['lib/*.jar'].any? or Dir['classes/**/*.class'].any?
   end
 end
 

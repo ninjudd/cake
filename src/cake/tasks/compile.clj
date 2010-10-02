@@ -1,6 +1,5 @@
 (ns cake.tasks.compile
   (:use cake cake.core cake.ant
-        [cake.utils.useful :only [include?]]
         [cake.tasks.dependencies :only [os-name os-arch]]
         [cake.utils.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
@@ -8,14 +7,15 @@
 (defn compile-java [src]
   (let [start (System/currentTimeMillis)]
     (when (.exists src)
-      (ant Javac {:destdir     (file "classes")
-                  :classpath   (classpath)
-                  :srcdir      (path src)
-                  :fork        true
-                  :verbose     (verbose?)
-                  :debug       true
-                  :debug-level "source,lines"
-                  :failonerror true}))
+      (ant Javac (assoc (:java-compile *project*)
+                   :destdir     (file "classes")
+                   :classpath   (classpath)
+                   :srcdir      (path src)
+                   :fork        true
+                   :verbose     (verbose?)
+                   :debug       true
+                   :debug-level "source,lines"
+                   :failonerror true)))
     (when (some #(newer? % start) (file-seq (file "classes")))
       (bake-restart))))
 
@@ -35,9 +35,12 @@
         (let [aot (:aot *project*)]
           (if (= :all aot)
             (constantly true)
-            (fn [namespace]
-              (or (= namespace (:main *project*))
-                  (include? namespace aot)))))]
+            (if (= :exclude (first aot))
+              (complement (partial contains? (set (rest aot))))
+              (let [aot (set aot)]
+                (fn [namespace]
+                  (or (= namespace (:main *project*))
+                      (contains? aot namespace)))))))]
     (remove nil?
       (for [sourcefile (find-clojure-sources-in-dir (source-dir))]
         (let [namespace (second (read-file-ns-decl sourcefile))
