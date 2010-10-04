@@ -13,7 +13,7 @@
   (ant Delete {:verbose true}
     (add-fileset {:dir (file) :includes "*.jar"})
     (add-fileset {:dir (file) :includes "*.war"}))
-  (doseq [dir ["classes" "build"]]
+  (doseq [dir ["classes" "build" "test/classes"]]
     (clean-dir (file dir)))
   (when (= ["deps"] (:clean *opts*))
     (clean-dir (file "lib"))

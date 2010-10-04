@@ -30,29 +30,31 @@
   (let [src (file "src" "clj")]
     (if (.exists src) src (file "src"))))
 
-(defn stale-namespaces []
+(defn stale-namespaces [source-path aot]
   (let [compile?
-        (let [aot (:aot *project*)]
-          (if (= :all aot)
-            (constantly true)
-            (if (= :exclude (first aot))
-              (complement (partial contains? (set (rest aot))))
-              (let [aot (set aot)]
-                (fn [namespace]
-                  (or (= namespace (:main *project*))
-                      (contains? aot namespace)))))))]
+        (if (= :all aot)
+          (constantly true)
+          (if (= :exclude (first aot))
+            (complement (partial contains? (set (rest aot))))
+            (let [aot (set aot)]
+              (fn [namespace]
+                (or (= namespace (:main *project*))
+                    (contains? aot namespace))))))]
     (remove nil?
-      (for [sourcefile (find-clojure-sources-in-dir (source-dir))]
+      (for [sourcefile (find-clojure-sources-in-dir source-path)]
         (let [namespace (second (read-file-ns-decl sourcefile))
               classfile (classfile namespace)]
           (when (and (compile? namespace) (newer? sourcefile classfile))
             namespace))))))
 
-(defn compile-clojure []
-  (when-let [stale (seq (stale-namespaces))]
-    (bake [libs stale]
-      (doseq [lib libs]
-        (compile lib)))
+(defn compile-clojure [source-path compile-path aot]
+  (when-let [stale (seq (stale-namespaces source-path aot))]
+    (.mkdirs compile-path)
+    (bake [libs stale
+           path (.getPath compile-path)]
+      (binding [*compile-path* path]
+        (doseq [lib libs]
+          (compile lib))))
     (bake-restart)))
 
 (defn add-native-libs [task dir libs]
@@ -73,7 +75,8 @@
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
   (copy-native)
   (compile-java (file "src" "jvm"))
-  (compile-clojure))
+  (compile-clojure (source-dir) (file "classes") (:aot *project*))
+  (compile-clojure (file "test") (file "test" "classes") (:aot-test *project*)))
 
 ;; add actions to compile-native if you need to compile native libraries
 ;; see http://github.com/lancepantz/tokyocabinet for an example
