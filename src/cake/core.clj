@@ -60,17 +60,14 @@
                       [(first forms) (rest forms)]
                       [#{} forms])
         deps (map #(if-not (symbol? %) (eval %) %) deps)
-        [doc forms] (split-with string? forms)]
-    {:deps deps :body forms :doc doc}))
-
-(defn parse-body [forms]
-  (let [[destruct forms] (if (map? (first forms))
+        [doc forms] (split-with string? forms)
+        [destruct forms] (if (map? (first forms))
                            [(first forms) (rest forms)]
                            [{} forms])
         [pred forms] (if (= :when (first forms))
                        `[~(second forms) ~(drop 2 forms)]
                        [true forms])]
-    {:destruct destruct :pred pred :actions forms}))
+    {:deps deps :doc doc :actions forms :destruct destruct :pred pred}))
 
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
@@ -82,9 +79,18 @@
      (do-something-else))"
   [name & forms]
   (verify (not (implicit-tasks name)) (str "Cannot redefine implicit task: " name))
-  (let [{:keys [deps body doc] :as parsed-opts} (parse-task-opts forms)
-        {:keys [destruct pred actions]} (parse-body body)]
-    `(swap! tasks update '~name update-task '~deps '~doc (fn [~destruct] (when ~pred ~@actions)))))
+  (let [{:keys [deps doc actions destruct pred]} (parse-task-opts forms)]
+    `(swap! tasks update '~name update-task '~deps '~doc
+            (fn [~destruct] (when ~pred ~@actions)))))
+
+(defn run-file-task? [target-file deps]
+  (let [{file-deps true task-deps false} (group-by string? deps)]
+    (or (not (.exists target-file))
+        (some (partial mtime< target-file)
+              (into file-deps
+                    (map #(file ".cake" "run" (name %))
+                         task-deps)))
+        (empty? deps))))
 
 (defmacro defile
   "Define a file task. Uses the same syntax as deftask, however the task name
@@ -94,21 +100,13 @@
    (defile \"main.o\" #{\"main.c\"}
      (sh \"cc\" \"-c\" \"-o\" \"main.o\" \"main.c\"))"
   [name & forms]
-  (let [{:keys [deps body doc]} (parse-task-opts forms)
-        {:keys [destruct pred actions]} (parse-body body)
-        {file-deps true task-deps false} (group-by string? deps)]
-    ;; TODO: fold and write some tests for this    
+  (let [{:keys [deps doc actions destruct pred]} (parse-task-opts forms)]
     `(swap! tasks update '~name update-task '~deps '~doc
             (fn [~destruct]
-              (let [f# (file ~name)]
-                (when (and (or (not (.exists f#))
-                               (seq (filter (partial mtime< f#)
-                                            ~(into file-deps
-                                                   (map #(file ".cake" "run" (name %))
-                                                        task-deps))))
-                               (empty? '~deps))
-                           ~pred)
-                  ~@actions))))))
+              (when (and ~pred
+                         (run-file-task? (file ~name) '~deps))
+                (mkdir (.getParentFile *File*))
+                ~@actions)))))
 
 (defmacro undeftask [& names]
   `(swap! tasks dissoc ~@(map #(list 'quote %) names)))
