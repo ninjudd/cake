@@ -130,7 +130,7 @@
             (doseq [action (:actions task)] (action *opts*)))
           (set! run? (assoc run? name true))
           (if (symbol? name)
-            (touch (file ".cake" "run" name))))))))
+            (touch (file ".cake" "run" name) :verbose false)))))))
 
 (defmacro invoke [name & [opts]]
   `(binding [*opts* (or ~opts *opts*)]

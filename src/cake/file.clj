@@ -1,7 +1,6 @@
 (ns cake.file
   (:use cake
-        cake.core
-        cake.ant
+        [cake.utils.useful :only [into-map]]
         [clojure.string :only [join]])
   (:import [org.apache.tools.ant.taskdefs Copy Move Touch Delete Mkdir]
            [java.io File]))
@@ -21,25 +20,25 @@
   [& path]
   (File. (apply file-name path)))
 
-(defn cp [from to]
-  (ant Copy {:file (file from)
-             :tofile (file to)}))
+(use 'cake.ant)
 
-(defn mv [from to]
-  (ant Move {:file (file from)
-             :tofile (file to)}))
+(defn cp [from to & opts]
+  (ant Copy (into-map opts :file from :tofile to)))
 
-(defn touch [& args]
-  (ant Touch {:file (apply file args)}))
+(defn mv [from to & opts]
+  (ant Move (into-map opts :file from :tofile to)))
 
-(defn rm [f]
-  (ant Delete {:file (file f)}))
+(defn touch [file & opts]
+  (ant Touch (into-map opts :file file)))
 
-(defn rmdir [f]
-  (ant Delete {:dir (file f)}))
+(defn rm [file & opts]
+  (ant Delete (into-map opts :file file)))
 
-(defn mkdir [f]
-  (ant Mkdir {:dir (file f)}))
+(defn rmdir [file & opts]
+  (ant Delete (into-map opts :dir file)))
+
+(defn mkdir [file & opts]
+  (ant Mkdir (into-map opts :dir file)))
 
 (defn mtime< [a b]
   (< (.lastModified (file a))

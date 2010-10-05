@@ -58,6 +58,26 @@
   (let [old (get map key), new (apply f old args)]
     (if (= old new) map (assoc map key new))))
 
+(defn append
+  "Merge two data structures by combining the contents. For maps, merge recursively by
+  appending values with the same key. For collections, combine the right and left using
+  into or conj. If the left value is a set and the right value is a map, the right value
+  is assumed to be an existence map where the value determines whether the key is in the
+  merged set. This makes sets unique from other collections because items can be deleted
+  from them."
+  [left right]
+  (cond (map? left)
+        (merge-with append left right)
+
+        (and (set? left) (map? right))
+        (reduce (fn [set [k v]] ((if v conj disj) set k))
+                left right)
+
+        (coll? left)
+        ((if (coll? right) into conj) left right)
+
+        :else right))
+
 (defmacro while-let
   "Repeatedly executes body while let binding is true."
   [bindings & body]
@@ -206,9 +226,10 @@
       (assoc m k (apply update-in! (get m k) ks f args))
       (assoc m k (apply f (get m k) args)))))
 
-(defn args-map [& args]
+(defn into-map
   "Convert a list of heterogeneous args into a map. Args can be alternating keys and values,
    maps of keys to values or collections of alternating keys and values."
+  [& args]
   (loop [args args map {}]
     (if (empty? args)
       map
