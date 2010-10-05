@@ -696,7 +696,7 @@ class Bake < JVM
   end
 
   def enabled?
-    Dir['lib/*.jar'].any?
+    Dir['lib/*.jar'].any? or Dir['classes/**/*.class'].any?
   end
 end
 
@@ -815,7 +815,7 @@ cake = Cake.new(
   [$config['cake.library.path'], "lib/dev/native"]
 )
 bake = Bake.new(
-  [bakepath, "src", "src/clj", "classes", "resources", "dev", "test", $config['project.classpath'], $opts[:cp], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [bakepath, "src", "src/clj", "classes", "resources", "dev", "test", "test/classes", $config['project.classpath'], $opts[:cp], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
   [$config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 

@@ -14,7 +14,7 @@
     (add-fileset {:dir (file) :includes "*.jar"})
     (add-fileset {:dir (file) :includes "*.war"})
     (add-fileset {:dir (file ".cake" "run") :includes "*"}))
-  (doseq [dir ["classes" "build"]]
+  (doseq [dir ["classes" "build" "test/classes"]]
     (clean-dir (file dir)))
   (when (= ["deps"] (:clean *opts*))
     (clean-dir (file "lib"))

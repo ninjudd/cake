@@ -20,6 +20,7 @@
          {"Created-By" "cake"
           "Built-By"   (System/getProperty "user.name")
           "Build-Jdk"  (System/getProperty "java.version")
+          "Class-Path" (:jar-classpath *project*)
           "Main-Class" (absorb (:main *project*) (-> str (.replaceAll "-" "_")))}))
 
 (defn add-license [task]
@@ -106,6 +107,7 @@
   (let [plexus-components (file "build/uberjar/META-INF/plexus/components.xml")]
     (merge-plexus-components jars plexus-components)
     (ant Jar {:dest-file (uberjarfile) :duplicate "preserve"}
+         (add-manifest (manifest))
          (add-jars jars)
          (add-fileset {:dir (file "build" "uberjar")}))))
 
