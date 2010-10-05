@@ -83,12 +83,15 @@
     `(swap! tasks update '~name update-task '~deps '~doc
             (fn [~destruct] (when ~pred ~@actions)))))
 
+(defn task-run-file [task-name]
+  (file ".cake" "run" task-name))
+
 (defn run-file-task? [target-file deps]
   (let [{file-deps true task-deps false} (group-by string? deps)]
     (or (not (.exists target-file))
         (some (partial mtime< target-file)
               (into file-deps
-                    (map #(file ".cake" "run" (name %))
+                    (map #(task-run-file %)
                          task-deps)))
         (empty? deps))))
 
@@ -105,6 +108,7 @@
             (fn [~destruct]
               (when (and ~pred
                          (run-file-task? (file ~name) '~deps))
+                (println "inside defile")
                 (mkdir (.getParentFile *File*))
                 ~@actions)))))
 
@@ -127,10 +131,10 @@
           (doseq [dep (:deps task)] (run-task dep))
           (binding [*current-task* name
                     *File* (if-not (symbol? name) (file name))]
-            (doseq [action (:actions task)] (action *opts*)))
-          (set! run? (assoc run? name true))
-          (if (symbol? name)
-            (touch (file ".cake" "run" name) :verbose false)))))))
+            (doseq [action (:actions task)] (action *opts*))
+            (set! run? (assoc run? name true))
+            (if (symbol? name)
+              (touch (task-run-file name) :verbose false))))))))
 
 (defmacro invoke [name & [opts]]
   `(binding [*opts* (or ~opts *opts*)]
