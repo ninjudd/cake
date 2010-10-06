@@ -1,5 +1,6 @@
 (ns bake.core
-  (:use cake)
+  (:use cake
+        [cake.utils.useful :only [merge-in into-map]])
   (:require clojure.main            
             cake.project
             [bake.swank :as swank]
@@ -7,10 +8,13 @@
   (:import [java.io FileOutputStream PrintStream PrintWriter]))
 
 (defmacro defproject "Just save project hash in bake."
-  [name version & args]
-  (let [opts (apply hash-map args)]
-    `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
-         (alter-var-root #'*context* (fn [_#] (get-context nil))))))
+  [name version & opts]
+  (let [opts (into-map opts)]
+    `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts))))))
+
+(defmacro defcontext [name & opts]
+  (let [opts (into-map opts)]
+    `(alter-var-root #'*context* merge-in {~(keyword name) ~opts})))
 
 (defmacro deftask "Just ignore deftask calls in bake."
   [name & body])
@@ -27,13 +31,13 @@
 
 (defn start-server [port]
   (in-ns 'bake.core)
-  (cake.project/init "project.clj")
+  (cake.project/load-files)
   (server/init-multi-out ".cake/project.log")
   (try (doseq [ns (:require *project*)]
          (require ns))
        (eval (:startup *project*))
        (catch Exception e
-         (print-stacktrace e)))
+         (server/print-stacktrace e)))
   (when-let [auto-start (*config* "swank.auto-start")]    
     (swank/start auto-start))
   (server/create port project-eval :quit quit)

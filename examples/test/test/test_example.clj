@@ -1,6 +1,7 @@
 (ns test-example
-  (:use [clojure.test]))
+  (:use cake clojure.test))
 
 (deftest test-example
   (println "running test-example...")
-  (is true))
+  (is true)
+  (is (= :test (:context *project*))))

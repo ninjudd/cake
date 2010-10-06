@@ -1,9 +1,10 @@
 (ns cake.tasks.jar
   (:use cake cake.core cake.ant ordered-set cake.file
+        [cake.project :only [current-context]]
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
-        [cake.utils.useful :only [absorb]])
+        [cake.utils.useful :only [absorb verify]])
   (:require [clojure.xml :as xml])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Mkdir]
            [org.apache.tools.ant.types FileSet ZipFileSet]
@@ -12,8 +13,12 @@
            [java.io File FileOutputStream]
            [java.util.jar JarFile]))
 
+(defn artifact [ext & [modifier]]
+  (let [parts [(:artifact-id *project*) (:version *project*) modifier (current-context)]]
+    (file (str (join "-" (remove nil? parts)) "." ext))))
+
 (defn jarfile []
-  (file (format "%s-%s.jar" (:artifact-id *project*) (:version *project*))))
+  (artifact "jar"))
 
 (defn manifest []
   (merge (:manifest *project*)
@@ -45,9 +50,14 @@
     (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"})))
 
 (defn build-context []
-  (ant Mkdir {:dir (file "build" "jar")})
+  (mkdir (file "build" "jar"))  
   (with-open [cake-clj (writer (file "build" "jar" "cake.clj"))]
-    (copy (format "(ns cake)\n(def *context* %s)" (pr-str *context*))
+    (copy (if (current-context)
+            (format "(ns cake)\n(def *project* %s)\n(def *context* nil)"
+                    (pr-str *project*))
+            (format "(ns cake)\n(def *project* %s)\n(def *context* %s)"
+                    (pr-str (.getRoot #'*project*))
+                    (pr-str *context*)))     
           cake-clj)))
 
 (defn build-jar []
@@ -76,7 +86,7 @@
   (build-jar))
 
 (defn uberjarfile []
-  (file (format "%s-%s-standalone.jar" (:artifact-id *project*) (:version *project*))))
+  (artifact "jar" "standalone"))
 
 (defn jars [& opts]
   (let [opts (apply hash-map opts)
@@ -130,7 +140,7 @@
     (println "Cannot create bin without :main namespace in project.clj")))
 
 (defn warfile []
-  (file (format "%s-%s.war" (:artifact-id *project*) (:version *project*))))
+  (artifact "war"))
 
 (defn build-war []
   (let [web     "WEB-INF"

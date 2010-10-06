@@ -3,9 +3,7 @@
 
 (deftask swank
   "Report status of swank server and start it if not running."
-  {[context] :context}
-  (bake (:require [bake.swank :as swank]) [context (get-context context)]
-        (alter-var-root #'cake/*context* (fn [_] context))
+  (bake (:require [bake.swank :as swank]) []
         (if (not (swank/installed?))
           (do (println "swank-clojure is not in your library path.")
               (println "add swank-clojure as a dev-dependency in ~/.cake/project.clj to enable"))

@@ -8,9 +8,17 @@
                  [tokyocabinet "1.23-SNAPSHOT"]]
   :dev-dependencies [[clojure-complete "0.1.0"]
                      [autodoc "0.7.1"]]
-  :contexts {:qa {:foo 1 :bar 2} :dev {:baz 1 :bar 8}})
+  :context development)
 
-(deftask bar [{[opt1 opt2 opt3] :optional}]
+(defcontext qa
+  :foo 1
+  :bar 2)
+
+(defcontext development
+  :baz 1
+  :bar 8)
+
+(deftask bar {[opt1 opt2 opt3] :optional}
   (println opt1 opt2 opt3)
   (bake (:use useful)
         [foo (prompt-read "enter foo:")

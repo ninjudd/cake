@@ -14,22 +14,25 @@
                arg
                (.lastModified (if (string? arg) (file arg) arg))))))
 
-(defmacro try-load [form]
-  `(try ~form
-        (catch Exception e#
-          (when (seq (.listFiles (file "lib")))
-            (print-stacktrace e#)))))
+(defn load-tasks [tasks]
+  (let [complain? (seq (.listFiles (file "lib")))]
+    (doseq [ns tasks]
+      (try (require ns)
+           (catch Exception e
+             (when complain? (server/print-stacktrace e)))))))
 
-(defmacro defproject [name version & args]
-  (let [opts (apply hash-map args)
+(defmacro defproject [name version & opts]
+  (let [opts (into-map opts)
         [tasks task-opts] (split-with symbol? (:tasks opts))
-        task-opts (apply hash-map task-opts)]
+        task-opts (into-map task-opts)]
     `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
-         (alter-var-root #'*context* (fn [_#] (get-context nil)))
          (require '~'[cake.tasks help jar test compile dependencies release swank core version])
-         ~@(for [ns tasks]
-             `(try-load (require '~ns)))
+         (load-tasks '~tasks)
          (undeftask ~@(:exclude task-opts)))))
+
+(defmacro defcontext [name & opts]
+  (let [opts (into-map opts)]
+    `(alter-var-root #'*context* merge-in {~(keyword name) ~opts})))
 
 (defn update-task [task deps doc action]
   (let [task (or task {:actions [] :deps #{} :doc []})]
@@ -242,11 +245,7 @@
 
 (defn start-server [port]
   (in-ns 'cake.core)
-  (cake.project/init "project.clj")
-  (try-load (cake.project/init "tasks.clj"))
-  (let [global-project (File. (System/getProperty "user.home") ".cake")]
-    (when-not (= (.getPath global-project) (System/getProperty "cake.project"))
-      (cake.project/init (.getPath (File. global-project "tasks.clj")))))
+  (cake.project/load-files)
   (when-not *project* (require '[cake.tasks help new]))
   (when (= "global" (:artifact-id *project*))
     (undeftask test autotest jar uberjar war uberwar install release)

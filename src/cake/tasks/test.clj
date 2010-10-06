@@ -13,10 +13,12 @@
                 (map read-string args)))))
 
 (defn run-project-tests [& opts]
-  (bake (:use bake.test)
+  (bake (:use bake.test
+              [cake.project :only [with-context]])
     [namespaces (find-namespaces-in-dir (java.io.File. "test"))
      opts       (merge (test-opts) (apply hash-map opts))]
-    (run-project-tests namespaces opts)))
+    (with-context :test
+      (run-project-tests namespaces opts))))
 
 (deftask test #{compile}
   "Run project tests."

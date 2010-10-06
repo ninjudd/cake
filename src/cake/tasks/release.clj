@@ -1,5 +1,6 @@
 (ns cake.tasks.release
   (:use cake cake.core cake.file
+        [cake.project :only [verbose? debug?]]
         [cake.tasks.jar :only [jarfile warfile]]
         [clojure.java.io :only [copy]]
         [cake.utils.useful :only [verify assoc-or]]

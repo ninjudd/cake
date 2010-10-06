@@ -78,6 +78,13 @@
 
         :else right))
 
+(defn merge-in
+  "Merge two nested associative structures."
+  [left right]
+  (if (associative? left)
+    (merge-with merge-in left right)
+    right))
+
 (defmacro while-let
   "Repeatedly executes body while let binding is true."
   [bindings & body]

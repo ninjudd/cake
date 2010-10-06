@@ -1,5 +1,6 @@
 (ns bake.swank
   (:use cake
+        [cake.project :only [with-context current-context]]
         [cake.utils.useful :only [if-ns]])
   (:import [java.io File StringWriter PrintWriter]))
 
@@ -15,6 +16,10 @@
       (let [[host port] (if (.contains host ":") (.split host ":") ["localhost" host])
             port        (Integer/parseInt port)
             writer      (StringWriter.)]
+        ;; wrap all swank threads in a with-context binding
+        (alter-var-root #'swank.util.concurrent.thread/start-thread
+          (fn [start-thread]
+            (fn [f] (start-thread #(with-context (current-context) (f))))))
         (binding [*out* writer
                   *err* (PrintWriter. writer)]
           (start-repl port :host host))
@@ -25,4 +30,3 @@
     (defn installed? [] false)
     (defn num-connections [] 0)
     (defn start [opts] nil)))
-

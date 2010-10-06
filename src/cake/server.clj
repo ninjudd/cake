@@ -1,14 +1,30 @@
 (ns cake.server
   (:use cake
+        [cake.project :only [with-context current-context]]
         [clojure.main :only [skip-whitespace]]
         [cake.utils.io :only [multi-outstream with-outstream]]
+        [cake.utils.useful :only [if-ns]]
         [cake.utils.find-namespaces :only [read-file-ns-decl]])
   (:require [cake.utils.server-socket :as server-socket]
-            [cake.utils.complete :as complete])
+            [cake.utils.complete :as complete]
+            [clojure.stacktrace :as stacktrace])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream
                     FileOutputStream ByteArrayInputStream StringReader FileNotFoundException]
            [clojure.lang LineNumberingPushbackReader LispReader$ReaderException]
            [java.net InetAddress]))
+
+(if-ns (:require [clj-stacktrace.repl :as clj-stacktrace])
+  (do
+    (defn print-stacktrace [e]
+      (if-let [pst-color (*config* "clj-stacktrace")]
+        (do (printf "%s: " (.getName (class e)))
+            (clj-stacktrace/pst-on *out* (= "color" pst-color) e))
+        (do (stacktrace/print-cause-trace e)
+            (flush)))))
+  (do
+    (defn print-stacktrace [e]
+      (stacktrace/print-cause-trace e)
+      (flush))))
 
 (defonce num-connections (atom 0))
 
@@ -126,12 +142,12 @@
                             *pwd*     (:pwd vars)
                             *env*     (:env vars)
                             *opts*    (:opts vars)
-                            *script*  (:script vars)
-                            *context* (get-context (get-in vars [:opts :context 0]))]
-                    (if (keyword? form)
-                      (when-let [command (or (commands form) (default-commands form))]
-                        (command))
-                      (f form)))))
+                            *script*  (:script vars)]
+                    (with-context (current-context)
+                      (if (keyword? form)
+                        (when-let [command (or (commands form) (default-commands form))]
+                          (command))
+                        (f form))))))
               (catch Throwable e
                 (print-stacktrace e)
                 (when (fatal? e) (System/exit 1)))))))
