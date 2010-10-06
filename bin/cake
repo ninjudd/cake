@@ -341,7 +341,7 @@ class JVM
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Process::Error => e
     if e.kind_of?(Errno::ECONNREFUSED)
       log(:start, "defunct #{type} jvm") if debug?
-      kill
+      kill(true)
     end
     reset! # no pidfile or invalid pid or connection refused
   end
@@ -438,9 +438,9 @@ class JVM
     end || (log(mode, "#{type} jvm not running") if $command == :stop)
   end
 
-  def kill
+  def kill(force = $opts[:"9"])
     if pid
-      signal = $opts[:"9"] ? KILL : TERM
+      signal = force ? KILL : TERM
       log(:kill, "sending #{signal} signal to #{type} jvm") if debug?
       Process.kill(signal, pid)
       reset!
