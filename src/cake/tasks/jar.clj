@@ -61,8 +61,8 @@
 
 (def *project*
   (let [project '%s
-        context (symbol (or (System/getProperty \"cake.context\")
-                            (System/getenv \"CAKE_CONTEXT\")
+        context (symbol (or (System/getProperty \"context\")
+                            (System/getenv \"CONTEXT\")
                             (:context project)))]
     (merge-in project (assoc (context *context*)
                         :context context))))")
