@@ -32,7 +32,7 @@
 
 (defmacro defcontext [name & opts]
   (let [opts (into-map opts)]
-    `(alter-var-root #'*context* merge-in {~(keyword name) ~opts})))
+    `(alter-var-root #'*context* merge-in {'~name ~opts})))
 
 (defn update-task [task deps doc action]
   (let [task (or task {:actions [] :deps #{} :doc []})]

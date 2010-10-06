@@ -49,16 +49,31 @@
     (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
     (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"})))
 
+(def cake-context
+"(ns cake)
+
+(defn- merge-in [left right]
+  (if (associative? left)
+    (merge-with merge-in left right)
+    right))
+
+(def *context* '%s)
+
+(def *project*
+  (let [project '%s
+        context (symbol (or (System/getProperty \"cake.context\")
+                            (System/getenv \"CAKE_CONTEXT\")
+                            (:context project)))]
+    (merge-in project (assoc (context *context*)
+                        :context context))))")
+
 (defn build-context []
   (when-not (= "cake" (:artifact-id *project*))
-    (mkdir (file "build" "jar"))  
+    (mkdir (file "build" "jar"))
     (with-open [cake-clj (writer (file "build" "jar" "cake.clj"))]
-      (copy (if (current-context)
-              (format "(ns cake)\n(def *project* %s)\n(def *context* nil)"
-                      (pr-str *project*))
-              (format "(ns cake)\n(def *project* %s)\n(def *context* %s)"
-                      (pr-str (.getRoot #'*project*))
-                      (pr-str *context*)))     
+      (copy (format cake-context
+                    (pr-str *context*)
+                    (pr-str (.getRoot #'*project*)))
             cake-clj))))
 
 (defn build-jar []

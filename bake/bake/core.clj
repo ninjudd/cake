@@ -14,7 +14,7 @@
 
 (defmacro defcontext [name & opts]
   (let [opts (into-map opts)]
-    `(alter-var-root #'*context* merge-in {~(keyword name) ~opts})))
+    `(alter-var-root #'*context* merge-in {'~name ~opts})))
 
 (defmacro deftask "Just ignore deftask calls in bake."
   [name & body])
