@@ -290,3 +290,4 @@ code in the global project. The file doesn't even have to end in .clj.
 - Justin Balthrop ([ninjudd](http://github.com/ninjudd))
 - Lance Bradley ([lancepantz](http://github.com/lancepantz))
 - Anthony Simpson ([Raynes](http://github.com/Raynes))
+- David Santiago ([davidsantiago](http://github.com/davidsantiago))
