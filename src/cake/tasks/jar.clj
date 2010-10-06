@@ -50,15 +50,16 @@
     (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"})))
 
 (defn build-context []
-  (mkdir (file "build" "jar"))  
-  (with-open [cake-clj (writer (file "build" "jar" "cake.clj"))]
-    (copy (if (current-context)
-            (format "(ns cake)\n(def *project* %s)\n(def *context* nil)"
-                    (pr-str *project*))
-            (format "(ns cake)\n(def *project* %s)\n(def *context* %s)"
-                    (pr-str (.getRoot #'*project*))
-                    (pr-str *context*)))     
-          cake-clj)))
+  (when-not (= "cake" (:artifact-id *project*))
+    (mkdir (file "build" "jar"))  
+    (with-open [cake-clj (writer (file "build" "jar" "cake.clj"))]
+      (copy (if (current-context)
+              (format "(ns cake)\n(def *project* %s)\n(def *context* nil)"
+                      (pr-str *project*))
+              (format "(ns cake)\n(def *project* %s)\n(def *context* %s)"
+                      (pr-str (.getRoot #'*project*))
+                      (pr-str *context*)))     
+            cake-clj))))
 
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
