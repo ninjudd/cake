@@ -61,8 +61,8 @@
 
 (def *project*
   (let [project '%s
-        context (symbol (or (System/getProperty \"context\")
-                            (System/getenv \"CONTEXT\")
+        context (symbol (or (System/getProperty \"clojure.context\")
+                            (System/getenv \"CLOJURE_CONTEXT\")
                             (:context project)))]
     (merge-in project (assoc (context *context*)
                         :context context))))")
