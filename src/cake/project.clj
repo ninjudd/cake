@@ -1,7 +1,11 @@
 (ns cake.project
   (:use cake
+        [clojure.string :only [join]]
         [cake.utils.useful :only [assoc-or update merge-in]])
   (:import [java.io File]))
+
+(defn log [& message]
+  (println (format "%11s %s" (str "[" *current-task* "]") (join " " message))))
 
 (defn debug? []
   (boolean (or (:d *opts*) (:debug *opts*))))

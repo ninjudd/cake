@@ -1,7 +1,8 @@
 (ns cake.tasks.compile
   (:use cake cake.core cake.project cake.ant cake.file
         [cake.tasks.dependencies :only [os-name os-arch]]
-        [cake.utils.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]])
+        [cake.utils.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
+        [cake.utils.useful :only [pluralize]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
 (defn compile-java [src]
@@ -50,10 +51,13 @@
 (defn compile-clojure [source-path compile-path aot]
   (when-let [stale (seq (stale-namespaces source-path aot))]
     (.mkdirs compile-path)
-    (bake [libs stale
+    (log "Compiling" (pluralize (count stale) "clojure namespace"))
+    (bake (:use [cake.project :only [log]])
+          [libs stale
            path (.getPath compile-path)]
       (binding [*compile-path* path]
         (doseq [lib libs]
+          (log "Compiling namespace" lib)
           (compile lib))))
     (bake-restart)))
 

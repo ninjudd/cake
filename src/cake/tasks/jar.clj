@@ -1,6 +1,6 @@
 (ns cake.tasks.jar
   (:use cake cake.core cake.ant ordered-set cake.file
-        [cake.project :only [current-context]]
+        [cake.project :only [current-context log]]
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]

@@ -123,9 +123,6 @@
   `(binding [*ant-project* (init-project)]
      ~@forms))
 
-(defn log [& message]
-  (ant Echo {:message (join " " message)}))
-
 (defmethod coerce [java.io.File String] [_ str] (file str))
 (defmethod coerce :default [type val]
   (if (= String type)

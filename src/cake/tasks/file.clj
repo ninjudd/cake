@@ -1,5 +1,6 @@
-(ns cake.tasks.core
-  (:use cake cake.core cake.ant cake.file)
+(ns cake.tasks.file
+  (:use cake cake.core cake.ant cake.file
+        [cake.project :only [log]])
   (:import (org.apache.tools.ant.taskdefs Delete Mkdir)))
 
 (defn clean-dir [dir]
@@ -20,8 +21,6 @@
     (clean-dir (file "lib"))
     (ant Delete {:verbose true}
       (add-fileset {:dir (file) :includes "pom.xml"}))))
-
-(deftask default #{help})
 
 (deftask file
   "Invoke a file task."

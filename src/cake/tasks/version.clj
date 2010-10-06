@@ -1,5 +1,6 @@
 (ns cake.tasks.version
   (:use cake cake.core cake.ant
+        [cake.project :only [log]]
         [cake.utils.useful :only [update]]
         [clojure.string :only [join]])
   (:import [org.apache.tools.ant.taskdefs Replace]))

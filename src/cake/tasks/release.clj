@@ -1,10 +1,9 @@
 (ns cake.tasks.release
   (:use cake cake.core cake.file
-        [cake.project :only [verbose? debug?]]
+        [cake.project :only [verbose? debug? log]]
         [cake.tasks.jar :only [jarfile warfile]]
         [clojure.java.io :only [copy]]
-        [cake.utils.useful :only [verify assoc-or]]
-        [cake.ant :only [log]])
+        [cake.utils.useful :only [verify assoc-or]])
   (:import [com.jcraft.jsch JSch ChannelExec Logger UserInfo JSchException]
            [java.io FileInputStream]))
 

@@ -1,9 +1,9 @@
 (ns cake.core
   (:use cake cake.utils.useful cake.file
         [clojure.string :only [join trim]])
-  (:require cake.project
-            [cake.ant :as ant]
-            [cake.server :as server])
+  (:require [cake.ant :as ant]
+            [cake.server :as server]
+            [cake.project :as project])
   (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader FileNotFoundException]
            [org.apache.tools.ant.taskdefs ExecTask]
            [java.net Socket SocketException]))
@@ -25,8 +25,8 @@
   (let [opts (into-map opts)
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (into-map task-opts)]
-    `(do (alter-var-root #'*project* (fn [_#] (cake.project/create '~name ~version '~opts)))
-         (require '~'[cake.tasks help jar test compile dependencies release swank core version])
+    `(do (alter-var-root #'*project* (fn [_#] (project/create '~name ~version '~opts)))
+         (require '~'[cake.tasks help jar test compile dependencies release swank file version])
          (load-tasks '~tasks)
          (undeftask ~@(:exclude task-opts)))))
 
@@ -169,13 +169,12 @@
 (defn bake* [ns-forms bindings body]
   (let [port (bake-port)]
     (verify port "bake not supported. perhaps you don't have a project.clj")
-    (let [ns     (symbol (str "bake.task." (name *current-task*)))
-          body  `(~'let ~(quote-if odd? bindings) ~@body)
+    (let [body  `(~'let ~(quote-if odd? bindings) ~@body)
           socket (bake-connect port)
           reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (OutputStreamWriter. (.getOutputStream socket))]
       (doto writer
-        (.write (prn-str [ns ns-forms body] *vars*))
+        (.write (prn-str [*current-task* ns-forms body] *vars*))
         (.flush))
       (loop [line (.readLine reader)]
         (when-not (or (nil? line) (= ":bake.core/result" line))
@@ -201,7 +200,7 @@
     (ant/args *script* args (str "--project=" *root*))))
 
 (defn bake-restart []
-  (ant/log "Restarting project jvm.")
+  (project/log "Restarting project jvm")
   (cake-exec "restart" "project"))
 
 (defn git [& args]
@@ -245,7 +244,7 @@
 
 (defn start-server [port]
   (in-ns 'cake.core)
-  (cake.project/load-files)
+  (project/load-files)
   (when-not *project* (require '[cake.tasks help new]))
   (when (= "global" (:artifact-id *project*))
     (undeftask test autotest jar uberjar war uberwar install release)
