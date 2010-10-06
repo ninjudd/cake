@@ -6,7 +6,7 @@
   (:import [java.io File]
            [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move]
            [org.apache.ivy.ant IvyConfigure IvyReport IvyResolve IvyRetrieve
-            IvyDeliver IvyPublish IvyMakePom IvyMakePom$Mapping]
+            IvyDeliver IvyPublish IvyMakePom IvyInstall IvyMakePom$Mapping]
            [org.apache.ivy.plugins.parser.xml XmlModuleDescriptorParser]
            [org.apache.ivy.plugins.resolver IBiblioResolver]))
 
@@ -147,3 +147,13 @@
                   :artifactspattern "[artifact]-[revision].[ext]"}
         options  (merge defaults (opts-to-ant *opts*))]
     (ant IvyPublish options)))
+
+(deftask install-module
+  "Installs a module from one repository to another."
+  "Requires --organisation --module and --revision.
+   Defaults --from=public and --to=local."
+  ;; TODO: Allow org/mod/revision instead of named parameters.
+  (let [defaults {:from "public"
+                  :to "local"}
+        options (merge defaults (opts-to-ant *opts*))]
+    (ant IvyInstall options)))
