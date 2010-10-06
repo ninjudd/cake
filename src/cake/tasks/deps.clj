@@ -1,19 +1,21 @@
 (ns cake.tasks.deps
   (:use cake cake.core cake.ant cake.file
-        [cake.project :only [group log]]
-        [clojure.java.shell :only [sh]])
-  (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
-           [org.apache.tools.ant.taskdefs Copy Delete Move]
-           [org.apache.maven.model Dependency Exclusion License]
-           [java.io File]))
+        clojure.contrib.prxml
+        [clojure.java.io :only [writer]]
+        [cake.project :only [group]])
+  (:import [java.io File]
+           [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move]
+           [org.apache.ivy.ant IvyConfigure IvyResolve IvyRetrieve
+            IvyDeliver IvyPublish IvyMakePom IvyMakePom$Mapping]
+           [org.apache.ivy.plugins.parser.xml XmlModuleDescriptorParser]
+           [org.apache.ivy.plugins.resolver IBiblioResolver]))
 
-(def *exclusions* nil)
+(def *artifact-pattern* "[artifact]-[revision].[ext]")
 
-(def repositories
-  [["clojure"           "http://build.clojure.org/releases"]
-   ["clojure-snapshots" "http://build.clojure.org/snapshots"]
-   ["clojars"           "http://clojars.org/repo"]
-   ["maven"             "http://repo1.maven.org/maven2"]])
+(def *repositories*
+     [["clojure"           "http://build.clojure.org/releases"]
+      ["clojure-snapshots" "http://build.clojure.org/snapshots"]
+      ["clojars"           "http://clojars.org/repo/"]])
 
 (defn os-name []
   (let [name (System/getProperty "os.name")]
@@ -33,102 +35,100 @@
           "i386"  "x86"
           arch))))
 
-(defn add-license [task attrs]
-  (when attrs
-    (.addConfiguredLicense task
-      (make License attrs))))
+(defn make-resolver
+  "Creates a maven compatible ivy resolver from a lein/cake repository."
+  [[id url]]
+  (doto (IBiblioResolver.)
+    (.setRoot url)
+    (.setName id)
+    (.setM2compatible true)))
 
-(defn add-repositories [task repositories]
-  (doseq [[id url] repositories]
-    (.addConfiguredRemoteRepository task
-      (make RemoteRepository {:id id :url url}))))
+(defn add-resolvers
+  "Adds default and project repositories."
+  [settings project]
+  (let [chain (.getResolver settings "main")]
+    (doseq [r (map make-resolver (concat *repositories*
+                                         (:repositories project)))]
+      (.setSettings r settings)
+      (.addResolver settings r)
+      (.add chain r))))
 
-(defn exclusion [dep]
-  (make Exclusion {:group-id (group dep) :artifact-id (name dep)}))
+(defn exclusion
+  [dep]
+  [:exclude {:org (group dep) :name (name dep)}])
 
-(defn- add-dep [task dep]
-  (if (instance? Pom task)
-    (.addConfiguredDependency task dep)
-    (.addDependency task dep)))
+(defn dependencies
+  [deps default-conf]
+  (for [[dep opts] deps]
+    [:dependency
+     (merge {:org (group dep) :name (name dep) :rev (:version opts)
+             :conf (or (:conf opts) default-conf)}
+            (select-keys opts [:transitive]))
+     (map exclusion (:exclusions opts))]))
 
-(defn add-dependencies [task deps]
-  (doseq [[dep opts] deps]
-    (add-dep task
-      (make Dependency
-        {:group-id    (group dep)
-         :artifact-id (name dep)
-         :version     (:version opts)
-         :classifier  (:classifier opts)
-         :exclusions  (map exclusion (concat *exclusions* (:exclusions opts)))}))))
-
-(defn subproject-path [dep]
-  (when *config*
-    (*config* (str "subproject." (name dep)))))
-
-(defn add-jarset [task path exclusions]
-  (let [exclusions (map #(re-pattern (str % "-\\d.*")) exclusions)]
-    (doseq [jar (fileset-seq {:dir path :includes "*.jar"}) :let [name (.getName jar)]]
-      (when (not-any? #(re-matches % name) exclusions)
-        (add-fileset task {:file jar})))))
-
-(defn install-subprojects []
-  (doseq [type [:dependencies :dev-dependencies], [dep opts] (*project* type)]
-    (when-let [path (subproject-path dep)]
-      (binding [*root* path]
-        (cake-exec "install")))))
+(defn make-ivy
+  [project]
+  (with-open [out (writer "ivy.xml")]
+    (binding [*prxml-indent* 2
+              *out* out]
+      (prxml [:ivy-module {:version "2.0"}
+              [:info {:organisation (:group-id project) :module (:name project) :revision (:version project)}]
+              [:configurations
+               [:conf {:name "master" :visibility "public"}]
+               [:conf {:name "default" :visibility "public"}]
+               [:conf {:name "develop" :visibility "private"}]]
+              [:dependencies
+               (dependencies (:dependencies project) "default->default")
+               (dependencies (:dev-dependencies project) "develop->default")]]))))
 
 (defn extract-native [jars dest]
   (doseq [jar jars]
     (ant Copy {:todir dest :flatten true}
          (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))))
 
-(defn fetch [deps dest]
-  (when (seq deps)
-    (let [ref-id (str "cake.deps.fileset." (.getName dest))]
-      (ant DependenciesTask {:fileset-id ref-id :path-id (:name *project*)}
-           (add-repositories (into repositories (:repositories *project*)))
-           (add-dependencies deps))
-      (ant Copy {:todir dest :flatten true}
-           (.addFileset (get-reference ref-id)))))
+(defn retrieve-conf [conf dest]
+  (ant IvyRetrieve {:conf conf :pattern (str dest "/" *artifact-pattern*) :sync true})
   (extract-native
    (fileset-seq {:dir dest :includes "*.jar"})
    (str dest "/native")))
 
-(defn make-pom []
-  (let [refid "cake.pom"
-        file  (file "pom.xml")
-        attrs (select-keys *project* [:artifact-id :group-id :version :name :description])]
-    (ant Pom (assoc attrs :id refid)
-      (add-license (:license *project*))
-      (add-dependencies (:dependencies *project*)))
-    (ant WritePomTask {:pom-ref-id refid :file file})))
-
-(defn fetch-deps []
+(defn retrieve []
   (log "Fetching dependencies...")
-  (fetch (:dependencies *project*) (file "build/lib"))
-  (binding [*exclusions* ['clojure 'clojure-contrib]]
-    (fetch (:dev-dependencies *project*) (file "build/lib/dev")))
+  (retrieve-conf "default" "build/lib")
+  (retrieve-conf "develop" "build/lib/dev")
   (when (.exists (file "build/lib"))
     (ant Delete {:dir "lib"})
     (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
-  (invoke clean {})
-  (bake-restart))
+  (let [deps-changed (.getProperty *ant-project* "ivy.deps.changed")]
+    (when (= "true" deps-changed)
+      (log "Dependencies changed.  Restarting bake...")
+      (invoke clean {})
+      (bake-restart))))
 
-(defn stale-deps? [deps-str deps-file]
-  (or (not (.exists deps-file)) (not= deps-str (slurp deps-file))))
+(deftask resolve
+  (let [configure-task (ant IvyConfigure {})
+        settings       (.getReference *ant-project* "ivy.instance")
+        ivy            (.getConfiguredIvyInstance settings configure-task)]
+    (add-resolvers (.getSettings ivy) *project*))
+  (make-ivy *project*)
+  (ant IvyResolve {}))
 
-(deftask pom "Generate pom.xml from project.clj."
-  (when (or (newer? (file "project.clj") (file "pom.xml")) (= ["force"] (:pom *opts*)))
-    (log "creating pom.xml")
-    (make-pom)))
+(deftask deps #{resolve}
+  (retrieve))
 
-(deftask deps #{pom}
-  "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
-  (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :dev-dependencies])))
-        deps-file (file "lib" "deps.clj")]
-    (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
-      (do (install-subprojects)
-          (fetch-deps)
-          (spit deps-file deps-str))
-      (when (= ["force"] (:compile *opts*))
-        (invoke clean {})))))
+(defn make-mapping [task attrs]
+  (let [mapping (.createMapping task)]
+    (set-attributes! mapping attrs)))
+
+(deftask pom #{resolve}
+  "Create a pom file."
+  (ant IvyMakePom {:ivy-file "ivy.xml" :pom-file "pom.xml" }
+       (make-mapping {:conf "default" :scope "compile"})))
+
+(deftask publish-local #{resolve}
+  "Publish this project to the local ivy repository."
+  (ant IvyPublish {:resolver "local"
+                   :forcedeliver true
+                   :overwrite true
+                   :srcivypattern "ivy-[revision].xml"
+                   :artifactspattern "[artifact]-[revision].[ext]"}))

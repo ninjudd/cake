@@ -1,5 +1,5 @@
 (ns cake.tasks.swank
-  (:use cake cake.core [cake.tasks.deps :only [fetch-deps]]))
+  (:use cake cake.core))
 
 (deftask swank
   "Report status of swank server and start it if not running."

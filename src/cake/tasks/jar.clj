@@ -8,8 +8,6 @@
   (:require [clojure.xml :as xml])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Mkdir]
            [org.apache.tools.ant.types FileSet ZipFileSet]
-           [org.codehaus.plexus.logging.console ConsoleLogger]
-           [org.apache.maven.artifact.ant InstallTask Pom]
            [java.io File FileOutputStream]
            [java.util.jar JarFile]))
 
@@ -188,8 +186,3 @@
 (deftask uberwar #{war}
   "Create a web archive containing all project dependencies."
   (build-uberwar))
-
-(deftask install #{jar}
-  "Install jar to local repository."
-  (ant Pom {:file "pom.xml" :id "cake.pom"})
-  (ant InstallTask {:file (jarfile) :pom-ref-id "cake.pom"}))
