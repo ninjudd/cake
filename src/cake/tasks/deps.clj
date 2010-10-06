@@ -5,7 +5,7 @@
         [cake.project :only [group]])
   (:import [java.io File]
            [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move]
-           [org.apache.ivy.ant IvyConfigure IvyResolve IvyRetrieve
+           [org.apache.ivy.ant IvyConfigure IvyReport IvyResolve IvyRetrieve
             IvyDeliver IvyPublish IvyMakePom IvyMakePom$Mapping]
            [org.apache.ivy.plugins.parser.xml XmlModuleDescriptorParser]
            [org.apache.ivy.plugins.resolver IBiblioResolver]))
@@ -125,10 +125,25 @@
   (ant IvyMakePom {:ivy-file "ivy.xml" :pom-file "pom.xml" }
        (make-mapping {:conf "default" :scope "compile"})))
 
-(deftask publish-local #{resolve}
+(defn opts-to-ant [m]
+  (into {} (for [[k [v]] m]
+             [k (condp = v
+                    "true" true
+                    "false" false
+                    v)])))
+
+(deftask deps-report #{resolve}
+  "Generates a dependency report in various formats to build/reports/ivy."
+  (let [defaults {:todir "build/reports/ivy"}
+        options  (merge defaults (opts-to-ant *opts*))]
+    (ant IvyReport options)))
+
+(deftask publish #{resolve}
   "Publish this project to the local ivy repository."
-  (ant IvyPublish {:resolver "local"
-                   :forcedeliver true
-                   :overwrite true
-                   :srcivypattern "ivy-[revision].xml"
-                   :artifactspattern "[artifact]-[revision].[ext]"}))
+  (let [defaults {:resolver "local"
+                  :forcedeliver true
+                  :overwrite true
+                  :srcivypattern "ivy-[revision].xml"
+                  :artifactspattern "[artifact]-[revision].[ext]"}
+        options  (merge defaults (opts-to-ant *opts*))]
+    (ant IvyPublish options)))
