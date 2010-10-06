@@ -125,8 +125,8 @@ running tasks in parallel.
 
 ## Command-line Arguments
 
-There is no way to pass parameters from one task to another, however, Cake does parse all
-command-line arguments and make them available to all tasks as a var called `opts` which
+There is no way to pass parameters from one task to another, however, cake does parse all
+command-line arguments and make them available to all tasks as a var called `*opts*` which
 contains a map of keys to vectors of repeated values. Named args begin with `--keyname`
 and are mapped to `:keyname`. Unnamed arguments are mapped to `:taskname`. Repeated named
 values can be specified by repeating a key or by using commas in the value.  Single and
@@ -134,7 +134,7 @@ double dashes are both supported though a single dash followed by word character
 internal dashes or an equal sign is assumed to be single character argument flags and are
 split accordingly.
 
-Here are some example Cake commands followed be the corresponding opts:
+Here are some example cake commands followed be the corresponding values of `*opts*`:
 
     cake help compile
     {:help ["compile"]}
@@ -151,7 +151,20 @@ Here are some example Cake commands followed be the corresponding opts:
 In the first two examples, you can see that unnamed arguments are placed under the task
 name in the opts map. This means you can pass "unnamed" arguments to a task that is a
 dependency of the one you are running by adding the task name before the arguments and
-separating them with commas, as in the third example.
+separating them with commas.
+
+You can also destructure `*opts*` directly in your task definitions:
+
+    (deftask test #{compile}
+       "Run the tests specified on the command line."
+       {test-names :test [verbose] :verbose}
+       ...)
+
+    (deftask foo #{bar}
+       "This task takes a bunch of opts."
+        {colors :color [no-wrap] :no-wrap [d] :D [v] :v
+         {style 0 :or {style "modern"}} :style}
+        ...)
 
 ## Advanced Techniques
 
