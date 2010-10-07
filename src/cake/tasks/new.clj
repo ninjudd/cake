@@ -1,9 +1,10 @@
 (ns cake.tasks.new
-  (:use cake cake.core cake.ant cake.file
-        [cake.project :only [group]]
+  (:use cake cake.core cake.file cake.ant
+        [cake.project :only [group log]]
         [clojure.string :only [join]]
         [cake.utils.io :only [extract-resource]])
-  (:import [org.apache.tools.ant.taskdefs Mkdir Copy]))
+  (:import [org.apache.tools.ant.taskdefs Copy]))
+
 
 (def default-template
 "(defproject +project+ \"0.0.1-SNAPSHOT\"
@@ -37,11 +38,11 @@
 (defn create-template [template]
   (log (str "Creating template directory: ~/.cake/templates/" template))
   (let [template (file template-dir template)]
-    (ant Mkdir {:dir template})
-    (ant Mkdir {:dir (file template "src" "+project+")})
+    (mkdir template)
+    (mkdir (file template "src" "+project+"))
     (spit (file template "src" "+project+" "core.clj") "(ns +project+.core)")
     (log "Created template file: src/+project+/core.clj")
-    (ant Mkdir {:dir (file template "test")})
+    (mkdir (file template "test"))
     (spit (file template "project.clj") default-template)
     (log "Created template file: project.clj")
     (spit (file template ".gitignore")
