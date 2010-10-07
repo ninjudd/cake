@@ -132,6 +132,7 @@ end
 
 begin
   require 'readline'
+  $libedit = true unless Readline.respond_to?(:emacs_editing_mode)
 rescue LoadError
   $no_readline = true
   module Readline
@@ -720,6 +721,12 @@ def initialize_cake_dirs
 ;;--------------------
 END
   end unless File.exists?(project_clj)
+
+  # Enable paren matching if using readline and .inputrc doesn't exist.
+  inputrc = "#{$home}/.inputrc"
+  File.open(inputrc, 'w') do |file|
+    file.write "set blink-matching-paren on\n"
+  end unless $no_readline or $libedit or File.exists?(inputrc)
 end
 
 #==================================

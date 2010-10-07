@@ -6,7 +6,7 @@ Cake has the following features:
 * large library of built in tasks
 * compatibile with most Leiningen project.clj files
 * cross platform (Linux, OS X, Windows, Commodore 64)
-* enhanced concurrent REPL with readline and tab completion
+* enhanced concurrent REPL with command history, paren matching and tab completion
 
 _This software is a pre-release, please submit an issue on github if you run into any problems._
 
