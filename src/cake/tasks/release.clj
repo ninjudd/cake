@@ -1,10 +1,10 @@
 (ns cake.tasks.release
   (:use cake cake.core cake.file
         [cake.project :only [verbose? debug? log]]
-        [cake.tasks.jar :only [jarfile warfile]]
+        [cake.tasks.jar :only [jarfile uberjarfile warfile]]
         [clojure.java.io :only [copy]]
         [cake.utils.useful :only [verify assoc-or]])
-  (:import [com.jcraft.jsch JSch ChannelExec Logger UserInfo JSchException]
+  (:import [com.jcraft.jsch JSch ChannelExec Logger UserInfo JSchException UIKeyboardInteractive]
            [java.io FileInputStream]))
 
 (def *session*      nil)
@@ -32,18 +32,19 @@
                session  (.getSession jsch username host (or port 22))]
            (doto session
              (.setUserInfo
-              (proxy [Object UserInfo] []
-                (getPassword      []  password)
-                (getPassphrase    []  passphrase)
-                (promptYesNo      [_] true)
-                (promptPassword   [_] true)
-                (promptPassphrase [_] true)
-                (showMessage      [_])))
+              (proxy [Object UserInfo UIKeyboardInteractive] []
+                (getPassword               []    password)
+                (getPassphrase             []    passphrase)
+                (promptYesNo               [_]   true)
+                (promptPassword            [_]   (not (nil? password)))
+                (promptPassphrase          [_]   (not (nil? passphrase)))
+                (promptKeyboardInteractive [& _] (if password (into-array String [password])))
+                (showMessage               [_])))
              (.connect))
            (set! *session-opts* opts)
            (log-auth username host keyfile "Auth success")
            session)
-         (catch JSchException e           
+         (catch JSchException e
            (log-auth username host keyfile (.getMessage e))
            nil))))
 
@@ -65,47 +66,59 @@
       (session-connect (assoc opts :password (prompt-password)))
       (throw (Exception. (format "unable to start session to %s@%s" username host)))))
 
-(defn ssh-session* [opts f]
+(defn ssh-session* [opts & commands]
   (let [hosts (or (:hosts opts) [(:host opts)])
         opts  (dissoc opts :hosts)]
     (binding [*session-opts* nil]
-      (doseq [opts (map (partial assoc opts :host) hosts)]
-        (binding [*session* (start-session opts)]
-          (try (f)
-               (finally (.disconnect *session*))))))))
+      (let [sessions
+            (for [host hosts]
+              (start-session (assoc opts :host host)))]
+        (doseq [command commands, session sessions]
+          (binding [*session* session]
+            (command)))
+        (doseq [session sessions]
+          (.disconnect session))))))
 
 (defmacro ssh-session [opts & forms]
-  `(ssh-session* ~opts (fn [] ~@forms)))
+  `(ssh-session* ~opts ~@(map (partial list 'fn []) forms)))
 
-(defn- wait-for-ack [in]
-  (let [code (.read in)]
-    (when-not (= 0 code)
-      (copy in *outs*)
-      (throw (Exception. (case code 1 "ssh error" 2 "ssh fatal error" -1 "disconnect error" "unknown error"))))))
+(defn log-host [& message]
+  (apply log (format "%s@%s:" (.getUserName *session*) (.getHost *session*)) message))
 
-(defn- send-ack [out]
-  (.write out (byte-array [(byte 0)]))
-  (.flush out))
-
-(defn ssh-exec [command f]
+(defn ssh-exec [command & [f]]
   (let [channel (.openChannel *session* "exec")]
     (.setCommand channel command)
     (let [in  (.getInputStream channel)
           out (.getOutputStream channel)
           ext (.getExtInputStream channel)]
       (.connect channel)
-      (wait-for-ack in)
-      (f in out ext)
+      (if f
+        (f in out ext)
+        (do (log-host command)
+            (.close out)
+            (copy ext *outs*)))
       (.disconnect channel))))
+
+(defn- send-ack [out]
+  (.write out (byte-array [(byte 0)]))
+  (.flush out))
+
+(defn- wait-for-ack [in]
+  (let [code (.read in)]
+    (when-not (= 0 code)
+      (copy in *outs*)
+      (throw (Exception. (case code 1 "scp error" 2 "scp fatal error" -1 "disconnect error" "unknown error"))))))
 
 (defn upload
   ([src] (upload src "."))
   ([src dest]
-      (let [src (if (sequential? src) src [src])]
+     (let [src  (if (sequential? src) src [src])
+           dest (or dest ".")]
         (ssh-exec (str "scp -r -d -t " (or dest "."))
           (fn [in out ext]
+            (wait-for-ack in)
             (doseq [f src :let [f (file f)]]
-              (log "uploading" (.getAbsolutePath f) "to" (:host *session-opts*))
+              (log-host "uploading" (.getAbsolutePath f) "to" dest)
               (let [command (format "C0644 %d %s\n" (.length f) (.getName f))]
                 (.write out (.getBytes command))
                 (.flush out)
@@ -117,7 +130,7 @@
             (.close out)
             (copy ext *outs*))))))
 
-(defn upload-to-clojars [jarfile]  
+(defn upload-to-clojars [jarfile]
   (log "Releasing jar:" jarfile)
   (ssh-session {:host "clojars.org" :username "clojars"}
     (upload ["pom.xml" jarfile])))
@@ -126,14 +139,25 @@
   "Release project jar to clojars."
   (upload-to-clojars (jarfile)))
 
+(defn files-by-dest [files]
+  (mapcat
+   #(cond (map? %)    %
+          (vector? %) {(last %) (butlast %)}
+          :else       {"." [%]})
+   files))
+
 (deftask deploy #{war}
-  "Deploy war to a group of servers."
+  "Deploy files to a group of servers."
   "This deploys a plain war by default. To deploy an uberwar, add '(deftask deploy #{uberwar})' to project.clj."
   (if (:deploy *project*)
-    (let [group  (symbol (or (first (:deploy *opts*)) 'qa))
-          deploy (group (:deploy *project*))]
-      (verify deploy (str "no deploy options specified for" group))
-      (log "Deploying to" group)
+    (let [deploy  (eval (:deploy *project*))
+          context (:context *project*)
+          files   (or (:files deploy) [(warfile)])]
+      (verify deploy (str "no deploy options specified for context" context))
+      (log "Deploying to" context)
       (ssh-session deploy
-        (upload [(warfile)] (:dest deploy))))
+        (doseq [[dest files] (files-by-dest files)]
+          (upload files dest))
+        (doseq [command (:commands deploy)]
+          (ssh-exec command))))
     (println "no :deploy key in project.clj")))

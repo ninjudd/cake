@@ -12,3 +12,17 @@
               ["project.clj" "META-INF/project.clj"]
               "project.clj"
               "doc"])
+
+(defcontext qa
+  :deploy {:username "judd"
+           :hosts ["qa1.foolambda.com" "qa2.foolambda.com"]
+           :files [["foo.html" "/var/www/"]
+                   ["foo.conf" "/etc/"]]
+           :commands ["/etc/init.d/httpd reload"]})
+
+(defcontext dev
+  :deploy {:username "justin"
+           :hosts ["localhost"]
+           :files [["resources/foo.html" "."]
+                   ["resources/foo.conf" "."]]
+           :commands ["touch /tmp/foo"]})
