@@ -16,13 +16,18 @@
 (defcontext qa
   :deploy {:username "judd"
            :hosts ["qa1.foolambda.com" "qa2.foolambda.com"]
-           :files [["foo.html" "/var/www/"]
+           :files [[:war "foo.html" "/var/www/"]
+                   [:jar :uberjar "."]
                    ["foo.conf" "/etc/"]]
            :commands ["/etc/init.d/httpd reload"]})
 
 (defcontext dev
   :deploy {:username "justin"
            :hosts ["localhost"]
-           :files [["resources/foo.html" "."]
-                   ["resources/foo.conf" "."]]
-           :commands ["touch /tmp/foo"]})
+           :pre-upload ["mkdir /tmp/foo" "mkdir /tmp/bar" "mkdir /tmp/baz"]
+           :files [[:war "resources/foo.html" "/tmp/foo/"]
+                   ["resources/foo.conf" "/tmp/bar/"]
+                   [:jar :uberjar "/tmp/baz"]]
+           :commands ["touch /tmp/restart"]})
+
+(deftask deploy #{war uberjar})

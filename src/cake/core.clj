@@ -1,5 +1,6 @@
 (ns cake.core
   (:use cake cake.utils.useful cake.file
+        clojure.contrib.condition
         [clojure.string :only [join trim]])
   (:require [cake.ant :as ant]
             [cake.server :as server]
@@ -32,7 +33,7 @@
 
 (defmacro defcontext [name & opts]
   (let [opts (into-map opts)]
-    `(alter-var-root #'*context* merge-in {'~name '~opts})))
+    `(alter-var-root #'*context* merge-in {'~name ~opts})))
 
 (defn update-task [task deps doc action]
   (let [task (or task {:actions [] :deps #{} :doc []})]
@@ -128,16 +129,23 @@
     (if (and (nil? task)
              (not (string? name)))
       (println "unknown task:" name)
-      (verify (not= :in-progress (run? name)) (str "circular dependency found in task: " name)
+      (verify (not= :in-progress (run? name))
+              (str "circular dependency found in task: " name)
         (when-not (run? name)
           (set! run? (assoc run? name :in-progress))
           (doseq [dep (:deps task)] (run-task dep))
           (binding [*current-task* name
                     *File* (if-not (symbol? name) (file name))]
-            (doseq [action (:actions task)] (action *opts*))
+            (handler-case :type
+              (doseq [action (:actions task)] (action *opts*))
+              (handle :abort-task
+                (println name "aborted:" (:message *condition*))))
             (set! run? (assoc run? name true))
             (if (symbol? name)
               (touch (task-run-file name) :verbose false))))))))
+
+(defn abort-task [& message]
+  (raise {:type :abort-task :message (join " " message)}))
 
 (defmacro invoke [name & [opts]]
   `(binding [*opts* (or ~opts *opts*)]

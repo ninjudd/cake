@@ -161,8 +161,6 @@
 (defn build-war []
   (let [web     "WEB-INF"
         classes (str web "/classes")]
-    (when-not (or (= :all (:aot *project*)) (= :partial (:war *project*)))
-      (println "warning: some namespaces may not be included in your war, use ':aot :all' to include them"))
     (build-context)
     (ant War {:dest-file (warfile)}
          (add-manifest (manifest))

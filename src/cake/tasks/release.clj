@@ -2,7 +2,7 @@
   (:use cake cake.core cake.file
         [cake.project :only [verbose? debug? log]]
         [cake.tasks.jar :only [jarfile uberjarfile warfile]]
-        [clojure.java.io :only [copy]]
+        [clojure.java.io :only [reader copy]]
         [cake.utils.useful :only [verify assoc-or]])
   (:import [com.jcraft.jsch JSch ChannelExec Logger UserInfo JSchException UIKeyboardInteractive]
            [java.io FileInputStream]))
@@ -10,9 +10,11 @@
 (def *session*      nil)
 (def *session-opts* nil)
 
-(defn keyfiles []
-  (if-let [id (or (first (:identity *opts*)) (*config* "release.identity"))]
-    (list (file id))
+(defn keyfiles [identity]
+  (if-let [identity (or identity (first (:identity *opts*)))]
+    (list (if (.startsWith identity "/")
+            (file identity)
+            (file "~/.ssh" identity)))
     (for [id (list "id_rsa" "id_dsa" "identity") :let [keyfile (file "~/.ssh" id)] :when (.exists keyfile)]
       keyfile)))
 
@@ -56,15 +58,15 @@
   (or (:password *session-opts*)
       (prompt-read "Password" :echo false)))
 
-(defn- start-session [{:keys [host port username] :as opts}]
+(defn- start-session [{:keys [host port username identity] :as opts}]
   (or (first (remove nil?
-        (for [keyfile (keyfiles)]
+        (for [keyfile (keyfiles identity)]
           (let [opts (assoc opts :keyfile keyfile)
                 session (session-connect opts)]
             (or session
                 (session-connect (assoc opts :passphrase (prompt-passphrase keyfile))))))))
       (session-connect (assoc opts :password (prompt-password)))
-      (throw (Exception. (format "unable to start session to %s@%s" username host)))))
+      (abort-task (format "unable to start session to %s@%s" username host))))
 
 (defn ssh-session* [opts & commands]
   (let [hosts (or (:hosts opts) [(:host opts)])
@@ -82,8 +84,15 @@
 (defmacro ssh-session [opts & forms]
   `(ssh-session* ~opts ~@(map (partial list 'fn []) forms)))
 
-(defn log-host [& message]
-  (apply log (format "%s@%s:" (.getUserName *session*) (.getHost *session*)) message))
+(defn log-host [& message]  
+  (apply log (format "[%s]" (.getHost *session*)) message))
+
+(defn copy-to-log [out]
+  (let [out (reader out)]
+    (loop []
+      (when-let [line (.readLine out)]
+        (log-host line)
+        (recur)))))
 
 (defn ssh-exec [command & [f]]
   (let [channel (.openChannel *session* "exec")]
@@ -94,9 +103,10 @@
       (.connect channel)
       (if f
         (f in out ext)
-        (do (log-host command)
-            (.close out)
-            (copy ext *outs*)))
+        (let [ext (reader ext)]
+          (log-host command)))
+      (.close out)
+      (copy-to-log ext)
       (.disconnect channel))))
 
 (defn- send-ack [out]
@@ -126,9 +136,7 @@
               (with-open [fs (FileInputStream. f)]
                 (copy fs out :buffer-size 8192))
               (send-ack out)
-              (wait-for-ack in))
-            (.close out)
-            (copy ext *outs*))))))
+              (wait-for-ack in)))))))
 
 (defn upload-to-clojars [jarfile]
   (log "Releasing jar:" jarfile)
@@ -139,25 +147,44 @@
   "Release project jar to clojars."
   (upload-to-clojars (jarfile)))
 
-(defn files-by-dest [files]
-  (mapcat
-   #(cond (map? %)    %
-          (vector? %) {(last %) (butlast %)}
-          :else       {"." [%]})
-   files))
+(defn- lookup-file [file]
+  (case file
+    :jar     (jarfile)
+    :uberjar (uberjarfile)
+    :war     (warfile)
+    file))
 
-(deftask deploy #{war}
+(deftask deploy
   "Deploy files to a group of servers."
-  "This deploys a plain war by default. To deploy an uberwar, add '(deftask deploy #{uberwar})' to project.clj."
+
+  "Add :deploy to defproject or defcontext to enable. Also add any dependencies that need
+   to be built before deploy e.g. (deftask deploy #{war}). Supported :deploy keys are:
+
+     :hosts      [host1 host2 host3]
+     :port       2222
+     :username   \"username\"
+     :password   \"password\"
+     :identity   \"ssh-public-key\"
+     :passphrase \"ssh-key-passphrase\"
+     :pre-upload [\"echo pre-upload commands\"
+                  \"/etc/init.d/server stop\"]
+     :files      [[\"file1\" \"file2\" \"/dest\"]
+                  [:war \"/another/dest\"]
+                  [:jar :uberjar \"/home/username\"]]
+     :commands   [\"echo remote commands\"
+                  \"/etc/init.d/server start\"]"
   (if (:deploy *project*)
-    (let [deploy  (eval (:deploy *project*))
-          context (:context *project*)
-          files   (or (:files deploy) [(warfile)])]
+    (let [deploy  (:deploy *project*)
+          context (:context *project*)]
       (verify deploy (str "no deploy options specified for context" context))
       (log "Deploying to" context)
       (ssh-session deploy
-        (doseq [[dest files] (files-by-dest files)]
-          (upload files dest))
+        (doseq [command (:pre-upload deploy)]
+          (ssh-exec command))
+        (doseq [files (:files deploy)]
+          (let [dest  (last files)
+                files (map lookup-file (butlast files))]
+            (upload files dest)))
         (doseq [command (:commands deploy)]
           (ssh-exec command))))
     (println "no :deploy key in project.clj")))
