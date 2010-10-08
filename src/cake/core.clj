@@ -135,7 +135,7 @@
           (set! run? (assoc run? name :in-progress))
           (doseq [dep (:deps task)] (run-task dep))
           (binding [*current-task* name
-                    *File* (if-not (symbol? name) (file name))]            
+                    *File* (if-not (symbol? name) (file name))]
             (doseq [action (:actions task)] (action *opts*))
             (set! run? (assoc run? name true))
             (if (symbol? name)
@@ -252,7 +252,7 @@
 
 (defn start-server [port]
   (in-ns 'cake.core)
-  (project/load-files)
+  (project/load-files ["project.clj" "context.clj"] ["tasks.clj" "dev.clj"])
   (when-not *project* (require '[cake.tasks help new]))
   (when (= "global" (:artifact-id *project*))
     (undeftask test autotest jar uberjar war uberwar install release)

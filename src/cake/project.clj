@@ -35,13 +35,13 @@
         (update :dev-dependencies dep-map)
         (assoc-or :name artifact))))
 
-(defn load-files []
-  (doseq [f ["project.clj" "context.clj" "tasks.clj" "dev.clj"]
+(defn load-files [project-files global-files]
+  (doseq [f (into project-files global-files)
           :when (.exists (File. f))]
     (load-file f))
   (let [global-project (File. (System/getProperty "user.home") ".cake")]
     (when-not (= (.getPath global-project) (System/getProperty "cake.project"))
-      (doseq [f ["tasks.clj" "dev.clj"]
+      (doseq [f global-files
               :let [file (File. global-project f)]
               :when (.exists file)]
         (load-file (.getPath file))))))
