@@ -135,17 +135,11 @@
           (set! run? (assoc run? name :in-progress))
           (doseq [dep (:deps task)] (run-task dep))
           (binding [*current-task* name
-                    *File* (if-not (symbol? name) (file name))]
-            (handler-case :type
-              (doseq [action (:actions task)] (action *opts*))
-              (handle :abort-task
-                (println name "aborted:" (:message *condition*))))
+                    *File* (if-not (symbol? name) (file name))]            
+            (doseq [action (:actions task)] (action *opts*))
             (set! run? (assoc run? name true))
             (if (symbol? name)
               (touch (task-run-file name) :verbose false))))))))
-
-(defn abort-task [& message]
-  (raise {:type :abort-task :message (join " " message)}))
 
 (defmacro invoke [name & [opts]]
   `(binding [*opts* (or ~opts *opts*)]
@@ -224,7 +218,13 @@
     (ant/in-project
      (doseq [dir ["lib" "classes" "build"]]
        (.mkdirs (file dir)))
-     (run-task (symbol (name task))))))
+     (handler-case :type
+       (run-task (symbol (name task)))
+       (handle :abort-task
+         (println (name task) "aborted:" (:message *condition*)))))))
+
+(defn abort-task [& message]
+  (raise {:type :abort-task :message (join " " message)}))
 
 (defn task-file? [file]
   (some (partial re-matches #".*\(deftask .*|.*\(defproject .*")
