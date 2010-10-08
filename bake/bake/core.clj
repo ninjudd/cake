@@ -33,7 +33,7 @@
 
 (defn start-server [port]
   (in-ns 'bake.core)
-  (cake.project/load-files)
+  (load-file "project.clj")
   (server/init-multi-out ".cake/project.log")
   (try (doseq [ns (:require *project*)]
          (require ns))
