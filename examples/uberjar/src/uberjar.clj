@@ -6,4 +6,5 @@
   (println "Running main...")
   (println "args:"     (pr-str args))
   (println "context:"  (:context *project*))
-  (println "*project*" (pr-str *project*)))
+  (println "*project*" (pr-str *project*))
+  (println "foo property:" (System/getProperty "foo")))
