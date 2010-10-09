@@ -51,7 +51,7 @@
     version))
 
 (undeftask release)
-(deftask release #{uberjar gem}
+(deftask release #{uberjar gem tag}
   "Release project jar to github and gem package to rubygems."
   (let [version   (:version *project*)
         snapshot? (snapshot? version)

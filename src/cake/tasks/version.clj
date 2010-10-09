@@ -55,5 +55,5 @@
   (let [version (:version *project*)]
     (if (.endsWith version "SNAPSHOT")
       (println "refusing to create tag for snapshot version:" version)
-      (do (git "tag" version)
+      (do (git "tag" "-a" version "-m" (format "'version %s'" version))
           (log "created git tag" version)))))
