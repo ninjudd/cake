@@ -829,8 +829,8 @@ bake = Bake.new(
 if $command == :default and $opts[:version]
   puts "cake #{$version}"
   exit
-elsif $command == :kill
-  if $opts[:all] or $opts[:kill] == ['all']
+elsif $command == :killall or $command == :kill
+  if $opts[:all] or $opts[:kill] == ['all'] or $command == :killall
     puts "'cake kill --all' is deprecated, in the future use 'cake kill all' instead" if $opts[:all]
     num = ps.each do |line|
       pid = line.split(' ').first.to_i

@@ -51,7 +51,7 @@
     (symbol context)))
 
 (defmacro with-context [context & forms]
-  `(let [context# (or ~context (:context *project*))]
+  `(let [context# (symbol (name (or ~context (:context *project*))))]
      (binding [*project* (merge-in (.getRoot #'*project*)
                                    (assoc (context# *context*)
                                      :context context#))]
