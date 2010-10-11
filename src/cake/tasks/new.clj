@@ -14,13 +14,18 @@
 
 (def template-dir (file "~" ".cake" "templates"))
 
-(defn rename-dirs [root project]
+(defn rename-files [root project]
   (log "Renaming directories with +project+ in their name")
   (doseq [old-file (reverse (sort-by (comp count str) (file-seq root)))
           :let [name (.getName old-file)
-                replaced (.replace name "+project+" project)]
+                replaced (.replace name "+project+" (.replace project "-" "_"))]
           :when (not= name replaced)]
     (.renameTo old-file (file (.getParent old-file) replaced))))
+
+(defn scan-replace-contents [files project]
+  (log (str "Replacing +project+ with '" project "' in all files."))
+  (doseq [f (filter #(.isFile %) files)]
+    (spit f (.replace (slurp f) "+project+" project))))
 
 (defn template-new [project template]
   (let [root (file *pwd* project)]
@@ -29,11 +34,8 @@
       (do
         (log (str "Creating a new project based on ~/cake/templates/" template))
         (ant Copy {:todir root} (add-fileset {:dir (str (file template-dir template))}))
-        (rename-dirs root project)
-        (let [files (file-seq root)]
-          (log (str "Replacing +project+ with '" project "' in all files."))
-          (doseq [f (filter #(.isFile %) files)]
-            (spit f (.replace (slurp f) "+project+" project))))))))
+        (rename-files root project)
+        (scan-replace-contents (file-seq root) project)))))
 
 (defn create-template [template]
   (log (str "Creating template directory: ~/.cake/templates/" template))
