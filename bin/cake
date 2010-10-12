@@ -730,9 +730,10 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   # Force new cake libs if cake's project.clj has changed.
   FileUtils.remove_dir(lib, true) if newer?(project, lib) and not $config['cake.disable-auto-deps']
 
-  if Dir["#{lib}/*.jar"].empty?
+  if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
     cakejar = get_cake(:version => $version, :dest => lib) rescue get_cake(:version => :current, :dest => lib)
+    extract(cakejar, "bake.jar", "#{lib}/dev")
   end
   $clojure = get_clojure(:dest => lib)
 
