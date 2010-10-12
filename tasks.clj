@@ -68,7 +68,7 @@
     (when-not snapshot?
       (ant Copy {:file (file "bin" "cake") :tofile (file "releases" "cake")})
       (spit (file "releases/stable") version))
-    (binding [*root* "releases"]
+    (binding [*root* (file "releases")]
       (git "add" jar "cake" "current" "stable")
       (git "commit" "--allow-empty" "-m" (format "'release cake %s'" (:version *project*)))
       (git "push"))
