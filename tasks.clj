@@ -12,6 +12,10 @@
 (defn clojure-jar []
   (str "clojure-" (.replace (clojure-version) "SNAPSHOT" "*") ".jar"))
 
+(defn add-dev-jars [task]
+  (doseq [jar (fileset-seq {:dir "lib/dev" :includes "*.jar"})]
+    (add-zipfileset task {:src jar :includes "**/*.clj" :excludes "META-INF/**/project.clj"})))
+
 (undeftask uberjar)
 (deftask uberjar #{jar}
   "Create a standalone jar containing all project dependencies."
@@ -19,9 +23,11 @@
   (let [jarfile (uberjarfile)
         bakejar (bakejar)]
     (ant Jar {:dest-file bakejar}
-         (add-fileset {:dir "bake"}))
+         (add-fileset {:dir "bake"})
+         (add-dev-jars))
     (ant Jar {:dest-file jarfile :update true}
-         (add-fileset {:file bakejar}))))
+         (add-fileset {:file bakejar})
+         (add-dev-jars))))
 
 (defn snapshot? [version]
   (.endsWith version "SNAPSHOT"))

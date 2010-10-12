@@ -227,20 +227,6 @@
 (defn abort-task [& message]
   (raise {:type :abort-task :message (join " " message)}))
 
-(defn task-file? [file]
-  (some (partial re-matches #".*\(deftask .*|.*\(defproject .*")
-        (line-seq (BufferedReader. (FileReader. file)))))
-
-(defn skip-task-files [load-file]
-  (fn [file]
-    (if (task-file? file)
-      (println "reload-failed: unable to reload file with deftask or defproject in it:" file)
-      (load-file file))))
-
-(defn reload-files []
-  (binding [clojure.core/load-file (skip-task-files load-file)]
-    (server/reload-files)))
-
 (defn repl []
   (binding [*current-task* "repl"]
     (ant/in-project (server/repl))))
@@ -252,12 +238,15 @@
     (read-line)))
 
 (defn start-server [port]
-  (in-ns 'cake.core)
-  (project/load-files ["project.clj" "context.clj"] ["tasks.clj" "dev.clj"])
-  (when-not *project* (require '[cake.tasks help new]))
-  (when (= "global" (:artifact-id *project*))
-    (undeftask test autotest jar uberjar war uberwar install release)
-    (require '[cake.tasks new]))
-  (server/init-multi-out ".cake/cake.log")
-  (server/create port process-command :reload reload-files :repl repl)
-  nil)
+  (let [project-files (project/files ["project.clj" "context.clj" "tasks.clj" "dev.clj"] ["tasks.clj" "dev.clj"])]
+    (in-ns 'cake.core)
+    (project/load-files project-files)
+    (when-not *project* (require '[cake.tasks help new]))
+    (when (= "global" (:artifact-id *project*))
+      (undeftask test autotest jar uberjar war uberwar install release)
+      (require '[cake.tasks new]))
+    (server/init-multi-out ".cake/cake.log")
+    (server/create port process-command
+      :reload (server/reloader project-files)
+      :repl   repl)
+    nil))

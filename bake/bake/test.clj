@@ -17,7 +17,7 @@
   (let [start (System/nanoTime)
         run?  (test-pred opts)]
     (doseq [ns namespaces]
-      (require :reload-all ns)
+      (require ns)
       (when-let [tests (seq (filter (partial run? ns) (ns-publics ns)))]
         (let [ns-meta (meta (find-ns ns))
               once-fixtures (join-fixtures (:clojure.test/once-fixtures ns-meta))

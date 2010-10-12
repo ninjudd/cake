@@ -32,15 +32,18 @@
     (println (pr-str result))))
 
 (defn start-server [port]
-  (in-ns 'bake.core)
-  (project/load-files ["project.clj" "context.clj"] ["dev.clj"])
-  (server/init-multi-out ".cake/project.log")
-  (try (doseq [ns (:require *project*)]
-         (require ns))
-       (eval (:startup *project*))
-       (catch Exception e
-         (server/print-stacktrace e)))
-  (when-let [auto-start (*config* "swank.auto-start")]
-    (swank/start auto-start))
-  (server/create port project-eval :quit quit)
-  nil)
+  (let [project-files (project/files ["project.clj" "context.clj" "dev.clj"] ["dev.clj"])]
+    (in-ns 'bake.core)
+    (project/load-files project-files)
+    (server/init-multi-out ".cake/project.log")
+    (try (doseq [ns (:require *project*)]
+           (require ns))
+         (eval (:startup *project*))
+         (catch Exception e
+           (server/print-stacktrace e)))
+    (when-let [auto-start (*config* "swank.auto-start")]
+      (swank/start auto-start))
+    (server/create port project-eval
+      :reload (server/reloader project-files)
+      :quit   quit)
+    nil))

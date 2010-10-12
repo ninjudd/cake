@@ -2,6 +2,8 @@
   (:use cake
         [cake.project :only [with-context current-context]]
         [clojure.main :only [skip-whitespace]]
+        [lazytest.reload :only [reload]]
+        [lazytest.tracker :only [tracker]]
         [cake.utils.io :only [multi-outstream with-outstream]]
         [cake.utils.useful :only [if-ns]]
         [cake.utils.find-namespaces :only [read-file-ns-decl]])
@@ -49,19 +51,28 @@
     (doseq [completion (complete/completions prefix ns)]
       (println completion))))
 
-(defn reload-files []
-  (let [files (read)]
-    (doseq [file files]
-      (if (not (.endsWith file ".clj"))
-        (println "reload-failed: cannot reload non-clojure file:" file)
-        (if-let [ns (second (read-file-ns-decl (java.io.File. file)))]
-          (if (symbol? ns)
-            (when (find-ns ns) ;; don't reload namespaces that aren't already loaded
-              (try (load-file file)
-                   (catch Exception e
-                     (print-stacktrace e))))
-            (throw (Exception. (format "invalid ns declaration in %s" file))))
-          (println "reload-failed: cannot reload file without namespace declaration:" file))))))
+(defn- track-dirs []
+  (for [url (.getURLs (java.lang.ClassLoader/getSystemClassLoader))
+        :let [file (File. (.getFile url))]
+        :when (.isDirectory file)]
+    file))
+
+(defn reloader [project-files]
+  (let [timestamp (atom (System/currentTimeMillis))
+        changed   (tracker (track-dirs) 0)]
+    (changed) ;; build dependency graph
+    (fn []
+      (let [now (System/currentTimeMillis)]
+        (doseq [file project-files :when (> (.lastModified file) @timestamp)]
+          (println (format "cannot reload %s, restarting" (.getPath file))))
+        (reset! timestamp now))
+      (doseq [ns (changed)]
+        (if (= 'cake.core ns)
+          (println "cannot reload cake.core, restarting")
+          (when (find-ns ns)
+            (try (reload ns)
+                 (catch Exception e
+                   (print-stacktrace e)))))))))
 
 (defn exit []
   (System/exit 0))
@@ -111,7 +122,6 @@
 (def default-commands
   {:validate    validate-form
    :completions completions
-   :reload      reload-files
    :force-quit  exit
    :quit        quit
    :repl        repl

@@ -328,9 +328,8 @@ class JVM
   end
 
   def init
-    stale = reload_stale_files if enabled? and running?
+    reload_stale_files if enabled? and running?
     start
-    stale
   end
 
   def refresh
@@ -359,34 +358,17 @@ class JVM
   end
 
   def reload_stale_files
-    stale_files = files.select {|f| stale?(f)}
-
-    if stale_files.empty?
-      log(:reload, "no stale #{type} files found") if verbose? and admin_command?
-      false
-    else
-      log(:reload, "the following #{type} files have changed: #{stale_files.join(', ')}") if debug?
-
-      if stale_files.any? {|f| File.extname(f) != ".clj"}
-        log(:reload, "non-clojure #{type} files have changed, restarting") if verbose?
-        stop(:reload)
+    with_socket(nil) do |socket|
+      socket.write ":reload {}"
+      socket.close_write
+      if socket.eof?
+        FileUtils.touch(pidfile)
+        @load_time = Time.now
       else
-        log(:reload, "clojure #{type} files have changed, reloading") if verbose?
-        with_socket(nil) do |socket|
-          stale_files = stale_files.collect {|f| %{"#{f}"} }
-          socket.write ":reload {} [#{stale_files.join(" ")}]"
-          socket.close_write
-          if socket.eof?
-            FileUtils.touch(pidfile)
-            @load_time = Time.now
-          else
-            inspect(socket)
-            log(:reload, "unable to reload all #{type} files, restarting") if verbose?
-            stop(:reload)
-          end
-        end
+        inspect(socket) if debug?
+        log(:reload, "unable to reload all #{type} files, restarting") if verbose?
+        stop(:reload)
       end
-      true
     end
   end
 
@@ -448,21 +430,6 @@ class JVM
     else
       log(:kill, "#{type} jvm not running") if $command == :kill
     end
-  end
-
-  def files
-    files = ["project.clj", "#{$home}/.cake/config", ".cake/config"]
-    classpath.split(PATH_SEP).uniq.each do |path|
-      if path =~ /(.*)\/\*$/
-        files.concat Dir["#{path}.jar"] << "#{$1}/." # include the directory itself so deletions will be detected
-      else
-        Find.find(path) do |f|
-          Find.prune if f == "#{$bakedir}/src/jvm"
-          files << f if f =~ /\.(clj|class|jar)$/ and File.exists?(f) and not File.directory?(f)
-        end if File.exists?(path)
-      end
-    end
-    files
   end
 
   def ping
@@ -662,10 +629,6 @@ class Cake < JVM
     end
   end
 
-  def files
-    super.concat ["tasks.clj", "#{$home}/.cake/tasks.clj"]
-  end
-
   def java_opts
     # bootclasspath = %{-Xbootclasspath/a:"#{$clojure}"}
     [ENV['CAKE_JAVA_OPTS'], $config['cake.java_opts'], super].compact.join(' ')
@@ -773,8 +736,8 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   end
   $clojure = get_clojure(:dest => lib)
 
-  cakepath = ["#{$cakedir}/src", "#{lib}/*"]
-  bakepath = ["#{$cakedir}/bake"]
+  cakepath = ["#{$cakedir}/src", "#{lib}/*", "#{lib}/dev/*"]
+  bakepath = ["#{$cakedir}/bake", "#{lib}/dev/*"]
 else
   cakejar = "#{lib}/cake.jar"
   bakejar = "#{lib}/bake.jar"
