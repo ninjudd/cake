@@ -236,7 +236,6 @@ end
 
 def download(url, path, opts = {})
   file = File.basename(url)
-  path = "#{path}/#{file}" if File.directory?(path)
 
   if opts[:force] or not File.exists?(path)
     FileUtils.makedirs(File.dirname(path))
@@ -261,14 +260,14 @@ end
 
 def get_cake(opts = {})
   version = cake_version(opts[:version] || :current)
-  download("#{$github}/jars/cake-#{version}.jar", "#{$m2}/cake/cake/#{snapshot(version)}", opts)
+  download("#{$github}/jars/cake-#{version}.jar", "#{$m2}/cake/cake/#{snapshot(version)}/cake-#{version}.jar", opts)
 end
 
 def get_clojure(opts = {})
   version = opts[:version] || "1.2.0"
   repo    = opts[:repo]    || "http://build.clojure.org/releases"
   path    = "org/clojure/clojure/#{version}"
-  download("#{repo}/#{path}/clojure-#{version}.jar", "#{$m2}/#{path}", opts)
+  download("#{repo}/#{path}/clojure-#{version}.jar", "#{$m2}/#{path}/clojure-#{version}.jar", opts)
 end
 
 def progress_bar(label, ch = '=', bg = '', width = 77, out = $stdout, progress = 0, total = nil)
