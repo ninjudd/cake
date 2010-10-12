@@ -13,8 +13,7 @@
   [["clojure"           "http://build.clojure.org/releases"]
    ["clojure-snapshots" "http://build.clojure.org/snapshots"]
    ["clojars"           "http://clojars.org/repo"]
-   ["maven"             "http://repo1.maven.org/maven2"]
-   ["stuartsierra"      "http://stuartsierra.com/maven2"]])
+   ["maven"             "http://repo1.maven.org/maven2"]])
 
 (defn os-name []
   (let [name (System/getProperty "os.name")]
