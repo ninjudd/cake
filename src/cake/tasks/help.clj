@@ -45,3 +45,8 @@
     (list-all-tasks)))
 
 (deftask default #{help})
+
+(deftask eat
+  (while (not (.ready *in*))
+    (println "the cake is a lie.")
+    (Thread/sleep 300)))
