@@ -11,13 +11,12 @@
 ;; agreeing to be bound by the terms of this license.  You must not
 ;; remove this notice, or any other, from this software.
 
-;; renamed from clojure.contrib.find-namespaces to avoid conflicts.
-;; removed classpath and jar functions because we don't use them.
+;; copied from clojure.contrib.find-namespaces
 
 (ns
   #^{:author "Stuart Sierra"
      :doc "Search for ns declarations in dirs, JARs, or CLASSPATH"}
-  cake.utils.find-namespaces
+  clojure.contrib.find-namespaces
   (import (java.io File FileReader BufferedReader PushbackReader InputStreamReader)))
 
 ;;; Finding namespaces in a directory tree

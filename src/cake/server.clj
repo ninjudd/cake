@@ -5,8 +5,7 @@
         [lazytest.reload :only [reload]]
         [lazytest.tracker :only [tracker]]
         [cake.utils.io :only [multi-outstream with-outstream]]
-        [cake.utils.useful :only [if-ns]]
-        [cake.utils.find-namespaces :only [read-file-ns-decl]])
+        [cake.utils.useful :only [if-ns]])
   (:require [cake.utils.server-socket :as server-socket]
             [cake.utils.complete :as complete]
             [clojure.stacktrace :as stacktrace])
@@ -66,13 +65,12 @@
         (doseq [file project-files :when (> (.lastModified file) @timestamp)]
           (println (format "cannot reload %s, restarting" (.getPath file))))
         (reset! timestamp now))
-      (doseq [ns (changed)]
-        (if (= 'cake.core ns)
+      (if-let [namespaces (seq (filter find-ns (changed)))]
+        (if (contains? namespaces 'cake.core)
           (println "cannot reload cake.core, restarting")
-          (when (find-ns ns)
-            (try (reload ns)
-                 (catch Exception e
-                   (print-stacktrace e)))))))))
+          (try (apply reload namespaces)
+               (catch Exception e
+                 (print-stacktrace e))))))))
 
 (defn exit []
   (System/exit 0))
