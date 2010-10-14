@@ -1,5 +1,6 @@
 (ns cake.tasks.bake
-  (:use cake.core))
+  (:use cake.core
+        [cake.utils.compress :only [unsmash]]))
 
 (deftask eat
   (while (not (.ready *in*))
@@ -7,35 +8,4 @@
     (Thread/sleep 300)))
 
 (deftask bake
-  (println "
-                                OMM.
-                                 .MM.
-                                   OM.
-                                .MM
-                       . MMMMM.NI .
-                      .MMMMMM.MMMMM.                   .. ~DMMMMMMMM.
-                  .MM.MMMMMM:MMMMMMM.. . .....~8MMMMMMMD~ ..MMMZ. .IM
-                .MMM. MMMMMMMMMMMMMM.NMMMMMD~. ...    .IMMM....OMMMMM
-                .MMO. MMMMMMMMMMMMMM   ?MMM      ..MMMD ...DMMMMMMMMM
-            8MMMM MM   MMMMMMMMMMMM.   MMM+.   MMMD . .IMMMMMMMMMMMMM
-           MM=..  .++  M. OMMMM+.  ..MMO  ~MMM=. ..ZMMMMMMMMMMMMMMMM.
-           M8MMM        MM: OMM     . DMMM.....DMMMMMMMMMMMMMMMM ...
-           MD  .DMMMN~  ..MM......MMMI.... NMMMMMMMMMMMMMMMM... . ZMM
-           MD      . . :$NMMMMMMD.. . .MMMMMMMMMMMMMMMMN  . . DMMMMMM
-           MD                   .. MMMMMMMMMMMMMMMM8..  ..MMMMMMMMMMM
-           MD                   .MMMMMMMMMMMMMM7.   . MMMMMMMMMMMMMMM
-           MD                   .MMMMMMMMMM+.. . .MMMMMMMMMMMMMMMMO..
-           MD                   .MMMMMM: . ..,MMMMMMMMMMMMMMMMI.   =M
-           MD                   .MM......~MMMMMMMMMMMMMMMM+.   ?MMMMM
-           MD                   . ...IMMMMMMMMMMMMMMMM:....OMMMMMMMMM
-           MD                    $MMMMMMMMMMMMMMMM ....DMMMMMMMMMMMMM
-           MD                   .MMMMMMMMMMMMM+. ..?MMMMMMMMMMMMMMMM
-           MD                   .MMMMMMMMM:.  .$MMMMMMMMMMMMMMMM
-           MD                   .MMMMM,... DMMMMMMMMMMMMMMMM
-           MD                   .M. . .NMMMMMMMMMMMMMMMM
-           MD                    . MMMMMMMMMMMMMMMMN
-           MM                   .MMMMMMMMMMMMMM8
-            MM..                .MMMMMMMMMM7
-              NMM:.             .MMMMMM+
-                  IMMMMMMMMMMMMMMMM:
-"))
+  (println (unsmash "eJydlLGOwyAMhvc8hYduVF4bIVVZWBgMex6GZz9sSO7ApKHnSiUhvz9sY1jgxiIRLnciwCkV0+5l\nmXWlQSA2DB6uOEhFUv5HAoTkqNqIgoc32UOFeWVkS2udcilP5HHPH7yOF2VxagxD9RSWqLzAEaN8\nGVFiT8nTWxkkFwYy7syopUi4IPImlPJu6ugASyw0pBC9OV40Jj8jSLDsyqtHgEQsyG87ddZUl9Yz\nbEZa5tRNdbUMf7I4ss2TDcRlPatCKuuLG1fB8whBhSB7t3cJuVq+/LOP6uPKLveAUGRuUBane4e7\nqyesWGs1Lu6Q0hJeCGfv/49ixslFXd0ripUj8OwJnkN7T8VStir1BGnCbTIj7gffE+zvEZqiwKMn\ngG6+L/fIcGhbz/0CYrlJVGCTgCe3uTo8E87SFerQ3FdQd3lob4yPuYqtzUUll+y1w6u7G0MpmBab\nwYWuG2b5Aaa0YDM=")))
