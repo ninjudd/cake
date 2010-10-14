@@ -75,6 +75,22 @@
                        [true forms])]
     {:deps deps :doc doc :actions forms :destruct destruct :pred pred}))
 
+(defn- in-ts [ts task-decl]
+  (conj (drop 2 task-decl)
+        (symbol (str ts "." (second task-decl)))
+        (first task-decl)))
+
+(defmacro ts
+  "Wrap deftask calls with a task namespace. Takes docstrings for the namespace followed by forms.
+   Creates a task named after the namespace that prints a list of tasks in that namespace."
+  [ts & forms]
+  (let [[doc forms] (split-with string? forms)
+        doc (update (vec doc) 0 #(str % " --"))]
+    `(do
+       (deftask ~ts ~@doc
+         (invoke ~'help {:help [~(name ts)]}))
+       ~@(map (partial in-ts ts) forms))))
+
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
    be broken up among multiple deftask calls and even multiple files:
