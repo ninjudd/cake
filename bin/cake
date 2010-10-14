@@ -393,10 +393,10 @@ class JVM
   def start
     return unless enabled?
     if running?
-      log(:start, "#{type} jvm already running") if $command == :start and not $opts[:silent]
+      log(:start, "#{type} jvm already running") if $command == :start
       return
     else
-      log(:start, "starting #{type} jvm") if verbose? or ($command == :start and not $opts[:silent])
+      log(:start, "starting #{type} jvm") if verbose? or $command == :start
       @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
       @pid = daemon %{java #{vm_opts} -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(require '#{type}.core) (#{type}.core/start-server #{port})"}
       File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
@@ -781,7 +781,7 @@ else
 end
 
 if $command == :upgrade
-  system($0, "start", "--silent")
+  system($0, "killall")
   exec($0, "--version")
 end
 

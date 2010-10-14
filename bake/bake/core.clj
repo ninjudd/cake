@@ -6,7 +6,7 @@
             [bake.swank :as swank]
             [cake.server :as server]
             [cake.project :as project])
-  (:import [java.io FileOutputStream PrintStream PrintWriter]))
+  (:import [java.io File FileOutputStream PrintStream PrintWriter]))
 
 (defmacro defproject "Just save project hash in bake."
   [name version & opts]
@@ -45,6 +45,6 @@
     (when-let [auto-start (*config* "swank.auto-start")]
       (swank/start auto-start))
     (server/create port project-eval
-      :reload (reloader project/classpath-dirs project-files)
+      :reload (reloader project/classpath project-files (File. "lib"))
       :quit   quit)
     nil))

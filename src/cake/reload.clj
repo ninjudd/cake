@@ -13,7 +13,7 @@
 (defn- newer-than [timestamp files]
   (filter #(> (.lastModified %) timestamp) files))
 
-(defn- newer-namespace-decls [dirs timestamp]
+(defn- newer-namespace-decls [timestamp dirs]
   (remove nil? (map read-file-ns-decl (newer-than timestamp (find-sources dirs)))))
 
 (defn- add-to-dep-graph [dep-graph namespace-decls]
@@ -35,25 +35,26 @@
   (apply union (set changed-namespaces) (map #(dependents old-dependency-graph %)
                                              changed-namespaces)))
 
-(defn reloader [dirs project-files]
+(defn reloader [classpath project-files jar-dir]
   (let [timestamp (atom (System/currentTimeMillis))
-        graph     (atom (update-dependency-graph (graph) (newer-namespace-decls dirs 0)))]
-    (println graph)
+        graph     (atom (update-dependency-graph (graph) (newer-namespace-decls 0 classpath)))]
     (fn []
       (let [then @timestamp
             now  (System/currentTimeMillis)]
-        (doseq [file (newer-than then project-files)]
-          (println (format "cannot reload project file: %s" (.getPath file))))
-        (when-let [new-decls (seq (newer-namespace-decls dirs then))]
-          (let [new-names (map second new-decls)
-                affected  (affected-namespaces new-names @graph)]
-            (reset! timestamp now)
-            (swap! graph update-dependency-graph new-decls)
-            (if-let [to-reload (seq (filter find-ns affected))] ; only reload namespaces that are loaded
-              (if (contains? to-reload 'cake.core)
-                (println "cannot reload cake.core")
-                (if-let [cannot-reload (seq (filter #(depends? @graph % 'cake.core) to-reload))]
-                  (println "cannot reload namespaces that depend on cake.core:" cannot-reload)
-                  (try (apply reload to-reload)
-                       (catch Exception e
-                         (print-stacktrace e))))))))))))
+        (if-let [project-files (seq (newer-than then project-files))]
+          (println "cannot reload project files:" project-files)
+          (if-let [jars (seq (newer-than then (file-seq jar-dir)))]
+            (println "jars have changed:" jars)
+            (when-let [new-decls (seq (newer-namespace-decls then classpath))]
+              (let [new-names (map second new-decls)
+                    affected  (affected-namespaces new-names @graph)]
+                (reset! timestamp now)
+                (swap! graph update-dependency-graph new-decls)
+                (if-let [to-reload (seq (filter find-ns affected))] ; only reload namespaces that are loaded
+                  (if (contains? to-reload 'cake.core)
+                    (println "cannot reload cake.core")
+                    (if-let [cannot-reload (seq (filter #(depends? @graph % 'cake.core) to-reload))]
+                      (println "cannot reload namespaces that depend on cake.core:" cannot-reload)
+                      (try (apply reload to-reload)
+                           (catch Exception e
+                             (print-stacktrace e))))))))))))))

@@ -264,6 +264,6 @@
       (require '[cake.tasks new]))
     (server/init-multi-out ".cake/cake.log")
     (server/create port process-command
-      :reload (reloader project/classpath-dirs project-files)
+      :reload (reloader project/classpath project-files (File. "lib/dev"))
       :repl   repl)
     nil))
