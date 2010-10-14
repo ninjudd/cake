@@ -10,11 +10,12 @@
     (doseq [doc docs] (println "  " doc))))
 
 (def system-tasks #{"stop" "start" "restart" "reload" "ps" "kill"})
+(def hidden-tasks #{"default" "eat" "bake"})
 
 (defn taskdocs [pattern]
   (filter
    (fn [[name doc]]
-     (and (not= "default" name)
+     (and (not (contains? hidden-tasks name))
           (re-find pattern name)
           (or (:a *opts*) doc)))
    (into (for [[t doc] implicit-tasks] [(name t) doc])
