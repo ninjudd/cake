@@ -8,7 +8,7 @@
   "Launch pallet tasks from the command line.
 
    For a list of tasks
-     lein pallet help"
+     cake pallet help"
   (bake (:require [clojure.string :as str])
 	[options (:pallet *opts*)]
 	(do
