@@ -28,7 +28,7 @@
         [tasks task-opts] (split-with symbol? (:tasks opts))
         task-opts (into-map task-opts)]
     `(do (alter-var-root #'*project* (fn [_#] (project/create '~name ~version '~opts)))
-         (require '~'[cake.tasks help jar test compile deps release swank file version bake])
+         (require 'cake.tasks.default)
          (load-tasks '~tasks)
          (undeftask ~@(:exclude task-opts)))))
 

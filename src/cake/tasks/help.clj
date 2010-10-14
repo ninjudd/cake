@@ -49,5 +49,3 @@
   (if-let [tasks (:help *opts*)]
     (apply task-doc tasks)
     (list-tasks #"^[^.]*$" true)))
-
-(deftask default #{help})
