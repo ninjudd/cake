@@ -3,8 +3,6 @@
   :tasks [foo :exclude [uberjar jar]]
   :dependencies [[clojure "1.2.0"]
                  [clojure-contrib "1.2.0"]
-                 [clojure-useful "0.2.2" :exclusions [clojure]]
-                 [swank-clojure "1.2.1"]
                  [tokyocabinet "1.23-SNAPSHOT"]]
   :dev-dependencies [[clojure-complete "0.1.0"]
                      [autodoc "0.7.1"]]

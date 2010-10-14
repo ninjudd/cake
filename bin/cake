@@ -35,6 +35,10 @@ else
   def daemon(cmd)
     puts cmd if debug?
     pid = fork do
+      if not $stdin.tty?
+        $stdout.close
+        $stderr.close
+      end
       Process.setsid
       exec(cmd)
     end
@@ -333,6 +337,7 @@ class JVM
 
   def refresh
     @pid, @port, @version = IO.read(pidfile).split("\n"); @pid = @pid.to_i; @port = @port.to_i
+
     Process.kill(0, @pid) # make sure pid is valid
     TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
 
@@ -528,7 +533,7 @@ private
         log :cake, "connection to #{type} jvm is taking a long time...",
                    "you can use ^C to abort and use 'cake kill' or 'cake kill -9' to force the jvm to restart"
       end
-      retry
+      retry unless retries < -$timeout
     end
   ensure
     socket.close if socket

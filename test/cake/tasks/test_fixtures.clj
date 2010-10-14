@@ -12,8 +12,8 @@
 ;; by Stuart Sierra
 ;; March 28, 2009
 
-(ns test-fixtures
-  (:use clojure.test cake))
+(ns cake.tasks.test-fixtures
+  (:use clojure.test))
 
 (declare *a* *b* *c* *d*)
 

@@ -1,14 +1,14 @@
 (ns test-test
-  (:use clojure.test))
+  (:use cake clojure.test))
 
 (deftest #^{:tags [:foo]} tag-foo
-  (comment println "tag :foo")
+  (println ":foo:")
   (is (= 1 1)))
 
 (deftest #^{:tags [:bar]} tag-bar
-  (comment println "tag :bar")
+  (println ":bar:")
   (is (= 1 1)))
 
 (deftest #^{:tags [:foo :bar]} tag-foo-and-bar
-  (comment println "tags [:foo :bar]")
+  (println ":foobar:")
   (is (= 1 1)))

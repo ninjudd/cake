@@ -1,4 +1,4 @@
-(ns cake.tasks.dependencies
+(ns cake.tasks.deps
   (:use cake cake.core cake.ant cake.file
         [cake.project :only [group log]]
         [clojure.java.shell :only [sh]])
