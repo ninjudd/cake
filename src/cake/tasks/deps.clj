@@ -4,15 +4,17 @@
         [clojure.java.io :only [writer]]
         [cake.project :only [group]])
   (:import [java.io File]
-           [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move]
+           [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move Property]
            [org.apache.ivy.ant IvyConfigure IvyReport IvyResolve IvyRetrieve
             IvyDeliver IvyPublish IvyMakePom IvyInstall IvyMakePom$Mapping]
            [org.apache.ivy.plugins.parser.xml XmlModuleDescriptorParser]
            [org.apache.ivy.plugins.resolver IBiblioResolver]))
 
-(def *artifact-pattern* "[artifact]-[revision].[ext]")
+(def artifact-pattern "[artifact]-[revision].[ext]")
 
-(def *repositories*
+(def local-pattern "[organisation]/[module]/([branch]/)[revision]/[type]s/[artifact].[ext]")
+
+(def repositories
      [["clojure"           "http://build.clojure.org/releases"]
       ["clojure-snapshots" "http://build.clojure.org/snapshots"]
       ["clojars"           "http://clojars.org/repo/"]])
@@ -47,7 +49,7 @@
   "Adds default and project repositories."
   [settings project]
   (let [chain (.getResolver settings "main")]
-    (doseq [r (map make-resolver (concat *repositories*
+    (doseq [r (map make-resolver (concat repositories
                                          (:repositories project)))]
       (.setSettings r settings)
       (.addResolver settings r)
@@ -63,7 +65,8 @@
     [:dependency
      (merge {:org (group dep) :name (name dep) :rev (:version opts)
              :conf (or (:conf opts) default-conf)}
-            (select-keys opts [:transitive]))
+            (select-keys opts [:transitive])
+            (select-keys opts [:branch]))
      (map exclusion (:exclusions opts))]))
 
 (defn make-ivy
@@ -87,7 +90,7 @@
          (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))))
 
 (defn retrieve-conf [conf dest]
-  (ant IvyRetrieve {:conf conf :pattern (str dest "/" *artifact-pattern*) :sync true})
+  (ant IvyRetrieve {:conf conf :pattern (str dest "/" artifact-pattern) :sync true})
   (extract-native
    (fileset-seq {:dir dest :includes "*.jar"})
    (str dest "/native")))
@@ -105,8 +108,18 @@
       (invoke clean {})
       (bake-restart))))
 
+(defn ivy-properties [project]
+  (let [defaults {"ivy.shared.default.artifact.pattern" local-pattern
+                  "ivy.shared.default.ivy.pattern" local-pattern
+                  "ivy.local.default.artifact.pattern" local-pattern
+                  "ivy.local.default.ivy.pattern" local-pattern}
+        properties (merge defaults (:ivy-properties project))]
+    (doall (for [[k v] properties]
+             (ant Property {:name k :value v})))))
+
 (deftask resolve
-  (let [configure-task (ant IvyConfigure {})
+  (let [properties     (ivy-properties *project*)
+        configure-task (ant IvyConfigure {})
         settings       (.getReference *ant-project* "ivy.instance")
         ivy            (.getConfiguredIvyInstance settings configure-task)]
     (add-resolvers (.getSettings ivy) *project*))
