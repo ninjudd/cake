@@ -100,6 +100,9 @@
   (doseq [a (remove nil? (flatten args))]
     (.. task createArg (setValue a))))
 
+(defn argline [task args]
+  (.. task createArg (setLine args)))
+
 (defn sys [task map]
   (doseq [[key val] map]
     (.addSysproperty task
