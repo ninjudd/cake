@@ -2,8 +2,6 @@
   (:use cake
         [cake.project :only [with-context current-context]]
         [clojure.main :only [skip-whitespace]]
-        [lazytest.reload :only [reload]]
-        [lazytest.tracker :only [tracker]]
         [cake.utils.io :only [multi-outstream with-outstream]]
         [cake.utils.useful :only [if-ns]])
   (:require [cake.utils.server-socket :as server-socket]
@@ -49,28 +47,6 @@
   (let [[prefix ns] (read)]
     (doseq [completion (complete/completions prefix ns)]
       (println completion))))
-
-(defn- track-dirs []
-  (for [url (.getURLs (java.lang.ClassLoader/getSystemClassLoader))
-        :let [file (File. (.getFile url))]
-        :when (.isDirectory file)]
-    file))
-
-(defn reloader [project-files]
-  (let [timestamp (atom (System/currentTimeMillis))
-        changed   (tracker (track-dirs) 0)]
-    (changed) ;; build dependency graph
-    (fn []
-      (let [now (System/currentTimeMillis)]
-        (doseq [file project-files :when (> (.lastModified file) @timestamp)]
-          (println (format "cannot reload %s, restarting" (.getPath file))))
-        (reset! timestamp now))
-      (if-let [namespaces (seq (filter find-ns (changed)))]
-        (if (contains? namespaces 'cake.core)
-          (println "cannot reload cake.core, restarting")
-          (try (apply reload namespaces)
-               (catch Exception e
-                 (print-stacktrace e))))))))
 
 (defn exit []
   (System/exit 0))

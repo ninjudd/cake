@@ -41,6 +41,12 @@
   (into (map #(File. %) local-files)
         (map #(File. global-root %) global-files)))
 
+(def classpath-dirs
+  (for [url (.getURLs (java.lang.ClassLoader/getSystemClassLoader))
+        :let [file (File. (.getFile url))]
+        :when (.isDirectory file)]
+    file))
+
 (defn load-files [files]
   (doseq [file files :when (.exists file)]
     (load-file (.getPath file))))

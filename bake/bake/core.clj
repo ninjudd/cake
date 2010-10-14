@@ -1,5 +1,6 @@
 (ns bake.core
   (:use cake
+        [cake.reload :only [reloader]]
         [cake.utils.useful :only [merge-in into-map]])
   (:require clojure.main
             [bake.swank :as swank]
@@ -44,6 +45,6 @@
     (when-let [auto-start (*config* "swank.auto-start")]
       (swank/start auto-start))
     (server/create port project-eval
-      :reload (server/reloader project-files)
+      :reload (reloader project/classpath-dirs project-files)
       :quit   quit)
     nil))

@@ -1,6 +1,7 @@
 (ns cake.core
   (:use cake cake.utils.useful cake.file
         clojure.contrib.condition
+        [cake.reload :only [reloader]]
         [clojure.string :only [join trim]])
   (:require [cake.ant :as ant]
             [cake.server :as server]
@@ -247,6 +248,6 @@
       (require '[cake.tasks new]))
     (server/init-multi-out ".cake/cake.log")
     (server/create port process-command
-      :reload (server/reloader project-files)
+      :reload (reloader project/classpath-dirs project-files)
       :repl   repl)
     nil))
