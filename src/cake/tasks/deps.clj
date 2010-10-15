@@ -160,12 +160,29 @@
 
 (deftask deps-report #{resolve}
   "Generates a dependency report in various formats to build/reports/ivy."
+  "One report per configuration is generated, but all reports
+   generated together are hyperlinked one to another.
+
+   --todir   the directory to which reports should be generated
+   --dot     generate graphviz dot files, false otherwise
+
+   See http://ant.apache.org/ivy/history/2.2.0/use/report.html for a full
+   list of supported options."
   (let [defaults {:todir "build/reports/ivy"}
         options  (merge defaults (opts-to-ant *opts*))]
     (ant IvyReport options)))
 
 (deftask publish #{resolve}
-  "Publish this project to the local ivy repository."
+  "Publish this project to an ivy repository."
+  "By default this task publishes to the local repository using
+   the current project version as defined in project.clj.
+
+   --resolver     the name of the resolver to use for publication. [local]
+   --pubrevision  the revision to use for the publication [project version]
+   --pubbranch    the branch to use for the publication
+
+   See http://ant.apache.org/ivy/history/2.2.0/use/publish.html for a full
+   list of supported options."
   (let [defaults {:resolver "local"
                   :forcedeliver true
                   :overwrite true
@@ -176,8 +193,23 @@
 
 (deftask install-module
   "Installs a module from one repository to another."
-  "Requires --organisation --module and --revision.
-   Defaults --from=public and --to=local."
+  "By default this task installs from the public (maven)
+   repository to your local repository.
+
+   The following options are required:
+
+   --organisation   the module organisation
+   --module         the module name
+   --revision       the revision to install
+
+   Some other useful options:
+
+   --branch         the module branch to install from
+   --overwrite      force overwrite of any preexisting modules
+   --transitive     install transitively
+
+   See http://ant.apache.org/ivy/history/2.2.0/use/install.html for a full
+   list of supported options."
   ;; TODO: Allow org/mod/revision instead of named parameters.
   (let [defaults {:from "public"
                   :to "local"}
