@@ -10,6 +10,8 @@
            [org.apache.ivy.plugins.parser.xml XmlModuleDescriptorParser]
            [org.apache.ivy.plugins.resolver IBiblioResolver]))
 
+(def *exclusions* nil)
+
 (def artifact-pattern "[artifact]-[revision].[ext]")
 
 (def local-pattern "[organisation]/[module]/([branch]/)[revision]/[type]s/[artifact].[ext]")
@@ -67,7 +69,7 @@
              :conf (or (:conf opts) default-conf)}
             (select-keys opts [:transitive])
             (select-keys opts [:branch]))
-     (map exclusion (:exclusions opts))]))
+     (map exclusion (concat *exclusions* (:exclusions opts)))]))
 
 (defn make-ivy
   [project]
@@ -108,6 +110,9 @@
       (invoke clean {})
       (bake-restart))))
 
+(defn stale-deps? [deps-str deps-file]
+  (or (not (.exists deps-file)) (not= deps-str (slurp deps-file))))
+
 (defn ivy-properties [project]
   (let [defaults {"ivy.shared.default.artifact.pattern" local-pattern
                   "ivy.shared.default.ivy.pattern" local-pattern
@@ -126,8 +131,16 @@
   (make-ivy *project*)
   (ant IvyResolve {}))
 
-(deftask deps #{resolve}
-  (retrieve))
+(deftask deps
+  "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
+  (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :dev-dependencies])))
+        deps-file (file "lib" "deps.clj")]
+    (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
+      (do (invoke resolve)
+          (retrieve)
+          (spit deps-file deps-str))
+      (when (= ["force"] (:compile *opts*))
+        (invoke clean {})))))
 
 (defn make-mapping [task attrs]
   (let [mapping (.createMapping task)]
