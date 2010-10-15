@@ -25,6 +25,9 @@
       (stacktrace/print-cause-trace e)
       (flush))))
 
+(defn pst []
+  (print-stacktrace *e))
+
 (defonce num-connections (atom 0))
 
 (defn read-seq []
@@ -63,7 +66,7 @@
   (let [marker (read)]
     (try (swap! num-connections inc)
          (clojure.main/repl
-          :init   #(ns user)
+          :init   #(ns user (:use [cake.server :only [pst]]))
           :caught #(do (reset-in) (clojure.main/repl-caught %))
           :prompt #(println (str marker (ns-name *ns*))))
          (finally (swap! num-connections dec)))))
