@@ -2,7 +2,7 @@
   (:use cake cake.core cake.ant cake.file
         clojure.contrib.prxml
         [clojure.java.io :only [writer]]
-        [cake.project :only [group]])
+        [cake.project :only [group log]])
   (:import [java.io File]
            [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move Property]
            [org.apache.ivy.ant IvyConfigure IvyReport IvyResolve IvyRetrieve
