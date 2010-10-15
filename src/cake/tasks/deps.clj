@@ -81,10 +81,10 @@
               [:configurations
                [:conf {:name "master" :visibility "public"}]
                [:conf {:name "default" :visibility "public"}]
-               [:conf {:name "develop" :visibility "private"}]]
+               [:conf {:name "devel" :visibility "private"}]]
               [:dependencies
                (dependencies (:dependencies project) "default->default")
-               (dependencies (:dev-dependencies project) "develop->default")]]))))
+               (dependencies (:dev-dependencies project) "devel->default")]]))))
 
 (defn extract-native [jars dest]
   (doseq [jar jars]
@@ -100,7 +100,7 @@
 (defn retrieve []
   (log "Fetching dependencies...")
   (retrieve-conf "default" "build/lib")
-  (retrieve-conf "develop" "build/lib/dev")
+  (retrieve-conf "devel" "build/lib/dev")
   (when (.exists (file "build/lib"))
     (ant Delete {:dir "lib"})
     (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
