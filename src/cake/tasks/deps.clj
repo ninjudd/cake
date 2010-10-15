@@ -159,16 +159,17 @@
                     v)])))
 
 (deftask deps-report #{resolve}
-  "Generates a dependency report in various formats to build/reports/ivy."
-  "One report per configuration is generated, but all reports
-   generated together are hyperlinked one to another.
+  "Generates an html dependency reports build/reports/ivy."
+  "One report per configuration is generated.
 
    --todir   the directory to which reports should be generated
-   --dot     generate graphviz dot files, false otherwise
+   --dot     generate graphviz dot files if true
+   --graph   generate graphml files if true
 
    See http://ant.apache.org/ivy/history/2.2.0/use/report.html for a full
    list of supported options."
-  (let [defaults {:todir "build/reports/ivy"}
+  (let [defaults {:todir "build/reports/ivy"
+                  :graph false}
         options  (merge defaults (opts-to-ant *opts*))]
     (ant IvyReport options)))
 
