@@ -3,7 +3,7 @@
   (:use [lazytest.reload :only [reload]]
         [lazytest.dependency :only [graph depend dependents remove-key depends?]]
         [lazytest.nsdeps :only [deps-from-ns-decl]]
-        [clojure.contrib.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
+        [cake.utils.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
         [clojure.set :only [union]]
         [cake.server :only [print-stacktrace]]))
 
