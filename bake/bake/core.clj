@@ -20,6 +20,9 @@
 (defmacro deftask "Just ignore deftask calls in bake."
   [name & body])
 
+(defmacro defile "Same as deftask above"
+  [name & body])
+
 (defn quit []
   (if (= 0 (swank/num-connections))
     (server/quit)
