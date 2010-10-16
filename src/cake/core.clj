@@ -130,7 +130,6 @@
             (fn [~destruct]
               (when (and ~pred
                          (run-file-task? (file ~name) '~deps))
-                (println "inside defile")
                 (mkdir (.getParentFile *File*))
                 ~@actions)))))
 
