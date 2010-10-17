@@ -76,15 +76,24 @@
   (with-open [out (writer "ivy.xml")]
     (binding [*prxml-indent* 2
               *out* out]
-      (prxml [:ivy-module {:version "2.0"}
-              [:info {:organisation (:group-id project) :module (:name project) :revision (:version project)}]
-              [:configurations
-               [:conf {:name "master" :visibility "public"}]
-               [:conf {:name "default" :visibility "public"}]
-               [:conf {:name "devel" :visibility "private"}]]
-              [:dependencies
-               (dependencies (:dependencies project) "default->default")
-               (dependencies (:dev-dependencies project) "devel->default")]]))))
+      (let [description (:description project)
+            url (:url project)
+            license (:license project)]
+        (prxml [:ivy-module {:version "2.0"}
+                [:info {:organisation (:group-id project)
+                        :module (:name project)
+                        :revision (:version project)}
+                 (if license
+                   [:license {:name (:name license) :url (:url license)}])
+                 (if (or url description)
+                   [:description (if url {:homepage url}) (if description description)])]
+                [:configurations
+                 [:conf {:name "master" :visibility "public"}]
+                 [:conf {:name "default" :visibility "public"}]
+                 [:conf {:name "devel" :visibility "private"}]]
+                [:dependencies
+                 (dependencies (:dependencies project) "default->default")
+                 (dependencies (:dev-dependencies project) "devel->default")]])))))
 
 (defn extract-native [jars dest]
   (doseq [jar jars]
@@ -159,7 +168,7 @@
                     v)])))
 
 (deftask deps-report #{resolve}
-  "Generates an html dependency reports build/reports/ivy."
+  "Generates an html dependency report to build/reports/ivy."
   "One report per configuration is generated.
 
    --todir   the directory to which reports should be generated

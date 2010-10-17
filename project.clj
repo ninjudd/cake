@@ -1,5 +1,8 @@
 (defproject cake "0.5.2"
   :description "Save your fork, there's cake!"
+  :url "http://github.com/ninjudd/cake"
+  :license {:name "Eclipse Public License - v 1.0"
+            :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[clojure "1.2.0"]
                  [clojure-contrib "1.2.0"]
                  [ordered-set "0.1.0"]
