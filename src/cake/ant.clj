@@ -94,7 +94,7 @@
     path))
 
 (defn classpath [& paths]
-  (apply path "src" "lib/*" paths))
+  (apply path "src" "lib/*" "dev" "lib/dev/*" paths))
 
 (defn args [task & args]
   (doseq [a (remove nil? (flatten args))]
