@@ -5,7 +5,7 @@
         [cake.project :only [group log]])
   (:import [java.io File]
            [org.apache.tools.ant.taskdefs Copy Delete ExecTask Move Property]
-           [org.apache.ivy.ant IvyConfigure IvyReport IvyResolve IvyRetrieve
+           [org.apache.ivy.ant IvyConfigure IvyCleanCache IvyReport IvyResolve IvyRetrieve
             IvyDeliver IvyPublish IvyMakePom IvyInstall IvyMakePom$Mapping]
            [org.apache.ivy.plugins.parser.xml XmlModuleDescriptorParser]
            [org.apache.ivy.plugins.resolver IBiblioResolver]))
@@ -225,3 +225,9 @@
                   :to "local"}
         options (merge defaults (opts-to-ant *opts*))]
     (ant IvyInstall options)))
+
+(deftask clean-cache
+  "Cleans the ivy cache of all modules."
+  "This is roughly equivelent to rm -rf ~/.m2 for maven users
+   but deletes the ivy.cache.dir instead."
+  (ant IvyCleanCache {}))
