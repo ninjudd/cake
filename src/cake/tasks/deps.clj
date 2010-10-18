@@ -71,6 +71,18 @@
              :rev (:version opts) :name (name dep) :org (group dep)})
      (map exclusion (concat *exclusions* (:exclusions opts)))]))
 
+(def default-confs
+     {:confs [{:name "master"}
+              {:name "default"}
+              {:name "devel" :visibility "private"}]})
+
+(defn configurations
+  [project]
+  (let [confs (or (:configurations project) default-confs)]
+    [:configurations (select-keys confs [:defaultconf :defaultconfmapping :confmappingoverride])
+     (for [conf (:confs confs)]
+       [:conf conf])]))
+
 (defn make-ivy
   [project]
   (with-open [out (writer "ivy.xml")]
@@ -88,10 +100,7 @@
                    [:license {:name (:name license) :url (:url license)}])
                  (if (or url description)
                    [:description (if url {:homepage url}) (if description description)])]
-                [:configurations
-                 [:conf {:name "master" :visibility "public"}]
-                 [:conf {:name "default" :visibility "public"}]
-                 [:conf {:name "devel" :visibility "private"}]]
+                (configurations project)                
                 [:dependencies
                  (dependencies (:dependencies project) "default->default")
                  (dependencies (:dev-dependencies project) "devel->default")]])))))
