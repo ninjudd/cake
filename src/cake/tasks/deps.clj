@@ -65,10 +65,10 @@
   [deps default-conf]
   (for [[dep opts] deps]
     [:dependency
-     (merge {:org (group dep) :name (name dep) :rev (:version opts)
-             :conf (or (:conf opts) default-conf)}
-            (select-keys opts [:transitive])
-            (select-keys opts [:branch]))
+     (merge (if (:classifier opts) {"m:classifier" (:classifier opts)})
+            (select-keys opts [:branch :transitive :force :changing])
+            {:conf (or (:conf opts) default-conf)
+             :rev (:version opts) :name (name dep) :org (group dep)})
      (map exclusion (concat *exclusions* (:exclusions opts)))]))
 
 (defn make-ivy
@@ -79,7 +79,8 @@
       (let [description (:description project)
             url (:url project)
             license (:license project)]
-        (prxml [:ivy-module {:version "2.0"}
+        (prxml [:ivy-module {:version "2.0"
+                             "xmlns:m" "http://ant.apache.org/ivy/maven"}
                 [:info {:organisation (:group-id project)
                         :module (:name project)
                         :revision (:version project)}
