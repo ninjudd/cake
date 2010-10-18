@@ -314,3 +314,4 @@ code in the global project. The file doesn't even have to end in .clj.
 - Lance Bradley ([lancepantz](http://github.com/lancepantz))
 - Anthony Simpson ([Raynes](http://github.com/Raynes))
 - David Santiago ([davidsantiago](http://github.com/davidsantiago))
+- Luke Renn ([lrenn](http://github.com/lrenn))
