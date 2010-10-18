@@ -51,7 +51,7 @@
   "Adds default and project repositories."
   [settings project]
   (let [chain (.getResolver settings "main")]
-    (doseq [r (map make-resolver (concat repositories
+    (doseq [r (map make-resolver (concat (if-not (:ivysettings project) repositories)
                                          (:repositories project)))]
       (.setSettings r settings)
       (.addResolver settings r)
@@ -134,7 +134,9 @@
 
 (deftask resolve
   (let [properties     (ivy-properties *project*)
-        configure-task (ant IvyConfigure {})
+        ivysettings    (:ivysettings *project*)
+        configure-opts (if ivysettings {:file ivysettings} {})
+        configure-task (ant IvyConfigure configure-opts)
         settings       (.getReference *ant-project* "ivy.instance")
         ivy            (.getConfiguredIvyInstance settings configure-task)]
     (add-resolvers (.getSettings ivy) *project*))
