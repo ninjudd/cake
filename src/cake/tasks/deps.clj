@@ -79,9 +79,24 @@
 (defn configurations
   [project]
   (let [confs (or (:configurations project) default-confs)]
-    [:configurations (select-keys confs [:defaultconf :defaultconfmapping :confmappingoverride])
+    [:configurations
+     (select-keys confs [:defaultconf :defaultconfmapping :confmappingoverride])
      (for [conf (:confs confs)]
        [:conf conf])]))
+
+(defn default-pubs
+  [project]
+  {:artifacts [{:name (:name project)
+                :type "jar"
+                :conf "master,default"}]})
+
+(defn publications
+  [project]
+  (let [pubs (or (:publications project) (default-pubs project))]
+    [:publications
+     (select-keys pubs [:defaultconf])
+     (for [artifact (:artifacts pubs)]
+       [:artifact artifact])]))
 
 (defn make-ivy
   [project]
@@ -99,8 +114,11 @@
                  (if license
                    [:license {:name (:name license) :url (:url license)}])
                  (if (or url description)
-                   [:description (if url {:homepage url}) (if description description)])]
-                (configurations project)                
+                   [:description
+                    (if url {:homepage url})
+                    (if description description)])]
+                (configurations project)
+                (publications project)
                 [:dependencies
                  (dependencies (:dependencies project) "default->default")
                  (dependencies (:dev-dependencies project) "devel->default")]])))))
