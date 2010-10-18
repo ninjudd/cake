@@ -1,4 +1,4 @@
-(defproject cake "0.5.3"
+(defproject cake "0.6.0-SNAPSHOT"
   :description "Save your fork, there's cake!"
   :url "http://github.com/ninjudd/cake"
   :license {:name "Eclipse Public License - v 1.0"
