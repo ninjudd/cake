@@ -1,4 +1,5 @@
 pom.xml
+ivy.xml
 .cake
 *.jar
 *.war
