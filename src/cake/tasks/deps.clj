@@ -166,9 +166,10 @@
         configure-task (ant IvyConfigure configure-opts)
         settings       (.getReference *ant-project* "ivy.instance")
         ivy            (.getConfiguredIvyInstance settings configure-task)]
-    (add-resolvers (.getSettings ivy) *project*))
-  (make-ivy *project*)
-  (ant IvyResolve {}))
+    (add-resolvers (.getSettings ivy) *project*)
+    (make-ivy *project*)
+    (.setShowProgress (.getLoggerEngine ivy) false)
+    (ant IvyResolve {:showprogress false})))
 
 (deftask deps
   "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
