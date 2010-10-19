@@ -129,7 +129,7 @@
     `(swap! tasks update '~name update-task '~deps '~doc
             (fn [~destruct]
               (when (and ~pred
-                         (run-file-task? (file ~name) '~deps))
+                         (run-file-task? *File* '~deps))
                 (mkdir (.getParentFile *File*))
                 ~@actions)))))
 
@@ -138,6 +138,9 @@
 
 (defmacro remove-dep! [task dep]
   `(swap! tasks update-in ['~task :deps] disj '~dep))
+
+(defn- expand-defile-path [path]
+  (file (.replaceAll path "\\+context\\+" (str (:context *project*)))))
 
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
@@ -152,7 +155,7 @@
           (set! run? (assoc run? name :in-progress))
           (doseq [dep (:deps task)] (run-task dep))
           (binding [*current-task* name
-                    *File* (if-not (symbol? name) (file name))]
+                    *File* (if-not (symbol? name) (expand-defile-path name))]
             (doseq [action (:actions task)] (action *opts*))
             (set! run? (assoc run? name true))
             (if (symbol? name)
