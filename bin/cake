@@ -384,8 +384,8 @@ class JVM
   end
 
   def vm_opts
-    `java -d32 -version 2>&1`
-    '-client -d32' if $? == 0
+    result = `java -d32 -version 2>&1`
+    '-client -d32' if $? == 0 and result !~ /Cannot run Java in 32 bit mode/
   end
 
   MIN_PORT = 2**14
