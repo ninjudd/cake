@@ -3,3 +3,5 @@
 (println *file*)
 (println cake/*pwd*)
 (println cake/*env*)
+(Thread/sleep 4000)
+(println "DONE")
