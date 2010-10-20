@@ -239,11 +239,18 @@ rescue NotImplementedError, Errno::EINVAL
   file
 end
 
+def mkdir_force(dir)
+  FileUtils.makedirs(dir)
+rescue Errno::EEXIST
+  File.unlink(dir)
+  FileUtils.makedirs(dir)
+end
+
 def download(url, path, opts = {})
   file = File.basename(url)
 
-  if opts[:force] or not File.exists?(path)
-    FileUtils.makedirs(File.dirname(path))
+  if opts[:force] or not File.exists?(path)        
+    mkdir_force(File.dirname(path))
     open(url, progress_bar(url)) do |remote|
       open(path, "wb") do |local|
         while (buf = remote.read(8192)); local.write buf; end
@@ -255,7 +262,7 @@ def download(url, path, opts = {})
   dir  = File.expand_path(opts[:dest])
   dest = "#{dir}/#{file}"
   if opts[:force] or not File.exists?(dest)
-    FileUtils.makedirs(dir)
+    mkdir_force(dir)
     FileUtils.copy(path, dest)
   end
   dest
