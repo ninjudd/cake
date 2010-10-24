@@ -151,7 +151,7 @@
         (log "Creating standalone executable:" (.getPath binfile))
         (with-open [bin (FileOutputStream. binfile)]
           (let [shebang (format "#!/usr/bin/env sh\nexec java %s -jar $0 \"$@\"\n"
-                                (*config* "project.java_opts"))]
+                                (or (*config* "project.java_opts") ""))]
             (.write bin (.getBytes shebang)))
           (copy uberjar bin))
         (ant Chmod {:file binfile :perm "+x"})))
