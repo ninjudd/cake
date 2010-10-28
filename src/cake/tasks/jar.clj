@@ -150,9 +150,11 @@
       (when (newer? uberjar binfile)
         (log "Creating standalone executable:" (.getPath binfile))
         (with-open [bin (FileOutputStream. binfile)]
-          (let [shebang (format "#!/usr/bin/env sh\nexec java %s -jar $0 \"$@\"\n"
-                                (or (*config* "project.java_opts") ""))]
-            (.write bin (.getBytes shebang)))
+          (let [opts (or (*config* "project.java_opts") "")
+                unix (format ":;exec java %s -jar $0 \"$@\"\n" opts)
+                dos  (format "@echo off\r\njava %s -jar %%1 \"%%~f0\" %%*\r\ngoto :eof\r\n" opts)]
+            (.write bin (.getBytes unix))
+            (.write bin (.getBytes dos)))
           (copy uberjar bin))
         (ant Chmod {:file binfile :perm "+x"})))
     (println "Cannot create bin without :main namespace in project.clj")))
