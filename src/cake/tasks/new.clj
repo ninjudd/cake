@@ -32,7 +32,7 @@
     (if (.exists root)
       (println "error:" project "already exists in this directory")
       (do
-        (log (str "Creating a new project based on ~/cake/templates/" template))
+        (log (str "Creating a new project based on ~/.cake/templates/" template))
         (ant Copy {:todir root} (add-fileset {:dir (str (file template-dir template))}))
         (rename-files root project)
         (scan-replace-contents (file-seq root) project)))))
