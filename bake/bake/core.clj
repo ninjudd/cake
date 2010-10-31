@@ -11,7 +11,8 @@
 (defmacro defproject "Just save project hash in bake."
   [name version & opts]
   (let [opts (into-map opts)]
-    `(do (alter-var-root #'*project* (fn [_#] (project/create '~name ~version '~opts))))))
+    `(do (alter-var-root #'*project*      (fn [_#] (project/create '~name ~version '~opts)))
+         (alter-var-root #'*project-root* (fn [_#] (project/create '~name ~version '~opts))))))
 
 (defmacro defcontext [name & opts]
   (let [opts (into-map opts)]

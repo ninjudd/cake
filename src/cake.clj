@@ -2,20 +2,23 @@
   (:import [java.io File FileInputStream]
            [java.util Properties]))
 
-(def *current-task* nil)
-(def *project*      nil)
+(def *project-root* nil)
 (def *context*      nil)
-(def *script*       nil)
-(def *opts*         nil)
-(def *pwd*          nil)
-(def *env*          nil)
-(def *vars*         nil)
-(def *File*         nil)
-(def *root* (System/getProperty "cake.project"))
 
-(def *ins*  nil)
-(def *outs* nil)
-(def *errs* nil)
+
+(def ^:dynamic *current-task* nil)
+(def ^:dynamic *project*      nil)
+(def ^:dynamic *script*       nil)
+(def ^:dynamic *opts*         nil)
+(def ^:dynamic *pwd*          nil)
+(def ^:dynamic *env*          nil)
+(def ^:dynamic *vars*         nil)
+(def ^:dynamic *File*         nil)
+(def ^:dynamic *root* (System/getProperty "cake.project"))
+
+(def ^:dynamic *ins*  nil)
+(def ^:dynamic *outs* nil)
+(def ^:dynamic *errs* nil)
 
 (defn read-config [file]
   (if (.exists file)
