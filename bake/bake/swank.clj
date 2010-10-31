@@ -7,11 +7,14 @@
 (def current-port (atom nil))
 (defn running? [] (not (nil? @current-port)))
 
-(if-ns (:use [swank.swank :only [start-repl]]
-             [swank.core.server :only [*connections*]])
+(if-ns (:require [swank.swank :as swank]
+                 [swank.core.server :as swank.server])
   (do
     (defn installed? [] true)
-    (defn num-connections [] (count @*connections*))
+    (defn num-connections []
+      (let [connections (or (ns-resolve 'swank.server '*connections*)
+                            (ns-resolve 'swank.server 'connections))]
+        (count @connections)))
     (defn start [host]
       (let [[host port] (if (.contains host ":") (.split host ":") ["localhost" host])
             port        (Integer/parseInt port)
@@ -22,7 +25,7 @@
             (fn [f] (start-thread #(with-context (current-context) (f))))))
         (binding [*out* writer
                   *err* (PrintWriter. writer)]
-          (start-repl port :host host))
+          (swank/start-repl port :host host))
         (if (.contains (.toString writer) "java.net.BindException")
           false
           (compare-and-set! current-port nil port)))))
