@@ -11,8 +11,8 @@
 (defmacro defproject "Just save project hash in bake."
   [name version & opts]
   (let [opts (into-map opts)]
-    `(do (alter-var-root #'*project*      (fn [_#] (project/create '~name ~version '~opts)))
-         (alter-var-root #'*project-root* (fn [_#] (project/create '~name ~version '~opts))))))
+    `(do (alter-var-root #'*project*    (fn [_#] (project/create '~name ~version '~opts)))
+         (alter-var-root #'project-root (fn [_#] (project/create '~name ~version '~opts))))))
 
 (defmacro defcontext [name & opts]
   (let [opts (into-map opts)]
@@ -46,7 +46,7 @@
          (eval (:startup *project*))
          (catch Exception e
            (server/print-stacktrace e)))
-    (when-let [auto-start (*config* "swank.auto-start")]
+    (when-let [auto-start (get *config* "swank.auto-start")]
       (swank/start auto-start))
     (server/create port project-eval
       :reload (reloader project/classpath project-files (File. "lib"))

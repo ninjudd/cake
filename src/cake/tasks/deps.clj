@@ -26,7 +26,7 @@
 
 (defn os-arch []
   (or (first (:arch *opts*))
-      (*config* "project.arch")
+      (get *config* "project.arch")
       (let [arch (System/getProperty "os.arch")]
         (case arch
           "amd64" "x86_64"
@@ -63,7 +63,7 @@
 
 (defn subproject-path [dep]
   (when *config*
-    (*config* (str "subproject." (name dep)))))
+    (get *config* (str "subproject." (name dep)))))
 
 (defn add-jarset [task path exclusions]
   (let [exclusions (map #(re-pattern (str % "-\\d.*")) exclusions)]

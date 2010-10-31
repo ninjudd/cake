@@ -150,7 +150,7 @@
       (when (newer? uberjar binfile)
         (log "Creating standalone executable:" (.getPath binfile))
         (with-open [bin (FileOutputStream. binfile)]
-          (let [opts (or (*config* "project.java_opts") "")
+          (let [opts (or (get *config* "project.java_opts") "")
                 unix (format ":;exec java %s -jar $0 \"$@\"\n" opts)
                 dos  (format "@echo off\r\njava %s -jar %%1 \"%%~f0\" %%*\r\ngoto :eof\r\n" opts)]
             (.write bin (.getBytes unix))

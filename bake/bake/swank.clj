@@ -8,13 +8,13 @@
 (defn running? [] (not (nil? @current-port)))
 
 (if-ns (:require [swank.swank :as swank]
-                 [swank.core.server :as swank.server])
+                 swank.core.server)
   (do
     (defn installed? [] true)
     (defn num-connections []
-      (let [connections (or (ns-resolve 'swank.server '*connections*)
-                            (ns-resolve 'swank.server 'connections))]
-        (count @connections)))
+      (let [connections (or (ns-resolve 'swank.core.server '*connections*)
+                            (ns-resolve 'swank.core.server 'connections))]
+        (count @@connections)))
     (defn start [host]
       (let [[host port] (if (.contains host ":") (.split host ":") ["localhost" host])
             port        (Integer/parseInt port)

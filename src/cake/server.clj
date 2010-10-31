@@ -15,7 +15,7 @@
 (if-ns (:require [clj-stacktrace.repl :as clj-stacktrace])
   (do
     (defn print-stacktrace [e]
-      (if-let [pst-color (*config* "clj-stacktrace")]
+      (if-let [pst-color (get *config* "clj-stacktrace")]
         (do (printf "%s: " (.getName (class e)))
             (clj-stacktrace/pst-on *out* (= "color" pst-color) e))
         (do (stacktrace/print-cause-trace e)

@@ -2,12 +2,11 @@
   (:import [java.io File FileInputStream]
            [java.util Properties]))
 
-(def *project-root* nil)
-(def *context*      nil)
-
+(def project-root nil)
 
 (def ^:dynamic *current-task* nil)
 (def ^:dynamic *project*      nil)
+(def ^:dynamic *context*      nil)
 (def ^:dynamic *script*       nil)
 (def ^:dynamic *opts*         nil)
 (def ^:dynamic *pwd*          nil)
@@ -26,5 +25,6 @@
       (into {} (doto (Properties.) (.load f))))
     {}))
 
-(def *config* (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
-                     (read-config (File. ".cake/config"))))
+(def ^:dynamic *config*
+  (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
+         (read-config (File. ".cake/config"))))
