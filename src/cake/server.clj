@@ -77,10 +77,10 @@
 (defn eval-multi
   ([] (eval-multi (doall (read-seq))))
   ([forms]
-     (in-ns 'user)
-     (last
-      (for [form forms]
-        (eval-verbose form)))))
+     (binding [*ns* (the-ns 'user)]
+       (last
+        (for [form forms]
+          (eval-verbose form))))))
 
 (defn eval-filter []
   (let [end (read)]
