@@ -90,8 +90,13 @@
             (println ~end))))))
 
 (defn run-file []
-  (let [script (read)]
-    (load-file script)))
+  (let [script (read)
+        script-ns (gensym "script")]
+    (try
+      (binding [*ns* (create-ns script-ns)]
+        (clojure.core/refer-clojure)
+        (load-file script))
+      (finally (remove-ns script-ns)))))
 
 (def default-commands
   {:validate    validate-form
