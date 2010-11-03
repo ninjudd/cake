@@ -709,7 +709,7 @@ $script  = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd     = Dir.getwd
 $bakedir = project_dir($pwd)
 $cakedir = File.expand_path(File.dirname(File.dirname(readlink(__FILE__))))
-$github  = "http://github.com/ninjudd/cake-standalone/raw/master"
+$github  = "https://github.com/ninjudd/cake-standalone/raw/master"
 $m2      = "#{$home}/.m2/repository"
 $config  = Configuration.new("#{$home}/.cake/config", ".cake/config")
 $vars    = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
