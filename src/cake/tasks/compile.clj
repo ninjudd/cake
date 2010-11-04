@@ -63,9 +63,8 @@
     (bake-restart)))
 
 (defn copy-native []
-  (when-let [libs (:native-libs *project*)]
-    (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}
-         (add-fileset {:dir "build/native/lib"}))))
+  (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}
+       (add-fileset {:dir "build/native/lib"})))
 
 (deftask compile #{deps compile-native}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
