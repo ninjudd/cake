@@ -62,19 +62,10 @@
           (compile lib))))
     (bake-restart)))
 
-(defn add-native-libs [task dir libs]
-  (doseq [lib libs]
-    (let [libname (System/mapLibraryName (str lib))
-          libfile (file dir libname)]
-      (if (.exists libfile)
-        (add-fileset task {:file libfile})
-        (when (= "macosx" (os-name))
-          (add-fileset task {:file (file dir (.replaceAll libname "\\.jnilib" ".dylib"))}))))))
-
 (defn copy-native []
   (when-let [libs (:native-libs *project*)]
     (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}
-         (add-native-libs "build/native/lib" libs))))
+         (add-fileset {:dir "build/native/lib"}))))
 
 (deftask compile #{deps compile-native}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
