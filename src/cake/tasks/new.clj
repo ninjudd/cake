@@ -48,7 +48,7 @@
     (spit (file template "project.clj") default-template)
     (log "Created template file: project.clj")
     (spit (file template ".gitignore")
-          (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" "+project+"] (repeat "\n"))))
+          (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" "./+project+"] (repeat "\n"))))
     (log "Created template file: .gitignore")
     (extract-resource "LICENSE" template)
     (log "Created template LICENSE file (Eclipse Public License)")))
