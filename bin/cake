@@ -47,6 +47,15 @@ else
   end
 end
 
+module OpenURI
+  REDIRECTABLE = ['http', 'ftp', 'https']
+  def self.redirectable?(uri1, uri2)
+    scheme1 = uri1.scheme.downcase
+    scheme2 = uri2.scheme.downcase
+    scheme1 == scheme2 or (REDIRECTABLE.include?(scheme1) and REDIRECTABLE.include?(scheme2))
+  end
+end
+
 class IO
   def gets_nonblock(delim = "\n")
     line = ""
