@@ -49,9 +49,6 @@
 
 (def implicit-tasks
   {'repl     ["Start an interactive shell with history and tab completion."]
-   'stop     ["Stop cake jvm processes."]
-   'start    ["Start cake jvm processes."]
-   'restart  ["Restart cake jvm processes."]
    'reload   ["Reload any .clj files that have changed or restart."]
    'upgrade  ["Upgrade cake to the most current version."]
    'ps       ["List running cake jvm processes for all projects."]

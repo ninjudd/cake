@@ -9,7 +9,7 @@
     (apply println "cake" name deps)
     (doseq [doc docs] (println "  " doc))))
 
-(def system-tasks #{"stop" "start" "restart" "reload" "ps" "kill" "killall"})
+(def system-tasks #{"reload" "ps" "kill" "killall"})
 (def hidden-tasks #{"default" "eat" "bake"})
 
 (defn taskdocs [pattern]

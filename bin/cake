@@ -189,11 +189,7 @@ def verbose?
 end
 
 def restart?
-  $opts[:r] or $opts[:restart] or [:stop, :restart].include?($command)
-end
-
-def admin_command?
-  [:start, :stop, :reload, :restart].include?($command)
+  $opts[:r] or $opts[:restart]
 end
 
 def log(command, *messages)
@@ -373,7 +369,7 @@ class JVM
   end
 
   def with_restart
-    stop
+    kill
     yield
     start
   end
@@ -388,7 +384,7 @@ class JVM
       else
         inspect(socket) if debug?
         log(:reload, "unable to reload all #{type} files, restarting") if verbose?
-        stop(:reload)
+        kill
       end
     end
   end
@@ -418,26 +414,6 @@ class JVM
     end
   rescue Errno::EADDRNOTAVAIL => e # port already in use
     retry
-  end
-
-  def stop(mode = :stop)
-    return unless running?
-    with_socket(nil) do |socket|
-      action = mode == :reload ? 'quit' : 'force-quit'
-      log(mode, "sending #{action} to #{type} jvm on port #{port}") if debug?
-      socket.write(":#{action} {}")
-      if socket.eof?
-        log(mode, "#{type} jvm stopped") if restart?
-        reset!
-      else
-        inspect(socket)
-        if mode == :stop
-          log(mode, "error stopping #{type} jvm, try 'cake kill' or 'cake kill -9'")
-        else
-          log(mode, "close active connections or use 'cake stop' to force quit")
-        end
-      end
-    end || (log(mode, "#{type} jvm not running") if $command == :stop)
   end
 
   def kill(force = $opts[:"9"])
@@ -814,7 +790,8 @@ if $command == :default and $opts[:version]
   exit
 elsif $command == :killall or $command == :kill
   if $opts[:all] or $opts[:kill] == ['all'] or $command == :killall
-    puts "'cake kill --all' is deprecated, in the future use 'cake kill all' instead" if $opts[:all]
+    puts "'cake kill --all' is deprecated, in the future use 'cake killall' instead" if $opts[:all]
+    puts "'cake kill all' is deprecated, in the future use 'cake killall' instead" if $opts[:kill] == ['all']
     num = ps.each do |line|
       pid = line.split(' ').first.to_i
       Process.kill($opts[:"9"] ? KILL : TERM, pid)
@@ -834,14 +811,13 @@ elsif $command == :restart and $opts[:restart] == ["project"]
   bake.init
   exit
 elsif restart?
-  cake.stop
-  bake.stop
-  exit if $command == :stop
+  cake.kill
+  bake.kill
 end
 
 cake.init
 if [:deps, :clean].include?($command)
-  bake.stop
+  bake.kill
 elsif File.exists?('project.clj')
   if not bake.enabled?
     cake.send_command(:deps)
@@ -857,14 +833,9 @@ if [:repl, :eval, :filter, :run].include?($command)
   else
     bake.send($command)
   end
-elsif [:start, :reload, :restart].include?($command)
-  if $opts[:l] or $opts[:log]
-    system("touch .cake/project.log")
-    system("tail -f .cake/project.log")
-  else
-    cake.ping
-    bake.ping
-  end
+elsif [:reload].include?($command)
+  cake.ping
+  bake.ping
 else
   if $command == :autotest
     cake.send_command(:test)
