@@ -53,9 +53,18 @@
   (if-let [context (get-in *opts* [:context 0])]
     (symbol context)))
 
+(defn project-with-context [context]
+  (merge-in project-root
+            (assoc (context *context*)
+              :context context)))
+
 (defmacro with-context [context & forms]
   `(let [context# (symbol (name (or ~context (:context *project*))))]
-     (binding [*project* (merge-in project-root
-                                   (assoc (context# *context*)
-                                     :context context#))]
+     (binding [*project* (project-with-context context#)]
        ~@forms)))
+
+(defmacro with-context! [context & forms]
+  `(let [context# (symbol (name (or ~context (:context *project*))))]
+     (alter-var-root #'*project* (fn [_#] (project-with-context context#)))
+     (do ~@forms)
+     (alter-var-root #'*project* project-root)))
