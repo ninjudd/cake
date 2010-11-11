@@ -357,7 +357,7 @@ class JVM
     kill if @version != $version
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Process::Error => e
     if e.kind_of?(Errno::ECONNREFUSED)
-      log(:start, "defunct #{type} jvm") if debug?
+      log(:cake, "defunct #{type} jvm") if debug?
       kill(true)
     end
     reset! # no pidfile or invalid pid or connection refused
@@ -403,15 +403,12 @@ class JVM
 
   def start
     return unless enabled?
-    if running?
-      log(:start, "#{type} jvm already running") if $command == :start
-      return
-    else
-      log(:start, "starting #{type} jvm") if verbose? or $command == :start
-      @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-      @pid = daemon %{java #{vm_opts} -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(require '#{type}.core) (#{type}.core/start-server #{port})"}
-      File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
-    end
+    return if running?
+
+    log(:cake, "starting #{type} jvm") if verbose?
+    @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
+    @pid = daemon %{java #{vm_opts} -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(require '#{type}.core) (#{type}.core/start-server #{port})"}
+    File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
   rescue Errno::EADDRNOTAVAIL => e # port already in use
     retry
   end
