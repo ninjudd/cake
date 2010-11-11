@@ -851,3 +851,5 @@ else
     cake.send_command($command)
   end
 end
+
+system("tail -n0 -f .cake/project.log") if $opts[:l] or $opts[:log]
