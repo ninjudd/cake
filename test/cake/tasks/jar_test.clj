@@ -7,39 +7,39 @@
 (use-fixtures :once in-test-project)
 
 (deftest jar
-  (let [results  (cake "jar")
-	jarfile  (file "test-example-0.1.0-SNAPSHOT.jar")
-	jarfiles (into #{}
+  (let [results (cake "jar")
+	jarfile (file "test-example-0.1.0-SNAPSHOT.jar")
+	jarcontents (into #{}
 		       (.split (:out (sh "jar" "tf" (.toString jarfile)))
-			       "\n"))]
+			       "\n"))
+	expected ["META-INF/cake/test-example/test-example/"
+		  "META-INF/cake/" "META-INF/MANIFEST.MF"
+		  "bar.clj"
+		  "META-INF/maven/test-example/"
+		  "cake.clj"
+		  "META-INF/cake/test-example/test-example/project.clj"
+		  "bar__init.class"
+		  "baz.clj"
+		  "META-INF/"
+		  "bar$inc.class"
+		  "foo.clj"
+		  "META-INF/maven/test-example/test-example/"
+		  "META-INF/maven/"
+		  "META-INF/maven/test-example/test-example/pom.xml"
+		  "META-INF/cake/test-example/"
+		  "bar$foo.class"]]
     (is (.exists jarfile))
-    (is (contains? jarfiles "META-INF/"))
-    (is (contains? jarfiles "META-INF/cake/test-example/test-example/"))
-    (is (contains? jarfiles "META-INF/cake/"))
-    (is (contains? jarfiles "META-INF/MANIFEST.MF"))
-    (is (contains? jarfiles "bar.clj"))
-    (is (contains? jarfiles "META-INF/maven/test-example/"))
-    (is (contains? jarfiles "cake.clj"))
-    (is (contains? jarfiles "META-INF/cake/test-example/test-example/project.clj"))
-    (is (contains? jarfiles "bar__init.class"))
-    (is (contains? jarfiles "baz.clj"))
-    (is (contains? jarfiles "META-INF/"))
-    (is (contains? jarfiles "bar$inc.class"))
-    (is (contains? jarfiles "foo.clj"))
-    (is (contains? jarfiles "META-INF/maven/test-example/test-example/"))
-    (is (contains? jarfiles "META-INF/maven/"))
-    (is (contains? jarfiles "META-INF/maven/test-example/test-example/pom.xml"))
-    (is (contains? jarfiles "META-INF/cake/test-example/"))
-    (is (contains? jarfiles "bar$foo.class"))))
+    (doseq [f expected]
+      (is (contains? jarcontents f)))))
 
 (deftest uberjar
-  (let [results      (cake "uberjar")
-	uberjarfile  (file "test-example-0.1.0-SNAPSHOT-standalone.jar")
-	uberjarfiles (into #{}
+  (let [results         (cake "uberjar")
+	uberjarfile     (file "test-example-0.1.0-SNAPSHOT-standalone.jar")
+	uberjarcontents (into #{}
 			   (.split (:out (sh "jar" "tf"
 					     (.toString uberjarfile)))
 				   "\n"))]
     ;; this is a bit brittle, but that's the point, the test project should
     ;; be locked down to specific versions so nothing changes, ever.
     ;; forever ever. -l
-    (is (= 2699 (count uberjarfiles)))))
+    (is (= 2699 (count uberjarcontents)))))
