@@ -6,7 +6,8 @@
                  [tokyocabinet "1.23-SNAPSHOT"]]
   :dev-dependencies [[clojure-complete "0.1.0"]
                      [autodoc "0.7.1"]]
-  :context development)
+  :context development
+  :aot [bar])
 
 (defcontext qa
   :foo 1
