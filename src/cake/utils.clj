@@ -41,12 +41,12 @@
       (ant ExecTask (assoc opts :executable "sudo")
 	   (args (apply vector "-S" arglist))))))
 
-(defn cake-exec [& args]
+(defn cake-exec [& params]
   (ant ExecTask {:executable "ruby" :dir *root* :failonerror true}
-       (args *script* args (str "--project=" *root*))))
+       (args *script* params (str "--project=" *root*))))
 
-(defn git [& my-args]
+(defn git [& params]
   (if (.exists (file ".git"))
     (ant ExecTask {:executable "git" :dir *root* :failonerror true}
-      (args my-args))
+      (args params))
     (println "warning:" *root* "is not a git repository")))
