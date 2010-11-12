@@ -9,15 +9,16 @@
 (defn compile-java [src]
   (let [start (System/currentTimeMillis)]
     (when (.exists src)
-      (ant Javac (assoc (:java-compile *project*)
-                   :destdir     (file "classes")
-                   :classpath   (classpath)
-                   :srcdir      (path src)
-                   :fork        true
-                   :verbose     (verbose?)
-                   :debug       true
-                   :debug-level "source,lines"
-                   :failonerror true)))
+      (ant Javac (merge {:destdir     (file "classes")
+                         :classpath   (classpath)
+                         :srcdir      (path src)
+                         :fork        true
+                         :verbose     (verbose?)
+                         :debug       true
+                         :debug-level "source,lines"
+                         :target      "1.5"
+                         :failonerror true}
+                        (:java-compile *project*))))
     (when (some #(newer? % start) (file-seq (file "classes")))
       (bake-restart))))
 
