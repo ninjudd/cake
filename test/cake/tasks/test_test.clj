@@ -33,7 +33,6 @@
     (is (re-find #":bar:"    (:out results)))
     (is (re-find #":foobar:" (:out results)))))
 
-
 (deftest test-namespaces
   (let [results (cake "test" "test-foo-bar")]
     (is (not (re-find #":baz:" (:out results))))
