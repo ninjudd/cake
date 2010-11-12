@@ -2,7 +2,8 @@
   (:use cake cake.core cake.ant
         [cake.project :only [log]]
         [cake.utils.useful :only [update]]
-        [clojure.string :only [join]])
+        [clojure.string :only [join]]
+	[cake.utils :only [git]])
   (:import [org.apache.tools.ant.taskdefs Replace]))
 
 (def version-levels [:major :minor :patch])

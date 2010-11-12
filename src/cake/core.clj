@@ -2,12 +2,12 @@
   (:use cake cake.utils.useful cake.file
         clojure.contrib.condition
         [cake.reload :only [reloader]]
-        [clojure.string :only [join trim]])
+        [clojure.string :only [join trim]]
+	[cake.utils :only [os-name cake-exec *readline-marker*]])
   (:require [cake.ant :as ant]
             [cake.server :as server]
             [cake.project :as project])
   (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader FileNotFoundException]
-           [org.apache.tools.ant.taskdefs ExecTask]
            [java.net Socket SocketException]))
 
 (defn newer? [& args]
@@ -215,21 +215,9 @@
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
     `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
 
-(defn cake-exec [& args]
-  (ant/ant ExecTask {:executable "ruby" :dir *root* :failonerror true}
-    (ant/args *script* args (str "--project=" *root*))))
-
 (defn bake-restart []
   (project/log "Restarting project jvm")
   (cake-exec "restart" "project"))
-
-(defn git [& args]
-  (if (.exists (file ".git"))
-    (ant/ant ExecTask {:executable "git" :dir *root* :failonerror true}
-      (ant/args args))
-    (println "warning:" *root* "is not a git repository")))
-
-(def *readline-marker* nil)
 
 (defn process-command [[task readline-marker]]
   (binding [*readline-marker* readline-marker, run? {}]
@@ -247,12 +235,6 @@
 (defn repl []
   (binding [*current-task* "repl"]
     (ant/in-project (server/repl))))
-
-(defn prompt-read [prompt & opts]
-  (let [opts (apply hash-map opts)
-        echo (if (false? (:echo opts)) "@" "")]
-    (println (str echo *readline-marker* prompt))
-    (read-line)))
 
 (defn start-server [port]
   (let [project-files (project/files ["project.clj" "context.clj" "tasks.clj" "dev.clj"] ["tasks.clj" "dev.clj"])]
