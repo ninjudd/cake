@@ -1,5 +1,6 @@
 (ns user
   (:use cake cake.core cake.ant cake.file
+	[cake.utils :only [git]]
         [cake.project :only [log]]
         [cake.tasks.jar :only [build-uberjar jars uberjarfile]]
         [cake.tasks.release :only [upload-to-clojars]])

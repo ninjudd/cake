@@ -15,21 +15,3 @@
 (defcontext development
   :baz 1
   :bar 8)
-
-(deftask bar {[opt1 opt2 opt3] :optional}
-  (println opt1 opt2 opt3)
-  (bake (:use useful)
-        [foo (prompt-read "enter foo:")
-         bar (prompt-read "enter bar:")
-         pw  (prompt-read "enter password" :echo false)]
-        (println "project:" *project*)
-        (println "opts:" *opts*)
-        (println "foo:" foo)
-        (println "bar:" bar)
-        (println "password is" (count pw) "characters long")
-        (println "baz!")
-        (Thread/sleep 2000)
-        (println "done sleeping!")
-        (verify true "true is false!"))
-  (let [n (bake [] {:foo (rand) :bar (rand)})]
-    (println (class n) n)))
