@@ -1,5 +1,5 @@
 (ns cake.tasks.jar
-  (:use cake cake.core cake.ant ordered-set cake.file
+  (:use cake cake.core cake.ant cake.file
         [cake.project :only [current-context log]]
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
@@ -107,8 +107,7 @@
 (defn jars [& opts]
   (let [opts (apply hash-map opts)
         jar  (jarfile)]
-    (into (ordered-set jar)
-          (fileset-seq {:dir "lib" :includes "*.jar" :excludes (join "," (:excludes opts))}))))
+    (fileset-seq {:dir "lib" :includes "*.jar" :excludes (join "," (:excludes opts))})))
 
 (defn plexus-components [jar]
   (let [jarfile (JarFile. jar)]
