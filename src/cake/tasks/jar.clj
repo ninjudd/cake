@@ -107,7 +107,8 @@
 (defn jars [& opts]
   (let [opts (apply hash-map opts)
         jar  (jarfile)]
-    (fileset-seq {:dir "lib" :includes "*.jar" :excludes (join "," (:excludes opts))})))
+    (into [jar]
+          (fileset-seq {:dir "lib" :includes "*.jar" :excludes (join "," (:excludes opts))}))))
 
 (defn plexus-components [jar]
   (let [jarfile (JarFile. jar)]
