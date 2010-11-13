@@ -6,7 +6,8 @@
   :dev-dependencies [[clojure-complete "0.1.0"]
                      [autodoc "0.7.1"]]
   :context development
-  :aot [bar])
+  :aot [speak]
+  :main speak)
 
 (defcontext qa
   :foo 1

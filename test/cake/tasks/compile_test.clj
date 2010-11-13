@@ -11,6 +11,7 @@
     (let [results (cake "compile")
 	  classes (fileset-seq {:dir classes :includes "*.class"})]
       (is (< 1 (count classes)))
-      (is (some #(.contains (.getPath %) "bar$foo")   classes))
-      (is (some #(.contains (.getPath %) "bar$inc")   classes))
-      (is (some #(.contains (.getPath %) "bar__init") classes)))))
+      (is (some #(.contains (.getPath %) "speak") classes))
+      (is (some #(.contains (.getPath %) "speak$_main") classes))
+      (is (some #(.contains (.getPath %) "speak$sayhi") classes))
+      (is (some #(.contains (.getPath %) "speak__init") classes)))))
