@@ -86,12 +86,13 @@ Cake also provides several system tasks for managing the persistent JVM.
 
 ## Custom Tasks
 
-Custom tasks are created using the `deftask` and `defile` macros in either project.clj, 
-tasks.clj or within your src directory. Any namespaces within src containing tasks will need to 
-be added to the `:tasks` vector in project.clj and will be usable by other projects.
+Custom tasks can be created using the `deftask` macro in either `project.clj`, `tasks.clj`
+or within your `src` directory. Any namespaces within `src` containing tasks must be added
+to the `:tasks` vector in `project.clj` and will be usable by other projects as plugins.
 
-Like many build tools, Cake uses a dependency-based programming model. This means that if other tasks your task is dependent on share a dependency, that dependency will only be ran once. For more details, check out Martin Fowler's
-[excellent article](http://martinfowler.com/articles/rake.html#DependencyBasedProgramming)
+Like many build tools, Cake uses a dependency-based programming model. This means that if two
+tasks share a dependency, that dependency will only be run once. For more details, check out
+Martin Fowler's [excellent article](http://martinfowler.com/articles/rake.html#DependencyBasedProgramming)
 on Rake. Here is the example from that article using Cake syntax:
 
     (deftask code-gen
@@ -114,24 +115,30 @@ on Rake. Here is the example from that article using Cake syntax:
       (println "running tests...")
       ...)
 
-Dependencies for a task are denoted by a set. For the `deftask` macro, dependencies are tasks that should be invoked before the task being defined. 
+Dependencies for a task are denoted by a set after the task name. In this case, each dependency
+is just the name of a task that should be invoked before the task being defined.
 
 ### File Tasks
 
-The `defile` macro is used to define file generation tasks. Instead of a symbol, the task is named by a string that is the path to the file relative to the project root. Dependencies of `defile` tasks are essentially when clauses that say to invoke the file task only if any of the dependencies have changed since the last time the file was generated.
+The `defile` macro is used to define file generation tasks. Instead of a symbol, the task
+is named by a string that is the path to the file relative to the project
 
-    (defile "lib/deps.clj" #{"project.clj"}
-      "This task is only ran if project.clj is newer than lib/deps.clj"
-      (println "generating lib/deps.clj from project.clj...")
+    (defile "web.xml" #{"web.yaml"}
+      "This task is only run if web.yaml is newer than web.xml"
+      (println "generating web.xml from web.yaml...")
       ...)
 
-You can also mix file and task dependencies for both macros. Within the dependency set, strings represent file generation tasks and symbols represent regular tasks.
+As shown by this example, `defile` dependencies can be the name of a file. Two things will happen in
+this case:
 
-    (deftask uberwar #{"web.xml" compile}
-      "This appends a condition to the task. `uberwar` will only be ran if web.xml was touched, or compile was ran, since `uberwar` was last invoked.")
+ 1. the file task for `web.yaml`, if it exists, will be run before the `web.xml` task.
+ 2. the body of the `web.xml` task will only be run if `web.yaml` is newer than `web.xml.
 
-TODO: Re-opening task documentation
-TODO: :when clause documentation
+You can also mix file and task dependencies for both macros. Within the dependency set,
+strings represent file tasks and symbols represent regular tasks.
+
+    (deftask deploy #{"web.xml" uberwar}
+      "Always generate web.xml and uberwar before deploying")
 
 ## Command-line Arguments
 
