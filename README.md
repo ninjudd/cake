@@ -229,6 +229,40 @@ task for some other reason, you can use `invoke`.
        (println "Executing secondary task...")
        ...)
 
+### Contexts
+
+Cake contexts allow you to easily configure your application to run in different contexts.
+Some common contexts are `dev/qa/stage/production`. Contexts are declared using the `defcontext`
+macro and can be placed in `project.clj` or in `context.clj` in your project root.
+
+    (defcontext qa
+      :deploy {:hosts ["qa1.yourcorp.com" "qa2.yourcorp.com"]
+               :copy  [[:war "web.xml"]]}
+      :db {:database "qa"
+           :username "test"
+           :host     "qadb.yourcorp.com"})
+
+    (defcontext production
+      :deploy {:hosts ["web1.yourcorp.com" "web2.yourcorp.com" "web3.yourcorp.com"]
+               :copy  [[:war "web.xml"]]}
+      :db {:database "production"
+           :username "live"
+           :host     "master-db.yourcorp.com"})
+
+Contexts are implemented as an overlay on top of `cake/*project*`, so defaults can be
+added directly to `defproject` and current context data will appear in `*project*`. In
+this example, to access your database config in code, just do something like this:
+
+    (with-connection (:db *project*)
+      ...)
+
+Cake commands can also be run in a specific context using the `--context` command line
+option or the `@` command line shortcut. So the following two commands both start a repl
+using the `qa` context:
+
+    cake repl --context=qa
+    cake repl @qa
+
 ### Native Library Dependencies
 
 Cake will automatically extract precompiled native libraries for your os and architecture
