@@ -63,7 +63,8 @@
 
 (defn subproject-path [dep]
   (when *config*
-    (get *config* (str "subproject." (name dep)))))
+    (or (get *config* (str "subproject." (group dep) "." (name dep)))
+        (get *config* (str "subproject." (name dep))))))
 
 (defn add-jarset [task path exclusions]
   (let [exclusions (map #(re-pattern (str % "-\\d.*")) exclusions)]
