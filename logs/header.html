@@ -33,12 +33,16 @@ function next() {
   updateFrame();
 }
 
+function pad(num) {
+  return (num < 10) ? '0' + num : num;
+}
+
 function updateFrame() {
   now = (new Date()).getTime();
   if (current.getTime() > now) {
     current.setTime(now);
   }
-  day = current.getFullYear() + "-" + (current.getMonth() + 1) + "-" + current.getDate();
+  day = current.getFullYear() + "-" + pad(current.getMonth() + 1) + "-" + pad(current.getDate());
   document.getElementById('day').innerText = day;
   parent.logs.location = base_url + "/" + day + ".txt";
 }
