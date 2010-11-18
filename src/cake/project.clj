@@ -3,14 +3,14 @@
         [cake.file :only [file]]
         [cake.ant :only [fileset-seq]]
         [clojure.string :only [join]]
-        [cake.utils.useful :only [assoc-or update merge-in]])
+        [cake.utils.useful :only [assoc-or update merge-in tap]])
   (:import [java.io File]))
 
 (def global-root (.getPath (File. (System/getProperty "user.home") ".cake")))
 
 (defn classpath []
   (map #(str "file:" (.getPath %) (if (.isDirectory %) "/" " "))
-       (concat (map file ["/Users/justin/projects/bake/src/" "/Users/justin/projects/classlojure/src/"
+       (concat (map file [(System/getProperty "bake.path")
                           "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"])
                (fileset-seq {:dir "lib"     :includes "*"})
                (fileset-seq {:dir "lib/dev" :includes "*"})

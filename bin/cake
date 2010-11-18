@@ -317,9 +317,10 @@ end
 class JVM
   attr_reader :classpath, :libpath, :port, :pid, :pidfile, :load_time
 
-  def initialize(classpath, libpath)
+  def initialize(classpath, libpath, java_opts = "")
     @classpath = make_path(classpath)
     @libpath   = make_path(libpath)
+    @java_opts = java_opts
     @pidfile   = ".cake/cake.pid"
     @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
     refresh
@@ -381,7 +382,7 @@ class JVM
 
   def java_opts
     paths = %{-cp "#{classpath}" -Djava.library.path="#{libpath}"}
-    ["-Xms128M -Xmx256M", ENV['JAVA_OPTS'], $config['project.java_opts'], paths].compact.join(' ')
+    ["-Xms128M -Xmx256M", ENV['JAVA_OPTS'], $config['project.java_opts'], @java_opts, paths].compact.join(' ')
   end
 
   def vm_opts
@@ -398,7 +399,7 @@ class JVM
 
     log(:cake, "starting jvm") if verbose?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    @pid = daemon %{java #{vm_opts} -Dcake.project="#{$project}" #{java_opts} clojure.main -e "(require 'cake.core) (cake.core/start-server #{port})"}
+    @pid = daemon %{java #{vm_opts} #{java_opts} clojure.main -e "(require 'cake.core) (cake.core/start-server #{port})"}
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
   rescue Errno::EADDRNOTAVAIL => e # port already in use
     retry
@@ -702,6 +703,7 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   $clojure = get_clojure(:dest => lib)
 
   cakepath = ["#{$cakedir}/src", "#{lib}/*", "#{lib}/dev/*"]
+  bakepath = "#{$cakedir}/bake"
 else
   cakejar = "#{lib}/cake.jar"
   bakejar = "#{lib}/bake.jar"
@@ -717,6 +719,7 @@ else
     $clojure = "#{lib}/clojure.jar"
 
     cakepath = [cakejar, $clojure]
+    bakepath = bakejar
   else
     # Standalone script.
     log(:cake, "running from standalone script") if verbose?
@@ -734,6 +737,7 @@ else
     $clojure = get_clojure
 
     cakepath = [cakejar, $clojure]
+    bakepath = extract(cakejar, "bake.jar")
   end
 end
 
@@ -743,8 +747,9 @@ if $command == :upgrade
 end
 
 cake = JVM.new(
-  [$config['cake.classpath'], cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
-  [$config['cake.library.path'], "lib/dev/native"]
+  [$config['cake.classpath'], bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [$config['cake.library.path'], "lib/dev/native"],
+  %{-Dcake.project="#{$project}" -Dbake.path="#{bakepath}"}
 )
 
 if $command == :default and $opts[:version]
