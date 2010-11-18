@@ -88,4 +88,3 @@
         dest (prompt-read (format "java.library.path [%s]:" default))	
         dest (if (= "" dest) default dest)]
     (apply sudo "cp" (conj files dest))))
-
