@@ -1,50 +1,41 @@
 (ns bake.core
   (:use cake
-        [cake.reload :only [reloader]]
-        [cake.utils.useful :only [merge-in into-map]])
-  (:require clojure.main
-            [bake.swank :as swank]
-            [cake.server :as server]
-            [cake.project :as project])
-  (:import [java.io File FileOutputStream PrintStream PrintWriter]))
+        [clojure.string :only [join]]))
 
-(defmacro defproject "Just save project hash in bake."
-  [name version & opts]
-  (let [opts (into-map opts)]
-    `(do (alter-var-root #'*project*    (fn [_#] (project/create '~name ~version '~opts)))
-         (alter-var-root #'project-root (fn [_#] (project/create '~name ~version '~opts))))))
+(prn (ns-publics 'cake))
 
-(defmacro defcontext [name & opts]
-  (let [opts (into-map opts)]
-    `(alter-var-root #'*context* merge-in {'~name '~opts})))
+(defn merge-in
+  "Merge two nested maps."
+  [left right]
+  (if (map? left)
+    (merge-with merge-in left right)
+    right))
 
-(defmacro deftask "Just ignore deftask calls in bake."
-  [name & body])
+(defn log [& message]
+  (println (format "%11s %s" (str "[" *current-task* "]") (join " " message))))
 
-(defmacro defile "Same as deftask above"
-  [name & body])
+(defn debug? []
+  (boolean (or (:d *opts*) (:debug *opts*))))
 
-(defn quit []
-  (if (= 0 (swank/num-connections))
-    (server/quit)
-    (println "refusing to quit because there are active swank connections")))
+(defn verbose? []
+  (boolean (or (:v *opts*) (:verbose *opts*))))
 
-(defn project-eval [[current-task ns-forms body]]
-)
+(defn current-context []
+  (if-let [context (get-in *opts* [:context 0])]
+    (symbol context)))
 
-(defn start-server [port]
-  (let [project-files (project/files ["project.clj" "context.clj" "dev.clj"] ["dev.clj"])]
-    (in-ns 'bake.core)
-    (project/load-files project-files)
-    (server/init-multi-out ".cake/project.log")
-    (try (doseq [ns (:require *project*)]
-           (require ns))
-         (eval (:startup *project*))
-         (catch Exception e
-           (server/print-stacktrace e)))
-    (when-let [auto-start (get *config* "swank.auto-start")]
-      (swank/start auto-start))
-    (server/create port project-eval
-      :reload (reloader project/classpath project-files (File. "lib"))
-      :quit   quit)
-    nil))
+(defn project-with-context [context]
+  (merge-in project-root
+            (assoc (context *context*)
+              :context context)))
+
+(defmacro with-context [context & forms]
+  `(let [context# (symbol (name (or ~context (:context *project*))))]
+     (binding [*project* (project-with-context context#)]
+       ~@forms)))
+
+(defmacro with-context! [context & forms]
+  `(let [context# (symbol (name (or ~context (:context *project*))))]
+     (alter-var-root #'*project* (fn [_#] (project-with-context context#)))
+     (do ~@forms)
+     (alter-var-root #'*project* project-root)))
