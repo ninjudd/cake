@@ -2,7 +2,7 @@
   "Lancet-inspired ant helpers."
   (:use cake
         [cake.file :only [file]]
-        [cake.project :only [debug?]]
+        [bake.core :only [debug?]]
         [clojure.string :only [join]])
   (:import [org.apache.tools.ant Project NoBannerLogger]
            [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]

@@ -1,6 +1,6 @@
 (ns cake.tasks.file
   (:use cake cake.core cake.ant cake.file
-        [cake.project :only [log]])
+        [bake.core :only [log]])
   (:import (org.apache.tools.ant.taskdefs Delete Mkdir)))
 
 (defn clean-dir [dir]

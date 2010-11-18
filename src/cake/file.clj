@@ -40,6 +40,8 @@
 (defn mkdir [file & opts]
   (ant Mkdir (into-map opts :dir file)))
 
-(defn mtime< [a b]
-  (< (.lastModified (file a))
-     (.lastModified (file b))))
+(defn newer? [& args]
+  (apply > (for [arg args]
+             (if (number? arg)
+               arg
+               (.lastModified (if (string? arg) (file arg) arg))))))

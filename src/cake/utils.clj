@@ -1,7 +1,7 @@
 (ns cake.utils
   (:use cake
-	[cake.file :only [file]]
-	[cake.ant :only [ant args argline]])
+        [cake.file :only [file]]
+        [cake.ant :only [ant args argline]])
   (:import [org.apache.tools.ant.taskdefs ExecTask]))
 
 (def *readline-marker* nil)
@@ -22,8 +22,8 @@
       "unknown")))
 
 (defn os-arch []
-  (or (first (:arch cake/*opts*))
-      (get cake/*config* "project.arch")
+  (or (first (:arch *opts*))
+      (get *config* "project.arch")
       (let [arch (System/getProperty "os.arch")]
         (case arch
           "amd64" "x86_64"

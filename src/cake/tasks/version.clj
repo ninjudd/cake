@@ -1,6 +1,6 @@
 (ns cake.tasks.version
   (:use cake cake.core cake.ant
-        [cake.project :only [log]]
+        [bake.core :only [log]]
         [cake.utils.useful :only [update]]
         [clojure.string :only [join]]
 	[cake.utils :only [git]])

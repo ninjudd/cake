@@ -1,17 +1,79 @@
 (ns cake.project
-  (:use cake
+  (:use cake classlojure
+        [cake.file :only [file]]
+        [cake.ant :only [fileset-seq]]
         [clojure.string :only [join]]
         [cake.utils.useful :only [assoc-or update merge-in]])
   (:import [java.io File]))
 
-(defn log [& message]
-  (println (format "%11s %s" (str "[" *current-task* "]") (join " " message))))
+(def global-root (.getPath (File. (System/getProperty "user.home") ".cake")))
 
-(defn debug? []
-  (boolean (or (:d *opts*) (:debug *opts*))))
+(defn classpath []
+  (map #(str "file:" (.getPath %) (if (.isDirectory %) "/" " "))
+       (concat (map file ["/Users/justin/projects/bake/src/" "/Users/justin/projects/classlojure/src/"
+                          "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"])
+               (fileset-seq {:dir "lib"     :includes "*"})
+               (fileset-seq {:dir "lib/dev" :includes "*"})
+               (fileset-seq {:dir (str global-root "lib/dev") :includes "*"}))))
 
-(defn verbose? []
-  (boolean (or (:v *opts*) (:verbose *opts*))))
+(defonce classloader nil)
+
+(defn reload! []
+  (alter-var-root #'classloader
+    (fn [_]
+      (let [cl (classlojure (classpath))]
+        (eval-in cl '(do (require 'cake)
+                         (require 'bake.io)
+                         (require 'clojure.main)
+                         (bake.io/init-multi-out)))
+        cl))))
+
+(defn- quote-if
+  "We need to quote the binding keys so they are not evaluated within the bake
+   syntax-quote and the binding values so they are not evaluated in the
+   project/project-eval syntax-quote. This function makes that possible."
+  [pred bindings]
+  (reduce
+   (fn [v form]
+     (if (pred (count v))
+       (conj v (list 'quote form))
+       (conj v form)))
+   [] bindings))
+
+(defn project-eval [ns-forms bindings body]
+  (let [form
+        `(do (ns ~(symbol (str "bake.task." (name *current-task*)))
+               (:use ~'cake)
+               ~@ns-forms)
+             (let ~(quote-if odd? bindings)
+               ~@body))]
+    (eval-in
+     classloader
+     `(fn [ins# outs#]
+        (clojure.main/with-bindings
+          (bake.io/with-streams ins# outs#
+            (binding [~'cake/*current-task* '~*current-task*
+                      ~'cake/*project*      '~*project*
+                      ~'cake/*context*      '~*context*
+                      ~'cake/*script*       '~*script*
+                      ~'cake/*opts*         '~*opts*
+                      ~'cake/*pwd*          '~*pwd*
+                      ~'cake/*env*          '~*env*
+                      ~'cake/*vars*         '~*vars*]
+              (eval '~form)))))
+     *ins* *outs*)))
+
+(defmacro bake
+  "Execute code in a your project classloader. Bindings allow passing state to the project
+   classloader. Namespace forms like use and require must be specified before bindings."  
+  {:arglists '([ns-forms* bindings body*])}
+  [& forms]
+  (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
+    `(project-eval '~ns-forms ~(quote-if even? bindings) '~body)))
+
+(defn files [local-files global-files]
+  (into (map #(File. %) local-files)
+        (map #(File. global-root %) global-files)))
 
 (defn group [project]
   (if (or (= project 'clojure) (= project 'clojure-contrib))
@@ -34,37 +96,3 @@
         (update :dependencies     dep-map)
         (update :dev-dependencies dep-map)
         (assoc-or :name artifact))))
-
-(def global-root (.getPath (File. (System/getProperty "user.home") ".cake")))
-
-(defn files [local-files global-files]
-  (into (map #(File. %) local-files)
-        (map #(File. global-root %) global-files)))
-
-(def classpath
-  (for [url (.getURLs (java.lang.ClassLoader/getSystemClassLoader))]
-    (File. (.getFile url))))
-
-(defn load-files [files]
-  (doseq [file files :when (.exists file)]
-    (load-file (.getPath file))))
-
-(defn current-context []
-  (if-let [context (get-in *opts* [:context 0])]
-    (symbol context)))
-
-(defn project-with-context [context]
-  (merge-in project-root
-            (assoc (context *context*)
-              :context context)))
-
-(defmacro with-context [context & forms]
-  `(let [context# (symbol (name (or ~context (:context *project*))))]
-     (binding [*project* (project-with-context context#)]
-       ~@forms)))
-
-(defmacro with-context! [context & forms]
-  `(let [context# (symbol (name (or ~context (:context *project*))))]
-     (alter-var-root #'*project* (fn [_#] (project-with-context context#)))
-     (do ~@forms)
-     (alter-var-root #'*project* project-root)))

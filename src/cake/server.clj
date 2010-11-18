@@ -1,10 +1,12 @@
 (ns cake.server
   (:use cake
-        [cake.project :only [with-context current-context]]
+        [cake.project :only [bake]]
+        [bake.core :only [with-context current-context]]
         [clojure.main :only [skip-whitespace]]
-        [cake.utils.io :only [multi-outstream with-outstream]]
+        [bake.io :only [multi-outstream with-streams]]
         [cake.utils.useful :only [if-ns]])
-  (:require [cake.utils.server-socket :as server-socket]
+  (:require bake.repl
+            [cake.utils.server-socket :as server-socket]
             [cake.utils.complete :as complete]
             [clojure.stacktrace :as stacktrace])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream
@@ -56,17 +58,11 @@
     (exit)
     (println "warning: refusing to quit because there are active connections")))
 
-(defn- reset-in []
-  (while (.ready *in*) (.read *in*)))
-
 (defn repl []
-  (let [marker (read)]
-    (try (swap! num-connections inc)
-         (clojure.main/repl
-          :init   #(in-ns 'user)
-          :caught #(do (reset-in) (clojure.main/repl-caught %))
-          :prompt #(println (str marker (ns-name *ns*))))
-         (finally (swap! num-connections dec)))))
+  (if (:cake *opts*)
+    (bake.repl/repl (read))
+    (bake (:use bake.repl) [marker (read)]        
+          (repl marker))))
 
 (defn eval-verbose [form]
   (try (eval form)
@@ -117,38 +113,23 @@
   (let [commands (apply hash-map commands)]
     (server-socket/create-server port
       (fn [ins outs]
-        (with-outstream [*outs* outs, *errs* outs]
-          (binding [*in*  (LineNumberingPushbackReader. (InputStreamReader. ins))
-                    *out* (OutputStreamWriter. outs)
-                    *err* (PrintWriter. #^OutputStream outs true)
-                    *ins* ins]
-            (try
-              (let [form (read), vars (read)]
-                (clojure.main/with-bindings
-                  (set! *command-line-args*  (:args vars))
-                  (set! *warn-on-reflection* (:warn-on-reflection *project*))
-                  (binding [*vars*    vars
-                            *pwd*     (:pwd vars)
-                            *env*     (:env vars)
-                            *opts*    (:opts vars)
-                            *script*  (:script vars)]
-                    (with-context (current-context)
-                      (if (keyword? form)
-                        (when-let [command (or (commands form) (default-commands form))]
-                          (command))
-                        (f form))))))
-              (catch Throwable e
-                (print-stacktrace e)
-                (when (fatal? e) (System/exit 1)))))))
+        (with-streams ins outs
+          (try
+            (let [form (read), vars (read)]
+              (clojure.main/with-bindings
+                (set! *command-line-args*  (:args vars))
+                (set! *warn-on-reflection* (:warn-on-reflection *project*))
+                (binding [*vars*    vars
+                          *pwd*     (:pwd vars)
+                          *env*     (:env vars)
+                          *opts*    (:opts vars)
+                          *script*  (:script vars)]
+                  (with-context (current-context)
+                    (if (keyword? form)
+                      (when-let [command (or (commands form) (default-commands form))]
+                        (command))
+                      (f form))))))
+            (catch Throwable e
+              (print-stacktrace e)
+              (when (fatal? e) (System/exit 1))))))
       0 (InetAddress/getByName "localhost"))))
-
-(defn init-multi-out [logfile]
-  (let [outs (multi-outstream *outs*)
-        errs (multi-outstream *errs*)
-        log  (FileOutputStream. logfile true)]
-    (alter-var-root #'*outs* (fn [_] (atom (list log))))
-    (alter-var-root #'*errs* (fn [_] (atom (list log))))
-    (alter-var-root #'*out*  (fn [_] (PrintWriter. outs)))
-    (alter-var-root #'*err*  (fn [_] (PrintWriter. errs)))
-    (System/setOut outs)
-    (System/setErr errs)))

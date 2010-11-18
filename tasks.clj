@@ -1,11 +1,18 @@
 (ns user
   (:use cake cake.core cake.ant cake.file
 	[cake.utils :only [git]]
-        [cake.project :only [log]]
+        [bake.core :only [log]]
         [cake.tasks.jar :only [build-uberjar jars uberjarfile]]
         [cake.tasks.release :only [upload-to-clojars]])
   (:import [org.apache.tools.ant.taskdefs Jar Copy Move ExecTask]
            [java.io File]))
+
+(deftask bar
+  (prn (cake.project/classpath))
+  (bake (:require clojure.string)
+        [version *clojure-version*]
+        (prn (clojure.string/join "-" (vals version)))
+        (prn *project*)))
 
 (defn bakejar []
   (file "bake.jar"))
