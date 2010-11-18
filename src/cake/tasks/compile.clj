@@ -2,8 +2,9 @@
   (:use cake cake.core cake.ant cake.file
         [cake.project :only [verbose? debug? log]]
         [cake.utils.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
-        [cake.utils :only [os-name os-arch]]
-        [cake.utils.useful :only [pluralize]])
+        [cake.utils :only [os-name os-arch sudo]]
+        [cake.utils.useful :only [pluralize]]
+	[cake.ant :only [fileset-seq]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
 (defn compile-java [src]
@@ -77,3 +78,8 @@
 ;; add actions to compile-native if you need to compile native libraries
 ;; see http://github.com/lancepantz/tokyocabinet for an example
 (deftask compile-native)
+
+(deftask install-native
+  (let [files (vec (map str (fileset-seq {:dir (file "lib" "native")
+					  :includes "*"})))]
+    (apply sudo "cp" (conj files "/usr/local/lib/"))))
