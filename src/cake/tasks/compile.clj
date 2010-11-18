@@ -2,7 +2,7 @@
   (:use cake cake.core cake.ant cake.file
         [cake.project :only [verbose? debug? log]]
         [cake.utils.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
-        [cake.utils :only [os-name os-arch sudo]]
+        [cake.utils :only [os-name os-arch sudo prompt-read]]
         [cake.utils.useful :only [pluralize]]
 	[cake.ant :only [fileset-seq]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
@@ -79,7 +79,11 @@
 ;; see http://github.com/lancepantz/tokyocabinet for an example
 (deftask compile-native)
 
-(deftask install-native
+(deftask install-native #{compile-native}
+  (copy-native)
   (let [files (vec (map str (fileset-seq {:dir (file "lib" "native")
-					  :includes "*"})))]
-    (apply sudo "cp" (conj files "/usr/local/lib/"))))
+					  :includes "*"})))
+	default "/usr/lib/java/"
+	dest (prompt-read (format "java.library.path [%s]:" default))	
+	dest (if (= "" dest) default dest)]
+    (apply sudo "cp" (conj files dest))))
