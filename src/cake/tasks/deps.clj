@@ -1,7 +1,8 @@
 (ns cake.tasks.deps
   (:use cake cake.core cake.ant cake.file
-	[cake.utils :only [cake-exec os-name os-arch]]
-        [cake.project :only [group log]]
+        [cake.utils :only [cake-exec os-name os-arch]]
+        [cake.project :only [group reload!]]
+        [bake.core :only [log]]
         [clojure.java.shell :only [sh]])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
            [org.apache.tools.ant.taskdefs Copy Delete Move]
@@ -96,7 +97,7 @@
     (ant Delete {:dir "lib"})
     (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
   (invoke clean {})
-  (bake-restart))
+  (reload!))
 
 (defn stale-deps? [deps-str deps-file]
   (or (not (.exists deps-file)) (not= deps-str (slurp deps-file))))

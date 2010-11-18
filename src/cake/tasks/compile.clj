@@ -1,6 +1,7 @@
 (ns cake.tasks.compile
   (:use cake cake.core cake.ant cake.file
-        [cake.project :only [verbose? debug? log]]
+        [cake.project :only [reload!]]
+        [bake.core :only [verbose? debug? log]]
         [cake.utils.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
         [cake.utils :only [os-name os-arch sudo prompt-read]]
         [cake.utils.useful :only [pluralize]]
@@ -21,7 +22,7 @@
                          :failonerror true}
                         (:java-compile *project*))))
     (when (some #(newer? % start) (file-seq (file "classes")))
-      (bake-restart))))
+      (reload!))))
 
 (defn classfile [ns]
   (file "classes"
@@ -62,7 +63,7 @@
         (doseq [lib libs]
           (log "Compiling namespace" lib)
           (compile lib))))
-    (bake-restart)))
+    (reload!)))
 
 (defn copy-native []
   (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}

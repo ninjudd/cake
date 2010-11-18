@@ -30,11 +30,7 @@
     (println "refusing to quit because there are active swank connections")))
 
 (defn project-eval [[current-task ns-forms body]]
-  (let [ns     (symbol (str "bake.task." (name current-task)))
-        result (server/eval-multi `[(~'ns ~ns (:use ~'cake) ~@ns-forms)
-                                    (binding [cake/*current-task* '~current-task] ~body)])]
-    (println ::result)
-    (println (pr-str result))))
+)
 
 (defn start-server [port]
   (let [project-files (project/files ["project.clj" "context.clj" "dev.clj"] ["dev.clj"])]

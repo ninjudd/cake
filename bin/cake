@@ -315,13 +315,12 @@ def ps
 end
 
 class JVM
-  attr_reader :type, :classpath, :libpath, :port, :pid, :pidfile, :load_time
+  attr_reader :classpath, :libpath, :port, :pid, :pidfile, :load_time
 
   def initialize(classpath, libpath)
-    @type      = self.class.name.downcase
     @classpath = make_path(classpath)
     @libpath   = make_path(libpath)
-    @pidfile   = ".cake/#{type}.pid"
+    @pidfile   = ".cake/cake.pid"
     @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
     refresh
   end
@@ -348,7 +347,7 @@ class JVM
     kill if @version != $version
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Process::Error => e
     if e.kind_of?(Errno::ECONNREFUSED)
-      log(:cake, "defunct #{type} jvm") if debug?
+      log(:cake, "defunct jvm") if debug?
       kill(true)
     end
     reset! # no pidfile or invalid pid or connection refused
@@ -374,14 +373,15 @@ class JVM
         @load_time = Time.now
       else
         inspect(socket) if debug?
-        log(:reload, "unable to reload all #{type} files, restarting") if verbose?
+        log(:reload, "unable to reload all files, restarting") if verbose?
         kill
       end
     end
   end
 
   def java_opts
-    %{-cp "#{classpath}" -Djava.library.path="#{libpath}"}
+    paths = %{-cp "#{classpath}" -Djava.library.path="#{libpath}"}
+    ["-Xms128M -Xmx256M", ENV['JAVA_OPTS'], $config['project.java_opts'], paths].compact.join(' ')
   end
 
   def vm_opts
@@ -396,9 +396,9 @@ class JVM
     return unless enabled?
     return if running?
 
-    log(:cake, "starting #{type} jvm") if verbose?
+    log(:cake, "starting jvm") if verbose?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    @pid = daemon %{java #{vm_opts} -Dcake.project="#{$bakedir}" #{java_opts} clojure.main -e "(require '#{type}.core) (#{type}.core/start-server #{port})"}
+    @pid = daemon %{java #{vm_opts} -Dcake.project="#{$project}" #{java_opts} clojure.main -e "(require 'cake.core) (cake.core/start-server #{port})"}
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
   rescue Errno::EADDRNOTAVAIL => e # port already in use
     retry
@@ -407,11 +407,11 @@ class JVM
   def kill(force = $opts[:"9"])
     if pid
       signal = force ? KILL : TERM
-      log(:kill, "sending #{signal} signal to #{type} jvm") if debug?
+      log(:kill, "sending #{signal} signal to jvm") if debug?
       Process.kill(signal, pid)
       reset!
     else
-      log(:kill, "#{type} jvm not running") if $command == :kill
+      log(:kill, "jvm not running") if $command == :kill
     end
   end
 
@@ -419,7 +419,7 @@ class JVM
     return unless enabled?
     with_socket do |socket|
       socket.write ":ping {}\n"
-      log($command, "#{type} jvm not running") unless socket.gets == "pong\n"
+      log($command, "jvm not running") unless socket.gets == "pong\n"
     end
   end
 
@@ -439,6 +439,26 @@ class JVM
     end
   ensure
     save_history
+  end
+
+  READLINE = "READLINE__#{rand}"
+  def send_command(command)
+    with_restart { FileUtils.remove_dir("lib/dev", true) } if $win and [:deps, :clean].include?(command)
+
+    with_socket do |socket|
+      cmd = [command, READLINE].to_clj
+      log(command, "sending: " + cmd) if debug?
+      socket.write("#{cmd} #{$vars}")
+      socket.duplex($stdin, $stdout) do |line|
+        if line =~ /^#{READLINE}(.*)$/
+          socket.write(prompt($1))
+        elsif line =~ /^@#{READLINE}(.*)$/
+          socket.write(prompt($1, :echo => false))
+        else
+          line
+        end
+      end
+    end
   end
 
   def run
@@ -509,7 +529,7 @@ private
     sleep 1
     if retries
       if (retries -= 1) == 0
-        log :cake, "connection to #{type} jvm is taking a long time...",
+        log :cake, "connection to jvm is taking a long time...",
                    "you can use ^C to abort and use 'cake kill' or 'cake kill -9' to force the jvm to restart"
       end
       retry unless retries < -$timeout
@@ -589,35 +609,6 @@ private
       completions
     end
   end
-end
-
-class Cake < JVM
-  READLINE = "READLINE__#{rand}"
-  def send_command(command)
-    with_restart { FileUtils.remove_dir("lib/dev", true) } if $win and [:deps, :clean].include?(command)
-
-    with_socket do |socket|
-      cmd = [command, READLINE].to_clj
-      log(command, "sending: " + cmd) if debug?
-      socket.write("#{cmd} #{$vars}")
-      socket.duplex($stdin, $stdout) do |line|
-        if line =~ /^#{READLINE}(.*)$/
-          socket.write(prompt($1))
-        elsif line =~ /^@#{READLINE}(.*)$/
-          socket.write(prompt($1, :echo => false))
-        else
-          line
-        end
-      end
-    end
-  end
-
-  def java_opts
-    # bootclasspath = %{-Xbootclasspath/a:"#{$clojure}"}
-    ["-Xms16M -Xmx64M", ENV['CAKE_JAVA_OPTS'], $config['cake.java_opts'], super].compact.join(' ')
-  end
-
-private
 
   def prompt(prompt, opts = {})
     if opts[:echo] == false
@@ -637,18 +628,8 @@ private
   end
 end
 
-class Bake < JVM
-  def java_opts
-    ["-Xms128M -Xmx256M", ENV['JAVA_OPTS'], $config['project.java_opts'], super].compact.join(' ')
-  end
-
-  def enabled?
-    Dir['lib/*.jar'].any? or Dir['classes/**/*.class'].any?
-  end
-end
-
 def initialize_cake_dirs
-  FileUtils.makedirs("#{$bakedir}/.cake/run")
+  FileUtils.makedirs("#{$project}/.cake/run")
   FileUtils.makedirs("#{$home}/.cake/run")
   project_clj = "#{$home}/.cake/project.clj"
   File.open(project_clj, 'w') do |file|
@@ -680,7 +661,7 @@ end
 parse_opts!
 $script   = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd      = Dir.getwd
-$bakedir  = project_dir($pwd)
+$project  = project_dir($pwd)
 $cakedir  = File.expand_path(File.dirname(File.dirname(readlink(__FILE__))))
 $releases = "http://releases.clojure-cake.org"
 $m2       = "#{$home}/.m2/repository"
@@ -689,7 +670,7 @@ $vars     = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :
 $timeout  = ($config['connect.timeout'] || 20).to_i
 
 initialize_cake_dirs
-Dir.chdir($bakedir)
+Dir.chdir($project)
 
 if debug?
   puts "config: #{$config.inspect}"
@@ -711,7 +692,7 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   log(:deps, "project.clj version is #{$version}") if debug?
 
   # Force new cake libs if cake's project.clj has changed.
-  FileUtils.remove_dir(lib, true) if newer?(project, lib) and not $config['cake.disable-auto-deps']
+  #FileUtils.remove_dir(lib, true) if newer?(project, lib) and not $config['cake.disable-auto-deps']
 
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
@@ -721,7 +702,6 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   $clojure = get_clojure(:dest => lib)
 
   cakepath = ["#{$cakedir}/src", "#{lib}/*", "#{lib}/dev/*"]
-  bakepath = ["#{$cakedir}/bake", "#{lib}/dev/*"]
 else
   cakejar = "#{lib}/cake.jar"
   bakejar = "#{lib}/bake.jar"
@@ -737,7 +717,6 @@ else
     $clojure = "#{lib}/clojure.jar"
 
     cakepath = [cakejar, $clojure]
-    bakepath = bakejar
   else
     # Standalone script.
     log(:cake, "running from standalone script") if verbose?
@@ -755,7 +734,6 @@ else
     $clojure = get_clojure
 
     cakepath = [cakejar, $clojure]
-    bakepath = extract(cakejar, "bake.jar")
   end
 end
 
@@ -764,13 +742,9 @@ if $command == :upgrade
   exec($0, "--version")
 end
 
-cake = Cake.new(
-  [cakepath, "src", "src/clj", $config['cake.claspath'], "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+cake = JVM.new(
+  [$config['cake.classpath'], cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
   [$config['cake.library.path'], "lib/dev/native"]
-)
-bake = Bake.new(
-  [bakepath, "src", "src/clj", "classes", "resources", "dev", "test", "test/classes", $config['project.classpath'], $opts[:cp], "lib/*", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
-  [$config['project.library.path'], "lib/native", "lib/dev/native"]
 )
 
 if $command == :default and $opts[:version]
@@ -787,43 +761,21 @@ elsif $command == :killall or $command == :kill
     puts "No matching processes belonging to you were found" if num == 0
   else
     cake.kill
-    bake.kill
   end
   exit
 elsif $command == :ps
   puts ps.sort.reverse
   exit
-elsif $command == :restart and $opts[:restart] == ["project"]
-  log(:restart, "restarting bake jvm") if debug?
-  bake.kill
-  bake.init
-  exit
 elsif restart?
   cake.kill
-  bake.kill
 end
 
 cake.init
-if [:deps, :clean].include?($command)
-  bake.kill
-elsif File.exists?('project.clj')
-  if not bake.enabled?
-    cake.send_command(:deps)
-    cake.init
-  end
-
-  bake.init
-end
 
 if [:repl, :eval, :filter, :run].include?($command)
-  if $opts[:cake] or not File.exists?('project.clj')
-    cake.send($command)
-  else
-    bake.send($command)
-  end
+  cake.send($command)
 elsif [:reload].include?($command)
   cake.ping
-  bake.ping
 else
   if $command == :autotest
     cake.send_command(:test)
@@ -832,7 +784,6 @@ else
       sleep(interval.to_i)
       cake.send_command(:autotest)
       $stdout.print_flush('.')
-      bake.reload
       cake.reload
     end
   else

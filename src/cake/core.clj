@@ -1,20 +1,15 @@
 (ns cake.core
   (:use cake cake.utils.useful cake.file
         clojure.contrib.condition
-        [cake.reload :only [reloader]]
+        [bake.io :only [init-multi-out]]
+        [bake.reload :only [reloader]]
         [clojure.string :only [join trim]]
-	[cake.utils :only [os-name cake-exec *readline-marker*]])
-  (:require [cake.ant :as ant]
-            [cake.server :as server]
-            [cake.project :as project])
+        [cake.utils :only [os-name cake-exec *readline-marker*]])
+  (:require [cake.project :as project]
+            [cake.ant :as ant]
+            [cake.server :as server])
   (:import [java.io File FileReader InputStreamReader OutputStreamWriter BufferedReader FileNotFoundException]
            [java.net Socket SocketException]))
-
-(defn newer? [& args]
-  (apply > (for [arg args]
-             (if (number? arg)
-               arg
-               (.lastModified (if (string? arg) (file arg) arg))))))
 
 (defn load-tasks [tasks]
   (let [complain? (seq (.listFiles (file "lib")))]
@@ -109,7 +104,7 @@
 (defn run-file-task? [target-file deps]
   (let [{file-deps true task-deps false} (group-by string? deps)]
     (or (not (.exists target-file))
-        (some (partial mtime< target-file)
+        (some #(newer? % target-file)
               (into file-deps
                     (map #(task-run-file %)
                          task-deps)))
@@ -163,61 +158,8 @@
   `(binding [*opts* (or ~opts *opts*)]
      (run-task '~name)))
 
-(defn- bake-connect [port]
-  (loop []
-    (if-let [socket (try (Socket. "localhost" (int port)) (catch SocketException e))]
-      socket
-      (recur))))
-
-(defn- quote-if
-  "We need to quote the binding keys so they are not evaluated within the bake syntax-quote and the
-   binding values so they are not evaluated in the bake* syntax-quote. This function makes that possible."
-  [pred bindings]
-  (reduce
-   (fn [v form]
-     (if (pred (count v))
-       (conj v (list 'quote form))
-       (conj v form)))
-   [] bindings))
-
-(defn bake-port []
-  (try (Integer/parseInt
-        (trim (second (.split (slurp (file ".cake" "bake.pid")) "\n"))))
-       (catch FileNotFoundException e
-         nil)))
-
-(defn bake* [ns-forms bindings body]
-  (let [port (bake-port)]
-    (verify port "bake not supported. perhaps you don't have a project.clj")
-    (let [body  `(~'let ~(quote-if odd? bindings) ~@body)
-          socket (bake-connect port)
-          reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
-          writer (OutputStreamWriter. (.getOutputStream socket))]
-      (doto writer
-        (.write (prn-str [*current-task* ns-forms body] *vars*))
-        (.flush))
-      (loop [line (.readLine reader)]
-        (when-not (or (nil? line) (= ":bake.core/result" line))
-          (println line)
-          (recur (.readLine reader))))
-      (let [line   (.readLine reader)
-            result (rescue (read-string line) line)]
-        (flush)
-        (.close socket)
-        result))))
-
-(defmacro bake
-  "Execute code in a separate jvm with the classpath of your projects. Bindings allow
-   passing state to the project jvm. Namespace forms like use and require must be
-   specified before bindings."
-  {:arglists '([ns-forms* bindings body*])}
-  [& forms]
-  (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
-    `(bake* '~ns-forms ~(quote-if even? bindings) '~body)))
-
-(defn bake-restart []
-  (project/log "Restarting project jvm")
-  (cake-exec "restart" "project"))
+(defmacro bake [& args]
+  `(project/bake ~@args))
 
 (defn process-command [[task readline-marker]]
   (binding [*readline-marker* readline-marker, run? {}]
@@ -237,15 +179,20 @@
     (ant/in-project (server/repl))))
 
 (defn start-server [port]
-  (let [project-files (project/files ["project.clj" "context.clj" "tasks.clj" "dev.clj"] ["tasks.clj" "dev.clj"])]
-    (in-ns 'cake.core)
-    (project/load-files project-files)
-    (when-not *project* (require '[cake.tasks help new]))
-    (when (= "global" (:artifact-id *project*))
-      (undeftask test autotest jar uberjar war uberwar install release)
-      (require '[cake.tasks new]))
-    (server/init-multi-out ".cake/cake.log")
-    (server/create port process-command
-      :reload (reloader project/classpath project-files (File. "lib/dev"))
-      :repl   repl)
-    nil))
+  (ant/in-project
+   (project/reload!)
+   (let [classpath (for [url (.getURLs (java.lang.ClassLoader/getSystemClassLoader))]
+                     (File. (.getFile url)))
+         project-files (project/files ["project.clj" "context.clj" "tasks.clj" "dev.clj"] ["tasks.clj" "dev.clj"])]
+     (in-ns 'cake.core)
+     (doseq [file project-files :when (.exists file)]
+       (load-file (.getPath file)))     
+     (when-not *project* (require '[cake.tasks help new]))
+     (when (= "global" (:artifact-id *project*))
+       (undeftask test autotest jar uberjar war uberwar install release)
+       (require '[cake.tasks new]))
+     (init-multi-out)
+     (server/create port process-command
+       :reload (reloader classpath project-files (File. "lib/dev"))
+       :repl   repl)
+     nil)))
