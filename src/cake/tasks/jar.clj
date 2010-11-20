@@ -13,7 +13,10 @@
            [java.io File FileOutputStream]
            [java.util.jar JarFile]))
 
-(defn jarfile [] (:jar-name *project*))
+(defn artifact [name-key ext]
+  (file (str (name-key *project*) (when-let [cc (current-context)] (str "-" cc)) ext)))
+
+(defn jarfile [] (artifact :jar-name ".jar"))
 
 (defn manifest []
   (merge (:manifest *project*)
@@ -96,7 +99,7 @@
   (clean "*.jar")
   (build-jar))
 
-(defn uberjarfile [] (:uberjar-name *project*))
+(defn uberjarfile [] (artifact :uberjar-name ".jar"))
 
 (defn jars [& opts]
   (let [opts (apply hash-map opts)
@@ -153,7 +156,7 @@
         (ant Chmod {:file binfile :perm "+x"})))
     (println "Cannot create bin without :main namespace in project.clj")))
 
-(defn warfile [] (:uberwar-name *project*))
+(defn warfile [] (artifact :uberwar-name ".war"))
 
 (defn build-war []
   (let [web     "WEB-INF"
