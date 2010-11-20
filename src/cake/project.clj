@@ -24,13 +24,17 @@
       [dep (apply hash-map :version version opts)])))
 
 (defn create [project-name version opts]
-  (let [artifact (name project-name)]
+  (let [artifact (name project-name)
+        artifact-version (str artifact "-" version)]
     (-> opts
         (assoc :artifact-id  artifact
                :group-id     (group project-name)
                :aot          (or (:aot opts) (:namespaces opts))
                :version      version
-               :context      (symbol (or (:context opts) "dev")))
+               :context      (symbol (or (:context opts) "dev"))
+               :jar-name     (File. (or (:jar-name opts) (str artifact-version ".jar")))
+               :uberjar-name (File. (or (:uberjar-name opts) (str artifact-version "-standalone.jar")))
+               :uberwar-name (File. (or (:uberwar-name opts) (str artifact-version ".war"))))
         (update :dependencies     dep-map)
         (update :dev-dependencies dep-map)
         (assoc-or :name artifact))))
