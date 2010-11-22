@@ -15,3 +15,11 @@
 (defcontext development
   :baz 1
   :bar 8)
+
+(deftask bar
+  (bake [out System/out
+         foo "foo"
+         bar {1 2 3 4}]
+        (prn out)
+        (prn foo)
+        (prn bar)))

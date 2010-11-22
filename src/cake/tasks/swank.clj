@@ -1,16 +1,14 @@
 (ns cake.tasks.swank
-  (:use cake cake.core [cake.tasks.deps :only [fetch-deps]]))
+  (:use cake cake.core)
+  (:require [bake.swank :as swank]))
 
 (deftask swank
   "Report status of swank server and start it if not running."
-  (bake (:require [bake.swank :as swank]) []
-        (if (not (swank/installed?))
-          (do (println "swank-clojure is not in your library path.")
-              (println "add swank-clojure as a dev-dependency in ~/.cake/project.clj to enable"))
-          (if (swank/running?)
-            (let [num (swank/num-connections), s (if (= 1 num) "" "s")]
-              (println
-               (format "swank currently running on port %d with %d active connection%s" @swank/current-port num s)))
-            (if (swank/start (or (first (:swank *opts*)) "localhost:4005"))
-              (println "started swank-clojure server on port" @swank/current-port)
-              (println "unable to start swank-clojure server, port already in use"))))))
+  (if (not (swank/installed?))
+    (do (println "swank-clojure is not in your library path.")
+        (println "add swank-clojure as a dev-dependency in ~/.cake/project.clj to enable"))
+    (if (swank/running?)      
+      (println "swank currently running on port" @swank/current-port)
+      (if (swank/start (or (first (:swank *opts*)) "localhost:4005"))
+        (println "started swank-clojure server on port" @swank/current-port)
+        (println "unable to start swank-clojure server, port already in use")))))
