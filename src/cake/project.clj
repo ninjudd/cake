@@ -1,5 +1,6 @@
 (ns cake.project
   (:use cake classlojure
+        [bake.io :only [get-outs]]
         [cake.file :only [file]]
         [cake.ant :only [fileset-seq]]
         [clojure.string :only [join]]
@@ -12,9 +13,9 @@
   (map #(str "file:" (.getPath %) (if (.isDirectory %) "/" ""))
        (concat (map file [(System/getProperty "bake.path")
                           "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"])
-               (fileset-seq {:dir "lib"     :includes "*"})
-               (fileset-seq {:dir "lib/dev" :includes "*"})
-               (fileset-seq {:dir (str global-root "lib/dev") :includes "*"}))))
+               (fileset-seq {:dir "lib"     :includes "*.jar"})
+               (fileset-seq {:dir "lib/dev" :includes "*.jar"})
+               (fileset-seq {:dir (str global-root "/lib/dev") :includes "*.jar"}))))
 
 (defonce classloader nil)
 
@@ -77,7 +78,12 @@
                        (in-ns '~temp-ns)
                        (try ~@body
                             (finally (remove-ns '~temp-ns)))))))))]
-    (apply eval-in classloader form *ins* *outs* (vals object-bindings))))
+    (spit "/tmp/swank" (pr-str form))
+    (try (apply eval-in classloader form *ins* (get-outs *outs*) (vals object-bindings))
+         (catch Throwable e
+           (println "error evaluating:")
+           (prn body)
+           (throw e)))))
 
 (defmacro bake
   "Execute code in a your project classloader. Bindings allow passing state to the project

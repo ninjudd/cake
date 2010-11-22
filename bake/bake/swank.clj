@@ -1,23 +1,20 @@
 (ns bake.swank
   (:use cake
-        [cake.project :only [with-context current-context]]
+        [bake.core :only [with-context current-context]]
+        [cake.project :only [classloader bake]]
         [cake.utils.useful :only [if-ns]])
   (:import [java.io File StringWriter PrintWriter]))
 
 (def current-port (atom nil))
 (defn running? [] (not (nil? @current-port)))
 
-(if-ns (:require [swank.swank :as swank]
-                 swank.core.server)
+(if-ns (:use [swank.core.server :only [start-swank-socket-server!]]
+             [swank.util.net.sockets :only [make-server-socket]])
   (do
     (defn installed? [] true)
-    (defn num-connections []
-      (let [connections (or (ns-resolve 'swank.core.server '*connections*)
-                            (ns-resolve 'swank.core.server 'connections))]
-        (count @@connections)))
     (defn start [host]
       (let [[host port] (if (.contains host ":") (.split host ":") ["localhost" host])
-            port        (Integer/parseInt port)
+            port        (Integer. port)
             writer      (StringWriter.)]
         ;; wrap all swank threads in a with-context binding
         (alter-var-root #'swank.util.concurrent.thread/start-thread
@@ -25,11 +22,20 @@
             (fn [f] (start-thread #(with-context (current-context) (f))))))
         (binding [*out* writer
                   *err* (PrintWriter. writer)]
-          (swank/start-repl port :host host))
+          (start-swank-socket-server!
+           (make-server-socket {:port port :host host})
+           (fn [socket]
+             (bake (:require swank.swank swank.core.server)
+                   [socket socket]
+                   (let [socket-serve     (ns-resolve 'swank.core.server 'socket-serve)
+                         connection-serve (ns-resolve 'swank.swank 'connection-serve)
+                         opts {:encoding (or (System/getProperty "swank.encoding") "iso-latin-1-unix")}]
+                     (spit "/tmp/swank" (prn-str socket socket-serve connection-serve))
+                     (socket-serve connection-serve socket opts))))
+           {}))
         (if (.contains (.toString writer) "java.net.BindException")
           false
           (compare-and-set! current-port nil port)))))
   (do
     (defn installed? [] false)
-    (defn num-connections [] 0)
     (defn start [opts] nil)))

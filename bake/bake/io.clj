@@ -4,14 +4,16 @@
                     InputStreamReader OutputStreamWriter]
            [clojure.lang Atom LineNumberingPushbackReader]))
 
+(defn get-outs [val]
+  (if (instance? Atom val) (first @val) val))
+
 (defmacro multi-outstream [var]
-  (letfn [(outs [val] (if (instance? Atom val) (first @val) val))]
-    `(PrintStream.
-      (proxy [BufferedOutputStream] [nil]
-        (write
-          ([b#]           (.write (~outs ~var) b#))
-          ([b# off# len#] (.write (~outs ~var) b# off# len#)))
-        (flush [] (.flush (~outs ~var)))))))
+  `(PrintStream.
+    (proxy [BufferedOutputStream] [nil]
+      (write
+        ([b#]           (.write (~get-outs ~var) b#))
+        ([b# off# len#] (.write (~get-outs ~var) b# off# len#)))
+      (flush [] (.flush (~get-outs ~var))))))
 
 (defn default-outstream-push [outs default]
   (swap! outs conj default))
@@ -23,11 +25,11 @@
   `(do (default-outstream-push *outs* ~outs)
        (default-outstream-push *errs* ~outs)
        (try
-         (binding [*in*   (LineNumberingPushbackReader. (InputStreamReader. ~ins))
-                   *out*  (OutputStreamWriter. ~outs)
-                   *err*  (PrintWriter. #^OutputStream ~outs true)
+         (binding [*in*   (if ~ins (LineNumberingPushbackReader. (InputStreamReader. ~ins)) *in*)
+                   *out*  (if ~outs (OutputStreamWriter. ~outs) *out*)
+                   *err*  (if ~outs (PrintWriter. #^OutputStream ~outs true) *out*)
                    *outs* ~outs
-                   *errs* ~outs                   
+                   *errs* ~outs
                    *ins*  ~ins]
            ~@forms)
          (finally
