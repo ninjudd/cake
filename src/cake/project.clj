@@ -74,7 +74,6 @@
                  (bake.io/with-streams ins# outs#
                    (binding ~(shared-bindings)
                      (let ~(quote-if odd? let-bindings)
-                       (spit "/tmp/foo" (prn-str *ns*))
                        ~@body))))))]
     (try (apply eval-in classloader
                 `(clojure.main/with-bindings (eval '~form))
