@@ -2,8 +2,6 @@
   (:use cake
         [clojure.string :only [join]]))
 
-(prn (ns-publics 'cake))
-
 (defn merge-in
   "Merge two nested maps."
   [left right]
