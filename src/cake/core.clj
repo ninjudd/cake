@@ -43,8 +43,7 @@
 (def run? nil)
 
 (def implicit-tasks
-  {'repl     ["Start an interactive shell with history and tab completion."]
-   'reload   ["Reload any .clj files that have changed or restart."]
+  {'reload   ["Reload any .clj files that have changed or restart."]
    'upgrade  ["Upgrade cake to the most current version."]
    'ps       ["List running cake jvm processes for all projects."]
    'kill     ["Kill running cake jvm processes. Use -9 to force."]
@@ -162,18 +161,15 @@
     (ant/in-project
      (doseq [dir ["lib" "classes" "build"]]
        (.mkdirs (file dir)))
+     (run-task 'deps)
+     (project/reload)
      (handler-case :type
-       (run-task 'deps)
        (run-task (symbol (name task)))
        (handle :abort-task
          (println (name task) "aborted:" (:message *condition*)))))))
 
 (defn abort-task [& message]
   (raise {:type :abort-task :message (join " " message)}))
-
-(defn repl []
-  (binding [*current-task* "repl"]
-    (ant/in-project (server/repl))))
 
 (defn start-server [port]
   (ant/in-project
@@ -188,10 +184,6 @@
        (undeftask test autotest jar uberjar war uberwar install release)
        (require '[cake.tasks new]))
      (init-multi-out)
-     ;; make sure to fetch all deps before initializing the project classloader
-     (binding [run? {}] (run-task 'deps))
-     (project/reload!)
      (server/create port process-command
-       :reload (reloader classpath project-files (File. "lib/dev"))
-       :repl   repl)
+       :reload (reloader classpath project-files (File. "lib/dev")))
      nil)))

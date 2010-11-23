@@ -9,25 +9,38 @@
 
 (def global-root (.getPath (File. (System/getProperty "user.home") ".cake")))
 
+(defn- make-url [file]
+  (str "file:" (.getPath file) (if (.isDirectory file) "/" "")))
+
 (defn classpath []
-  (map #(str "file:" (.getPath %) (if (.isDirectory %) "/" ""))
+  (map make-url
        (concat (map file [(System/getProperty "bake.path")
                           "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"])
                (fileset-seq {:dir "lib"     :includes "*.jar"})
                (fileset-seq {:dir "lib/dev" :includes "*.jar"})
                (fileset-seq {:dir (str global-root "/lib/dev") :includes "*.jar"}))))
 
+(defn ext-classpath []
+  (map make-url
+       (fileset-seq {:dir "lib/ext" :includes "*.jar"})))
+
 (defonce classloader nil)
 
+(defn make-classloader []
+  (wrap-ext-classloader (ext-classpath))
+  (when-let [cl (classlojure (classpath))]
+    (eval-in cl '(do (require 'cake)
+                     (require 'bake.io)
+                     (require 'clojure.main)
+                     (bake.io/init-multi-out)))
+    cl))
+
 (defn reload! []
-  (alter-var-root #'classloader
-    (fn [_]
-      (let [cl (classlojure (classpath))]
-        (eval-in cl '(do (require 'cake)
-                         (require 'bake.io)
-                         (require 'clojure.main)
-                         (bake.io/init-multi-out)))
-        cl))))
+  (alter-var-root #'classloader (fn [_] (make-classloader)))
+  (System/gc))
+
+(defn reload []
+  (alter-var-root #'classloader (fn [cl] (or cl (make-classloader)))))
 
 (defn- quote-if
   "We need to quote the binding keys so they are not evaluated within the bake
@@ -114,5 +127,6 @@
                :version      version
                :context      (symbol (or (:context opts) "dev")))
         (update :dependencies     dep-map)
+        (update :ext-dependencies dep-map)
         (update :dev-dependencies dep-map)
         (assoc-or :name artifact))))

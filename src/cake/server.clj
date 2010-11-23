@@ -5,8 +5,7 @@
         [clojure.main :only [skip-whitespace]]
         [bake.io :only [multi-outstream with-streams]]
         [cake.utils.useful :only [if-ns]])
-  (:require bake.repl
-            [cake.utils.server-socket :as server-socket]
+  (:require [cake.utils.server-socket :as server-socket]
             [cake.utils.complete :as complete]
             [clojure.stacktrace :as stacktrace])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream
@@ -50,16 +49,9 @@
     (doseq [completion (complete/completions prefix ns)]
       (println completion))))
 
-(defn repl []
-  (if (:cake *opts*)
-    (bake.repl/repl (read))
-    (bake (:use bake.repl) [marker (read)]        
-          (repl marker))))
-
 (def default-commands
   {:validate    validate-form
    :completions completions
-   :repl        repl
    :ping        #(println "pong")})
 
 (defn fatal? [e]

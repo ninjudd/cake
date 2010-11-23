@@ -79,7 +79,8 @@
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
         cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))]
-    (build-context)
+    (when (:include-context *project*)
+      (build-context))
     (ant Jar {:dest-file (jarfile)}
          (add-manifest (manifest))
          (add-license)

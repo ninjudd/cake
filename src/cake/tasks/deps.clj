@@ -91,6 +91,7 @@
 (defn fetch-deps []
   (log "Fetching dependencies...")
   (fetch (:dependencies *project*) (file "build/lib"))
+  (fetch (:ext-dependencies *project*) (file "build/lib/ext"))
   (binding [*exclusions* ['clojure 'clojure-contrib]]
     (fetch (:dev-dependencies *project*) (file "build/lib/dev")))
   (when (.exists (file "build/lib"))
@@ -109,7 +110,7 @@
 
 (deftask deps #{pom}
   "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
-  (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :dev-dependencies])))
+  (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :ext-dependencies :dev-dependencies])))
         deps-file (file "lib" "deps.clj")]
     (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
       (do (install-subprojects)
