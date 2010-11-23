@@ -1,6 +1,7 @@
 (ns cake.tasks.eval
   (:use cake cake.core
-        [cake.file :only [file]]))
+        [cake.file :only [file]]
+        [bake.repl :only [repl]]))
 
 
 (defn- read-form [string]
@@ -33,3 +34,10 @@
   {[script] :run}
   (bake [script (.getPath (file script))]
         (load-file script)))
+
+(deftask repl "Start an interactive shell with history and tab completion."
+  {cake? :cake}
+  (if cake?
+    (repl (read))
+    (bake (:use bake.repl) [marker (read)]
+          (repl marker))))

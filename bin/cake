@@ -418,8 +418,8 @@ class JVM
     puts ";; cannot find readline; your repl won't be very awesome without it" if $no_readline
     load_history
     loop do
-      with_socket do |socket|
-        socket.write %{:repl #{$vars} "#{REPL_PROMPT}"}
+      with_socket do |socket|        
+        socket.write %{[repl] #{$vars} "#{REPL_PROMPT}"}
         while @ns = read_until_prompt(socket)
           line = readline
           return unless line
@@ -699,7 +699,7 @@ end
 
 cake = JVM.new(
   [$config['cake.classpath'], bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
-  [$config['cake.library.path'], "lib/dev/native"],
+  [$config['cake.library.path'], "lib/ext/native"], #, "lib/native", "lib/dev/native"],
   %{-Dcake.project="#{$project}" -Dbake.path="#{bakepath}"}
 )
 
