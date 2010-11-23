@@ -51,15 +51,21 @@ class IO
   def gets_nonblock(delim = "\n")
     line = ""
     while c = read_nonblock(1)
-      line << c
+      line << c      
       break if c == delim
     end
     line
-  rescue Errno::EAGAIN, Errno::EWOULDBLOCK, EOFError
+  rescue Errno::EAGAIN, Errno::EWOULDBLOCK, EOFError => e
+    @eof_reached = true if e.is_a?(EOFError)
     line
   end
 
+  def eof_reached?
+    @eof_reached
+  end
+
   def eof_nonblock?
+    return true if eof_reached?
     ungetc(read_nonblock(1)[0])
     false
   rescue Errno::EAGAIN, Errno::EWOULDBLOCK, EOFError => e
@@ -84,8 +90,8 @@ class IO
       return if finished
 
       while input.ready?
-        return if input.eof?
-        write(input.gets)
+        write(input.gets_nonblock(nil))
+        close_write if input.eof_reached?
       end unless $win or input_wait > 0
     end
   end
@@ -245,7 +251,7 @@ end
 def download(url, path, opts = {})
   file = File.basename(url)
 
-  if opts[:force] or not File.exists?(path)        
+  if opts[:force] or not File.exists?(path)
     mkdir_force(File.dirname(path))
     open(url, progress_bar(url)) do |remote|
       open(path, "wb") do |local|
@@ -330,12 +336,8 @@ class JVM
     not pid.nil?
   end
 
-  def enabled?
-    true
-  end
-
   def init
-    reload_stale_files if enabled? and running?
+    reload_stale_files if running?
     start
   end
 
@@ -352,17 +354,6 @@ class JVM
       kill(true)
     end
     reset! # no pidfile or invalid pid or connection refused
-  end
-
-  def reload
-    refresh
-    init
-  end
-
-  def with_restart
-    kill
-    yield
-    start
   end
 
   def reload_stale_files
@@ -394,7 +385,6 @@ class JVM
   MAX_PORT = 2**16
 
   def start
-    return unless enabled?
     return if running?
 
     log(:cake, "starting jvm") if verbose?
@@ -417,7 +407,6 @@ class JVM
   end
 
   def ping
-    return unless enabled?
     with_socket do |socket|
       socket.write ":ping {}\n"
       log($command, "jvm not running") unless socket.gets == "pong\n"
@@ -444,8 +433,6 @@ class JVM
 
   READLINE = "READLINE__#{rand}"
   def send_command(command)
-    with_restart { FileUtils.remove_dir("lib/dev", true) } if $win and [:deps, :clean].include?(command)
-
     with_socket do |socket|
       cmd = [command, READLINE].to_clj
       log(command, "sending: " + cmd) if debug?
@@ -459,42 +446,6 @@ class JVM
           line
         end
       end
-    end
-  end
-
-  def run
-    with_socket do |socket|
-      log(:run, "running file #{$script}") if debug?
-      socket.write(":run #{$vars} #{$script.inspect}")
-      socket.duplex($stdin, $stdout)
-    end
-  end
-
-  def eval
-    forms = $opts[:eval].collect do |form|
-      form == '-' ? $stdin.gets(nil) : form
-    end.join(' ')
-    forms = "(doall (map println [#{forms}]))" unless $opts[:q]
-    with_socket do |socket|
-      log(:eval, forms) if debug?
-      socket.write(":eval #{$vars} #{forms} :cake/EOF ")
-      socket.duplex($stdin, $stdout)
-    end
-  end
-
-  EOL = "EOL__#{rand}"
-  def filter
-    forms = $opts[:filter]
-    with_socket do |socket|
-      socket.write %(:filter #{$vars} "#{EOL}")
-      while line = $stdin.gets
-        socket.write [line.chomp, ~forms].to_clj
-        while (line = socket.gets)
-          break if line.index(EOL) == 0
-          puts line
-        end
-      end
-      socket.close_write
     end
   end
 
@@ -777,8 +728,8 @@ end
 
 cake.init
 
-if [:repl, :eval, :filter, :run].include?($command)
-  cake.send($command)
+if $command == :repl
+  cake.repl
 elsif [:reload].include?($command)
   cake.ping
 else
@@ -789,7 +740,8 @@ else
       sleep(interval.to_i)
       cake.send_command(:autotest)
       $stdout.print_flush('.')
-      cake.reload
+      cake.refresh
+      cake.init
     end
   else
     cake.send_command($command)

@@ -56,7 +56,7 @@
   (when-let [stale (seq (stale-namespaces source-path aot))]
     (.mkdirs compile-path)
     (log "Compiling" (pluralize (count stale) "clojure namespace"))
-    (bake (:use [cake.project :only [log]])
+    (bake (:use [bake.core :only [log]])
           [libs stale
            path (.getPath compile-path)]
       (binding [*compile-path* path]

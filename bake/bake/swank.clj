@@ -31,7 +31,8 @@
                          connection-serve (ns-resolve 'swank.swank 'connection-serve)
                          opts {:encoding (or (System/getProperty "swank.encoding") "iso-latin-1-unix")}]
                      (spit "/tmp/swank" (prn-str socket socket-serve connection-serve))
-                     (socket-serve connection-serve socket opts))))
+                     (socket-serve connection-serve socket opts))
+                   nil))
            {}))
         (if (.contains (.toString writer) "java.net.BindException")
           false

@@ -66,20 +66,19 @@
   (let [[let-bindings object-bindings] (separate-bindings bindings)
         temp-ns (gensym "bake")
         form
-        `(do (binding [*ns* nil]
-               (ns ~temp-ns
+        `(do (ns ~temp-ns
                  (:use ~'cake)
-                 ~@ns-forms))
+                 ~@ns-forms)
              (fn [ins# outs# ~@(keys object-bindings)]
                (clojure.main/with-bindings
                  (bake.io/with-streams ins# outs#
                    (binding ~(shared-bindings)
                      (let ~(quote-if odd? let-bindings)
-                       (in-ns '~temp-ns)
-                       (try ~@body
-                            (finally (remove-ns '~temp-ns)))))))))]
-    (spit "/tmp/swank" (pr-str form))
-    (try (apply eval-in classloader form *ins* (get-outs *outs*) (vals object-bindings))
+                       (spit "/tmp/foo" (prn-str *ns*))
+                       ~@body))))))]
+    (try (apply eval-in classloader
+                `(clojure.main/with-bindings (eval '~form))
+                *ins* (get-outs *outs*) (vals object-bindings))
          (catch Throwable e
            (println "error evaluating:")
            (prn body)

@@ -48,11 +48,7 @@
    'upgrade  ["Upgrade cake to the most current version."]
    'ps       ["List running cake jvm processes for all projects."]
    'kill     ["Kill running cake jvm processes. Use -9 to force."]
-   'killall  ["Kill all running cake jvm processes for all projects."]
-   'eval     ["Eval the given forms in the project JVM." "Read forms from stdin if - is provided."]
-   'run      ["Execute a script in the project jvm."]
-   'filter   ["Thread each line in stdin through the given forms, printing the results."
-              "The line is passed as a string with a trailing newline, and println is called with the result of the final form."]})
+   'killall  ["Kill all running cake jvm processes for all projects."]})
 
 (defn parse-task-opts [forms]
   (let [[deps forms] (if (set? (first forms))
@@ -167,6 +163,7 @@
      (doseq [dir ["lib" "classes" "build"]]
        (.mkdirs (file dir)))
      (handler-case :type
+       (run-task 'deps)
        (run-task (symbol (name task)))
        (handle :abort-task
          (println (name task) "aborted:" (:message *condition*)))))))
@@ -180,7 +177,6 @@
 
 (defn start-server [port]
   (ant/in-project
-   (project/reload!)
    (let [classpath (for [url (.getURLs (java.lang.ClassLoader/getSystemClassLoader))]
                      (File. (.getFile url)))
          project-files (project/files ["project.clj" "context.clj" "tasks.clj" "dev.clj"] ["tasks.clj" "dev.clj"])]
@@ -192,6 +188,9 @@
        (undeftask test autotest jar uberjar war uberwar install release)
        (require '[cake.tasks new]))
      (init-multi-out)
+     ;; make sure to fetch all deps before initializing the project classloader
+     (binding [run? {}] (run-task 'deps))
+     (project/reload!)
      (server/create port process-command
        :reload (reloader classpath project-files (File. "lib/dev"))
        :repl   repl)
