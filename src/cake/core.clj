@@ -46,6 +46,7 @@
   {'reload   ["Reload any .clj files that have changed or restart."]
    'upgrade  ["Upgrade cake to the most current version."]
    'ps       ["List running cake jvm processes for all projects."]
+   'log      ["Tail the cake log file. Optionally pass the number of lines of history to show."]
    'kill     ["Kill running cake jvm processes. Use -9 to force."]
    'killall  ["Kill all running cake jvm processes for all projects."]})
 
@@ -183,7 +184,7 @@
      (when (= "global" (:artifact-id *project*))
        (undeftask test autotest jar uberjar war uberwar install release)
        (require '[cake.tasks new]))
-     (init-multi-out)
+     (init-multi-out ".cake/cake.log")
      (server/create port process-command
        :reload (reloader classpath project-files (File. "lib/dev")))
      nil)))

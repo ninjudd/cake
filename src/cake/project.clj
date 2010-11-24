@@ -1,6 +1,5 @@
 (ns cake.project
   (:use cake classlojure
-        [bake.io :only [get-outs]]
         [cake.file :only [file]]
         [cake.ant :only [fileset-seq]]
         [clojure.string :only [join]]
@@ -31,8 +30,7 @@
   (when-let [cl (classlojure (classpath))]
     (eval-in cl '(do (require 'cake)
                      (require 'bake.io)
-                     (require 'clojure.main)
-                     (bake.io/init-multi-out)))
+                     (require 'clojure.main)))
     cl))
 
 (defn reload! []
@@ -59,7 +57,7 @@
    should be passed directly to the project classloader, while other values should be serialized."
   [bindings]
   (reduce (fn [b [sym val]]
-            (if (.getClassLoader (class val))
+            (if (and (class val) (.getClassLoader (class val)))
               (update b 0 conj  sym val)
               (update b 1 assoc sym val)))
           [[] {}]
@@ -80,8 +78,8 @@
         temp-ns (gensym "bake")
         form
         `(do (ns ~temp-ns
-                 (:use ~'cake)
-                 ~@ns-forms)
+               (:use ~'cake)
+               ~@ns-forms)
              (fn [ins# outs# ~@(keys object-bindings)]
                (clojure.main/with-bindings
                  (bake.io/with-streams ins# outs#
@@ -90,7 +88,7 @@
                        ~@body))))))]
     (try (apply eval-in classloader
                 `(clojure.main/with-bindings (eval '~form))
-                *ins* (get-outs *outs*) (vals object-bindings))
+                *ins* *outs* (vals object-bindings))
          (catch Throwable e
            (println "error evaluating:")
            (prn body)

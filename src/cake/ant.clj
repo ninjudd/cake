@@ -9,7 +9,7 @@
            [org.apache.tools.ant.taskdefs Echo Javac Manifest Manifest$Attribute]
            [java.beans Introspector]))
 
-(def *ant-project* nil)
+(def #^{:dynamic true} *ant-project* nil)
 
 (defmulti coerce (fn [type val] [type (class val)]))
 
