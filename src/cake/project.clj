@@ -65,6 +65,7 @@
 
 (defn- shared-bindings []
   `[~'cake/*current-task* '~*current-task*
+    ~'cake/*project-root* '~*project-root*
     ~'cake/*project*      '~*project*
     ~'cake/*context*      '~*context*
     ~'cake/*script*       '~*script*
