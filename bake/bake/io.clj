@@ -1,48 +1,55 @@
 (ns bake.io
   (:use cake)
-  (:import [java.io File FileInputStream FileOutputStream BufferedOutputStream PrintStream PrintWriter
+  (:import [java.io FileInputStream FileOutputStream BufferedOutputStream PrintStream PrintWriter
                     InputStreamReader OutputStreamWriter]
            [clojure.lang Atom LineNumberingPushbackReader]))
 
-(defn get-outs [val]
-  (if (instance? Atom val) (first @val) val))
+(defmacro with-outstreams [[sym var] & forms]
+  `(let [root# (alter-var-root #'~var identity)]
+     (when (not= root# ~var)
+       (let [~sym root#]
+         ~@forms))
+     (let [~sym ~var]
+       ~@forms)))
 
 (defmacro multi-outstream [var]
   `(PrintStream.
     (proxy [BufferedOutputStream] [nil]
       (write
-        ([b#]           (.write (~get-outs ~var) b#))
-        ([b# off# len#] (.write (~get-outs ~var) b# off# len#)))
-      (flush [] (.flush (~get-outs ~var))))))
+        ([b#]
+           (with-outstreams [outs# ~var]
+             (.write outs# b#)))
+        ([b# off# len#]
+           (with-outstreams [outs# ~var]
+             (.write outs# b# off# len#))))
 
-(defn default-outstream-push [outs default]
-  (swap! outs conj default))
-
-(defn default-outstream-pop [outs default]
-  (doall (swap! outs (partial remove #(= default %)))))
+      (flush []
+        (with-outstreams [outs# ~var]
+          (.flush outs#))))))
 
 (defmacro with-streams [ins outs & forms]
-  `(do (default-outstream-push *outs* ~outs)
-       (default-outstream-push *errs* ~outs)
-       (try
-         (binding [*in*   (if ~ins (LineNumberingPushbackReader. (InputStreamReader. ~ins)) *in*)
-                   *out*  (if ~outs (OutputStreamWriter. ~outs) *out*)
-                   *err*  (if ~outs (PrintWriter. #^OutputStream ~outs true) *out*)
-                   *outs* ~outs
-                   *errs* ~outs
-                   *ins*  ~ins]
-           ~@forms)
-         (finally
-          (default-outstream-pop *outs* ~outs)
-          (default-outstream-pop *errs* ~outs)))))
+  `(binding [*in*   (if ~ins  (LineNumberingPushbackReader. (InputStreamReader. ~ins)) *in*)
+             *out*  (if ~outs (OutputStreamWriter. ~outs) *out*)
+             *err*  (if ~outs (PrintWriter. ~outs true) *err*)
+             *outs* ~outs
+             *errs* ~outs
+             *ins*  ~ins]
+     ~@forms))
 
-(defn init-multi-out []
+(defn init-multi-out [log-file]
   (let [outs (multi-outstream *outs*)
         errs (multi-outstream *errs*)
-        log  (FileOutputStream. ".cake/cake.log" true)]
-    (alter-var-root #'*outs* (fn [_] (atom (list log))))
-    (alter-var-root #'*errs* (fn [_] (atom (list log))))
+        log  (FileOutputStream. log-file true)]
+    (alter-var-root #'*outs* (fn [_] log))
+    (alter-var-root #'*errs* (fn [_] log))
     (alter-var-root #'*out*  (fn [_] (PrintWriter. outs)))
     (alter-var-root #'*err*  (fn [_] (PrintWriter. errs)))
     (System/setOut outs)
     (System/setErr errs)))
+
+(defn disconnect [& [wait]]
+  (let [outs *outs*]
+    (future
+      (when wait
+        (Thread/sleep wait))
+      (.close outs))))

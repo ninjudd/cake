@@ -697,9 +697,13 @@ if $command == :upgrade
   exec($0, "--version")
 end
 
+if $command == :log
+  exec("tail -n#{$opts[:log] || 10} -f #{$project}/.cake/cake.log")
+end
+
 cake = JVM.new(
   [$config['cake.classpath'], bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
-  [$config['cake.library.path'], "lib/ext/native"], #, "lib/native", "lib/dev/native"],
+  [$config['cake.library.path'], "lib/ext/native", "lib/native", "lib/dev/native"],
   %{-Dcake.project="#{$project}" -Dbake.path="#{bakepath}"}
 )
 
@@ -732,20 +736,16 @@ if $command == :repl
   cake.repl
 elsif [:reload].include?($command)
   cake.ping
-else
-  if $command == :autotest
-    cake.send_command(:test)
-    interval = ($opts[:interval].first if $opts[:interval]) || $config['autotest.interval'] || 5
-    while true
-      sleep(interval.to_i)
-      cake.send_command(:autotest)
-      $stdout.print_flush('.')
-      cake.refresh
-      cake.init
-    end
-  else
-    cake.send_command($command)
+elsif $command == :autotest
+  cake.send_command(:test)
+  interval = ($opts[:interval].first if $opts[:interval]) || $config['autotest.interval'] || 5
+  while true
+    sleep(interval.to_i)
+    cake.send_command(:autotest)
+    $stdout.print_flush('.')
+    cake.refresh
+    cake.init
   end
+else
+  cake.send_command($command)
 end
-
-system("tail -n0 -f .cake/project.log") if $opts[:l] or $opts[:log]

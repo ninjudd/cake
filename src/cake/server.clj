@@ -3,7 +3,7 @@
         [cake.project :only [bake]]
         [bake.core :only [with-context current-context]]
         [clojure.main :only [skip-whitespace]]
-        [bake.io :only [multi-outstream with-streams]]
+        [bake.io :only [with-streams]]
         [cake.utils.useful :only [if-ns]])
   (:require [cake.utils.server-socket :as server-socket]
             [cake.utils.complete :as complete]
