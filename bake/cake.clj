@@ -2,9 +2,8 @@
   (:import [java.io File FileInputStream]
            [java.util Properties]))
 
-(def project-root nil)
-
 (def ^{:dynamic true} *current-task* nil)
+(def ^{:dynamic true} *project-root* nil)
 (def ^{:dynamic true} *project*      nil)
 (def ^{:dynamic true} *context*      nil)
 (def ^{:dynamic true} *script*       nil)

@@ -23,7 +23,7 @@
     (symbol context)))
 
 (defn project-with-context [context]
-  (merge-in project-root
+  (merge-in *project-root*
             (assoc (context *context*)
               :context context)))
 
@@ -36,4 +36,4 @@
   `(let [context# (symbol (name (or ~context (:context *project*))))]
      (alter-var-root #'*project* (fn [_#] (project-with-context context#)))
      (do ~@forms)
-     (alter-var-root #'*project* project-root)))
+     (alter-var-root #'*project* *project-root*)))
