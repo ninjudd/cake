@@ -1,6 +1,7 @@
 (ns cake.tasks.new
   (:use cake cake.core cake.file cake.ant
-        [cake.project :only [group log]]
+        [bake.core :only [log]]
+        [cake.project :only [group]]
         [clojure.string :only [join]]
         [cake.utils.io :only [extract-resource]])
   (:import [org.apache.tools.ant.taskdefs Copy]))
