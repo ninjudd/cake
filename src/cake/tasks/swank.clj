@@ -5,25 +5,25 @@
 
 (def current-port (atom nil))
 
-(defn serve-swank [socket]
+(defn- serve-swank
+  "Run swank connection thread in the project classloader."
+  [socket]
   (bake (:require swank.swank swank.core.server)
         [socket socket]
         (let [socket-serve     (ns-resolve 'swank.core.server 'socket-serve)
               connection-serve (ns-resolve 'swank.swank 'connection-serve)
               opts {:encoding (or (System/getProperty "swank.encoding") "iso-latin-1-unix")}]
           (spit "/tmp/swank" (prn-str socket socket-serve connection-serve))
-          (socket-serve connection-serve socket opts))
-        nil))
+          (socket-serve connection-serve socket opts))))
 
-(defn wrap-swank-context! []
-  ;; wrap all swank threads in a with-context binding
+(defn- wrap-swank-context!
+  "Wrap all swank threads in a with-context binding." []
   (bake (:use [swank.util.concurrent.thread :only [start-thread]]
               [bake.core :only [with-context current-context]]) []
         (alter-var-root
          #'start-thread
          (fn [start-thread]
-           (fn [f] (start-thread #(with-context (current-context) (f))))))
-        nil))
+           (fn [f] (start-thread #(with-context (current-context) (f))))))))
 
 (if-ns (:use [swank.core.server :only [start-swank-socket-server!]]
              [swank.util.net.sockets :only [make-server-socket]])
