@@ -1,5 +1,6 @@
 (ns cake.tasks.eval
-  (:use cake cake.core
+  (:use cake
+        [cake.core :only [deftask bake]]
         [cake.file :only [file]]
         [bake.repl :only [repl]]))
 

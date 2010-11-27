@@ -1,11 +1,13 @@
 (ns cake.tasks.compile
-  (:use cake cake.core cake.ant cake.file
+  (:use cake
+        [cake.core :only [deftask bake]]
+        [cake.ant  :only [ant add-fileset fileset-seq path classpath]]
+        [cake.file :only [file newer?]]
         [cake.project :only [reload!]]
         [bake.core :only [verbose? debug? log]]
         [cake.utils.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
         [cake.utils :only [os-name os-arch sudo prompt-read]]
-        [cake.utils.useful :only [pluralize]]
-	[cake.ant :only [fileset-seq]])
+        [cake.utils.useful :only [pluralize]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
 (defn compile-java [src]

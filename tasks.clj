@@ -1,18 +1,11 @@
-(ns user
+(ns tasks
   (:use cake cake.core cake.ant cake.file
-	[cake.utils :only [git]]
+        [cake.utils :only [git]]
         [bake.core :only [log]]
         [cake.tasks.jar :only [build-uberjar jars uberjarfile]]
         [cake.tasks.release :only [upload-to-clojars]])
   (:import [org.apache.tools.ant.taskdefs Jar Copy Move ExecTask]
            [java.io File]))
-
-(deftask bar
-  (prn (cake.project/classpath))
-  (bake (:require clojure.string)
-        [version *clojure-version*]
-        (prn (clojure.string/join "-" (vals version)))
-        (prn *project*)))
 
 (defn bakejar []
   (file "bake.jar"))
@@ -45,7 +38,7 @@
   (let [version (:version *project*)]
     (if (snapshot? version)
       (println "refusing to make gem since this is a snapshot version:" version)
-      (do (run-task 'uberjar)
+      (do (invoke uberjar)
           (ant Copy {:file (uberjarfile) :tofile (file "gem/lib/cake.jar")})
           (ant Copy {:file (bakejar)     :tofile (file "gem/lib/bake.jar")})
           (ant Copy {:tofile (file "gem/lib/clojure.jar")}
