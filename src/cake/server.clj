@@ -6,7 +6,7 @@
         [bake.io :only [with-streams]]
         [cake.utils.useful :only [if-ns]])
   (:require [cake.utils.server-socket :as server-socket]
-            [cake.utils.complete :as complete]
+            [bake.complete :as complete]
             [clojure.stacktrace :as stacktrace])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream
                     FileOutputStream ByteArrayInputStream StringReader FileNotFoundException]
@@ -45,9 +45,14 @@
               "invalid"))))))
 
 (defn completions []
-  (let [[prefix ns] (read)]
-    (doseq [completion (complete/completions prefix ns)]
-      (println completion))))
+  (let [[prefix ns cake?] (read)]
+    (dorun
+     (map println
+          (if cake?
+            (complete/completions prefix ns)
+            (bake (:require [bake.complete :as complete])
+                  [prefix prefix, ns ns]
+                  (complete/completions prefix ns)))))))
 
 (def default-commands
   {:validate    validate-form

@@ -389,7 +389,7 @@ class JVM
 
     log(:cake, "starting jvm") if verbose?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    @pid = daemon %{java #{vm_opts} #{java_opts} clojure.main -e "(require 'cake.core) (cake.core/start-server #{port})"}
+    @pid = daemon %{java #{vm_opts} #{java_opts} clojure.main -e "(require 'cake.main) (cake.main/start-server #{port})"}
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
   rescue Errno::EADDRNOTAVAIL => e # port already in use
     retry
@@ -553,7 +553,7 @@ private
   def completions(prefix)
     return [] if prefix.empty?
     with_socket do |socket|
-      socket.write ~[:completions, {}, ~[prefix, ~@ns]]
+      socket.write ~[:completions, {}, ~[prefix, ~@ns, $opts[:cake]]]
       completions = []
       while line = socket.gets
         completions << line.chomp

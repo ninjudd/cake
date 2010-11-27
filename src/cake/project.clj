@@ -82,11 +82,14 @@
                (:use ~'cake)
                ~@ns-forms)
              (fn [ins# outs# ~@(keys object-bindings)]
-               (clojure.main/with-bindings
-                 (bake.io/with-streams ins# outs#
-                   (binding ~(shared-bindings)
-                     (let ~(quote-if odd? let-bindings)
-                       ~@body))))))]
+               (try
+                 (clojure.main/with-bindings
+                   (bake.io/with-streams ins# outs#
+                     (binding ~(shared-bindings)
+                       (let ~(quote-if odd? let-bindings)
+                         ~@body))))
+                 (finally
+                  (remove-ns '~temp-ns)))))]
     (try (apply eval-in classloader
                 `(clojure.main/with-bindings (eval '~form))
                 *ins* *outs* (vals object-bindings))

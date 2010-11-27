@@ -1,4 +1,4 @@
-(ns cake.utils.complete
+(ns bake.complete
   (:import [java.util.jar JarFile] [java.io File]))
 
 ;; Code adapted from swank-clojure (http://github.com/jochu/swank-clojure)

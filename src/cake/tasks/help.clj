@@ -1,5 +1,7 @@
 (ns cake.tasks.help
-  (:use cake cake.core))
+  (:use cake
+        [cake.core :only [deftask]]
+        [cake.task :only [get-task tasks implicit-tasks]]))
 
 (def line "-------------------------------------------")
 
@@ -9,7 +11,7 @@
     (apply println "cake" name deps)
     (doseq [doc docs] (println "  " doc))))
 
-(def system-tasks #{"reload" "ps" "kill" "killall" "log"})
+(def system-tasks #{"reload" "ps" "kill" "killall" "log" "upgrade"})
 (def hidden-tasks #{"default" "eat" "bake"})
 
 (defn taskdocs [pattern]
@@ -19,7 +21,9 @@
           (re-find pattern name)
           (or (:a *opts*) doc)))
    (into (for [[t doc] implicit-tasks] [(name t) doc])
-         (for [[t task] @tasks] [(name t) (seq (:doc task))]))))
+         (for [sym (keys @tasks)]
+           (let [task (get-task sym)]            
+             [(name sym) (seq (:docs task))])))))
 
 (defn list-tasks [pattern system?]
   (let [taskdocs (into {} (taskdocs pattern))]
@@ -38,8 +42,8 @@
 
 (defn task-doc [& task-names]
   (doseq [name task-names :let [sym (symbol name)]]
-    (if-let [task (@tasks sym)]
-      (print-task name (:deps task) (:doc task))
+    (if-let [task (get-task sym)]
+      (print-task name (:deps task) (:docs task))
       (if-let [doc (implicit-tasks sym)]
         (print-task name [] doc)))
     (list-tasks (re-pattern name) false)))
