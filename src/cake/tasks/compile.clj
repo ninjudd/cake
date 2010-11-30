@@ -5,7 +5,7 @@
         [cake.file :only [file newer?]]
         [cake.project :only [reload!]]
         [bake.core :only [verbose? debug? log]]
-        [cake.utils.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
+        [bake.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
         [cake.utils :only [os-name os-arch sudo prompt-read]]
         [cake.utils.useful :only [pluralize]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))

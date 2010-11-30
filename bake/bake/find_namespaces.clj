@@ -16,7 +16,7 @@
 (ns
   #^{:author "Stuart Sierra"
      :doc "Search for ns declarations in dirs, JARs, or CLASSPATH"}
-  cake.utils.find-namespaces
+  bake.find-namespaces
   (import (java.io File FileReader BufferedReader PushbackReader InputStreamReader)))
 
 ;;; Finding namespaces in a directory tree

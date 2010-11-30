@@ -3,9 +3,9 @@
         [bake.core :only [log]]
         [cake.project :only [group]]
         [clojure.string :only [join]]
-        [cake.utils.io :only [extract-resource]])
+        [clojure.java.io :only [copy]]
+        [cake.utils :only [extract-resource]])
   (:import [org.apache.tools.ant.taskdefs Copy]))
-
 
 (def default-template
 "(defproject +project+ \"0.0.1-SNAPSHOT\"
