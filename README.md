@@ -12,8 +12,8 @@ _This software is a pre-release, please submit an issue on github if you run int
 
 ## Installation
 
-There are three ways to get Cake. The simplest method is just to install the gem. If
-you're new, that's what we recommend.
+There are three ways to get Cake. The simplest method is just to install the gem. If you're new,
+that's what we recommend.
 
 ### Using gem
 
@@ -28,6 +28,10 @@ you're new, that's what we recommend.
 
 1. `git clone git://github.com/ninjudd/cake.git`
 2. Symlink bin/cake into your path and make it executable
+
+Note: some users have reported problems with clojure and java 1.5, so you may want to make sure
+you're on 1.6 with `java -version` if you are having problems. On OS X, you can switch to java 1.6
+using `/Applications/Utilities/Java Preferences.app`.
 
 ## Getting Started
 
@@ -75,12 +79,11 @@ Cake provides default tasks for most of the things you probably do on a regular 
 
 Cake also provides several system tasks for managing the persistent JVM.
 
-    cake start     ;; Start cake jvm processes.
-    cake stop      ;; Stop cake jvm processes.
-    cake restart   ;; Restart cake jvm processes.
-    cake reload    ;; Reload any .clj files that have changed or restart.
     cake ps        ;; List running cake jvm processes for all projects.
-    cake kill      ;; Kill running cake jvm processes. Use -9 to force or --all for all projects.
+    cake kill      ;; Kill running cake jvm processes. Use -9 to force.
+    cake killall   ;; Kill all running cake jvm processes for all projects.
+    cake log       ;; Tail the cake log file. Optionally pass the number of lines of history to show.
+    cake upgrade   ;; Upgrade cake to the most current version.
 
 [Default Task Documentation](http://wiki.github.com/ninjudd/cake/default-tasks)
 
