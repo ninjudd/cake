@@ -70,8 +70,9 @@
 (defn get-tasks []
   (reduce
    (fn [tasks ns]
-     (let [ns-tasks @@(ns-resolve ns 'task-defs)]
-       (merge-with combine-task tasks ns-tasks)))
+     (if-let [task-defs (ns-resolve ns 'task-defs)]
+       (merge-with combine-task tasks @@task-defs)
+       tasks))
    {}
    (mapcat task-namespaces
            (into (default-tasks) (:tasks *project*)))))
