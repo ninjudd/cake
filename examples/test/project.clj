@@ -16,7 +16,10 @@
   :baz 1
   :bar 8)
 
-(deftask bar
+(deftask foo
+  (prn "foo"))
+
+(deftask bar #{compile}
   (bake [out System/out
          foo "foo"
          bar {1 2 3 4}]

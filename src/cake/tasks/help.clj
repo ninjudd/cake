@@ -1,7 +1,7 @@
 (ns cake.tasks.help
   (:use cake
         [cake.core :only [deftask]]
-        [cake.task :only [get-task tasks implicit-tasks]]))
+        [cake.task :only [tasks implicit-tasks]]))
 
 (def line "-------------------------------------------")
 
@@ -21,9 +21,9 @@
           (re-find pattern name)
           (or (:a *opts*) doc)))
    (into (for [[t doc] implicit-tasks] [(name t) doc])
-         (for [sym (keys @tasks)]
-           (let [task (get-task sym)]            
-             [(name sym) (seq (:docs task))])))))
+         (for [taskname (keys tasks)]
+           (let [task (get tasks taskname)]
+             [(name taskname) (seq (:docs task))])))))
 
 (defn list-tasks [pattern system?]
   (let [taskdocs (into {} (taskdocs pattern))]
@@ -42,7 +42,7 @@
 
 (defn task-doc [& task-names]
   (doseq [name task-names :let [sym (symbol name)]]
-    (if-let [task (get-task sym)]
+    (if-let [task (get tasks sym)]
       (print-task name (:deps task) (:docs task))
       (if-let [doc (implicit-tasks sym)]
         (print-task name [] doc)))

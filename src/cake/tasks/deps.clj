@@ -1,7 +1,7 @@
 (ns cake.tasks.deps
   (:use cake cake.core cake.ant cake.file
         [cake.utils :only [cake-exec os-name os-arch]]
-        [cake.project :only [group reload!]]
+        [cake.project :only [group reload reload!]]
         [bake.core :only [log]]
         [clojure.java.shell :only [sh]])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
@@ -97,8 +97,7 @@
   (when (.exists (file "build/lib"))
     (ant Delete {:dir "lib"})
     (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
-  (invoke clean {})
-  (reload!))
+  (invoke clean {}))
 
 (defn stale-deps? [deps-str deps-file]
   (or (not (.exists deps-file)) (not= deps-str (slurp deps-file))))
@@ -115,6 +114,10 @@
     (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
       (do (install-subprojects)
           (fetch-deps)
-          (spit deps-file deps-str))
-      (when (= ["force"] (:compile *opts*))
-        (invoke clean {})))))
+          (spit deps-file deps-str)
+          (reload!))
+      (do (when (= ["force"] (:compile *opts*))
+            (invoke clean {}))
+          (if (or (:r *opts*) (:reload *opts*))
+            (reload!)
+            (reload))))))

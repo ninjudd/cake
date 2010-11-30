@@ -6,25 +6,22 @@
   (:require [cake.project :as project]))
 
 (defmacro defproject [name version & opts]
-  (let [opts (into-map opts)
-        [tasks task-opts] (split-with symbol? (:tasks opts))
-        task-opts (into-map task-opts)]
+  (let [opts (into-map opts)]
     `(do (alter-var-root #'*project*      (fn [_#] (project/create '~name ~version '~opts)))
-         (alter-var-root #'*project-root* (fn [_#] (project/create '~name ~version '~opts)))
-         (require 'cake.tasks.default)
-         (load-tasks '~tasks)
-         (undeftask ~@(:exclude task-opts)))))
+         (alter-var-root #'*project-root* (fn [_#] (project/create '~name ~version '~opts))))))
 
 (defmacro defcontext [name & opts]
   (let [opts (into-map opts)]
     `(alter-var-root #'*context* merge-in {'~name '~opts})))
 
-(defmacro undeftask [& task-names]
-  `(doseq [name# '~task-names]
-     (append-task! name# nil)))
+(defmacro undeftask [taskname]
+  `(append-task! ~taskname {:replace true}))
 
-(defmacro remove-dep [task-name dep]
-  `(append-task! '~task-name {:remove-dep '~dep}))
+(defmacro remove-deps [taskname & deps]
+  `(append-task! ~taskname {:remove-deps ~deps}))
+
+(defmacro require-tasks [& namespaces]
+  `(require-tasks! ~namespaces))
 
 (defmacro deftask
   "Define a cake task. Each part of the body is optional. Task definitions can
@@ -38,10 +35,12 @@
   (verify (not (implicit-tasks name)) (str "Cannot redefine implicit task: " name))
   (let [taskname (to-taskname name)
         {:keys [deps docs actions destruct pred]} (parse-task-opts forms)]
-    `(do
-       (defn ~taskname ~(join " " docs) [~destruct]
-         (when ~pred ~@actions))
-       (append-task! '~name {:action '~taskname :deps '~deps :docs '~docs}))))
+    (if (empty? forms)
+      `(append-task! ~name {:deps ~deps :docs ~docs})
+      `(do
+         (defn ~taskname ~(join " " docs) [~destruct]
+           (when ~pred ~@actions))
+         (append-task! ~name {:actions [~taskname] :deps ~deps :docs ~docs})))))
 
 (defn- in-ts [ts task-decl]
   (conj (drop 2 task-decl)
@@ -69,13 +68,15 @@
   [filename & forms]
   (let [taskname (to-taskname filename)
         {:keys [deps docs actions destruct pred]} (parse-task-opts forms)]
-    `(do
-       (defn ~taskname ~(join " " docs) [~destruct]
-         (when (and ~pred
-                    (run-file-task? *File* '~deps))
-           (mkdir (.getParentFile *File*))
-           ~@actions))
-       (append-task! '~filename {:action '~taskname :deps '~deps :docs '~docs}))))
+    (if (empty? forms)
+      `(append-task! ~filename {:deps ~deps :docs ~docs})
+      `(do
+         (defn ~taskname ~(join " " docs) [~destruct]
+           (when (and ~pred
+                      (run-file-task? *File* '~deps))
+             (mkdir (.getParentFile *File*))
+             ~@actions))
+         (append-task! ~filename {:actions [~taskname] :deps ~deps :docs ~docs})))))
 
 (defmacro invoke [name & [opts]]
   `(binding [*opts* (or ~opts *opts*)]
