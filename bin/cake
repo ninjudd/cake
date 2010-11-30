@@ -186,7 +186,7 @@ def verbose?
 end
 
 def restart?
-  $opts[:r] or $opts[:restart]
+  $opts[:R] or $opts[:restart]
 end
 
 def log(command, *messages)
@@ -734,8 +734,6 @@ cake.init
 
 if $command == :repl
   cake.repl
-elsif [:reload].include?($command)
-  cake.ping
 elsif $command == :autotest
   cake.send_command(:test)
   interval = ($opts[:interval].first if $opts[:interval]) || $config['autotest.interval'] || 5

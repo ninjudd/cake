@@ -2,25 +2,17 @@
   (:use cake
         [cake.server :only [print-stacktrace]]
         [cake.file :only [file newer? touch]]
-        [cake.utils.useful :only [update verify]]))
+        [cake.utils.useful :only [update verify append]]))
 
-(defonce tasks (atom {}))
-(def run? nil)
+(declare tasks)
+(declare run?)
 
 (def implicit-tasks
-  {'reload   ["Reload any .clj files that have changed or restart."]
-   'upgrade  ["Upgrade cake to the most current version."]
+  {'upgrade  ["Upgrade cake to the most current version."]
    'ps       ["List running cake jvm processes for all projects."]
    'log      ["Tail the cake log file. Optionally pass the number of lines of history to show."]
    'kill     ["Kill running cake jvm processes. Use -9 to force."]
    'killall  ["Kill all running cake jvm processes for all projects."]})
-
-(defn load-tasks [tasks]
-  (let [complain? (seq (.listFiles (file "lib")))]
-    (doseq [ns tasks]
-      (try (require ns)
-           (catch Exception e
-             (when complain? (print-stacktrace e)))))))
 
 (defn parse-task-opts [forms]
   (let [[deps forms] (if (set? (first forms))
@@ -36,25 +28,53 @@
                        [true forms])]
     {:deps deps :docs docs :actions forms :destruct destruct :pred pred}))
 
-(defn append-task! [task-name task-var]
-  (swap! tasks update task-name
-         (fn [task]
-           (let [task (or task ())]
-             (if (some (partial = task-var) task)
-               task
-               (conj task task-var))))))
+(defmacro append-task! [name task]
+  `(do (defonce ~'task-defs (atom {}))
+       (swap! ~'task-defs update '~name append '~task)))
 
-(defn get-task [name]
+(defn- expand-prefix
+  "Converts a vector of the form [prefix sym1 sym1] to (prefix.sym1 prefix.sym2)"
+  [ns]
+  (if (sequential? ns)
+    (map #(symbol (str (name (first ns)) "." (name %)))
+         (rest ns))
+    (list ns)))
+
+(defmacro require-tasks!
+  "Require all the specified namespaces and add them to the list of task namespaces."
+  [namespaces]
+  (let [namespaces (mapcat expand-prefix namespaces)]
+    `(do (defonce ~'required-tasks (atom []))
+         (apply require '~namespaces)
+         (swap! ~'required-tasks into '~namespaces))))
+
+(defn task-namespaces
+  "Returns all required task namespaces for the given namespace (including transitive requirements)."
+  [namespace]
+  (into [namespace]
+        (when-let [namespaces (ns-resolve namespace 'required-tasks)]
+          (mapcat task-namespaces @@namespaces))))
+
+(defn default-tasks []
+  (if (= "global" (:artifact-id *project*))
+    '[cake.tasks.global  cake.user]
+    '[cake.tasks.default cake.user]))
+
+(defn combine-task [task1 task2]
+  (when-not (= {:replace true} task2)
+    (let [task1 (or (if-not (:replace task2) task1)
+                    {:actions [] :docs [] :deps #{}})]
+      (append (apply dissoc task1 (:remove-deps task2))
+              (select-keys task2 [:actions :docs :deps])))))
+
+(defn get-tasks []
   (reduce
-   (fn [task {:keys [remove-dep action deps docs]}]
-     (-> task
-         (update :actions conj action)
-         (update :deps    into deps)
-         (update :deps    disj remove-dep)
-         (update :docs    into docs)))
-   {:actions [] :deps #{} :docs []}
-   (reverse
-    (take-while (complement nil?) (get @tasks name)))))
+   (fn [tasks ns]
+     (let [ns-tasks @@(ns-resolve ns 'task-defs)]
+       (merge-with combine-task tasks ns-tasks)))
+   {}
+   (mapcat task-namespaces
+           (into (default-tasks) (:tasks *project*)))))
 
 (defn to-taskname [taskname]
   (symbol
@@ -63,8 +83,8 @@
      (str "file-" (.replaceAll taskname "/" "-"))
      (str "task-" (name taskname)))))
 
-(defn task-run-file [task-name]
-  (file ".cake" "run" task-name))
+(defn task-run-file [taskname]
+  (file ".cake" "run" taskname))
 
 (defn run-file-task? [target-file deps]
   (let [{file-deps true task-deps false} (group-by string? deps)]
@@ -81,19 +101,24 @@
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
   [name]
-  (let [task (get-task name)]
-    (if (and (nil? task)
-             (not (string? name)))
-      (println "unknown task:" name)
-      (verify (not= :in-progress (run? name))
-              (str "circular dependency found in task: " name)
-        (when-not (run? name)
-          (set! run? (assoc run? name :in-progress))
-          (doseq [dep (:deps task)] (run-task dep))
-          (binding [*current-task* name
-                    *File* (if-not (symbol? name) (expand-defile-path name))]
-            (doseq [action (map resolve (:actions task)) :when action]              
-              (action *opts*))
-            (set! run? (assoc run? name true))
-            (if (symbol? name)
-              (touch (task-run-file name) :verbose false))))))))
+  (if-not (bound? #'tasks)
+    ;; create the tasks and run? bindings if it hasn't been done yet.
+    (binding [tasks (get-tasks)
+              run?  {}]
+      (run-task name))
+    (let [task (get tasks name)]
+      (if (and (nil? task)
+               (not (string? name)))
+        (println "unknown task:" name)
+        (verify (not= :in-progress (run? name))
+                (str "circular dependency found in task: " name)
+                (when-not (run? name)
+                  (set! run? (assoc run? name :in-progress))
+                  (doseq [dep (:deps task)] (run-task dep))
+                  (binding [*current-task* name
+                            *File* (if-not (symbol? name) (expand-defile-path name))]
+                    (doseq [action (map resolve (:actions task)) :when action]
+                      (action *opts*))
+                    (set! run? (assoc run? name true))
+                    (if (symbol? name)
+                      (touch (task-run-file name) :verbose false)))))))))
