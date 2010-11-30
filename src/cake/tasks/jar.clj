@@ -14,7 +14,10 @@
            [java.util.jar JarFile]))
 
 (defn artifact [name-key ext]
-  (file (str (name-key *project*) (when-let [cc (current-context)] (str "-" cc)) ext)))
+  (file (str (name-key *project*)
+             (when-let [context (current-context)]
+               (str "-" context))
+             ext)))
 
 (defn jarfile [] (artifact :jar-name ".jar"))
 
@@ -157,7 +160,7 @@
         (ant Chmod {:file binfile :perm "+x"})))
     (println "Cannot create bin without :main namespace in project.clj")))
 
-(defn warfile [] (artifact :uberwar-name ".war"))
+(defn warfile [] (artifact :war-name ".war"))
 
 (defn build-war []
   (let [web     "WEB-INF"
