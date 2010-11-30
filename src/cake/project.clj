@@ -129,9 +129,9 @@
                :aot          (or (:aot opts) (:namespaces opts))
                :version      version
                :context      (symbol (or (:context opts) "dev"))
-               :jar-name     (or (:jar-name opts)artifact-version)
-               :uberjar-name (or (:uberjar-name opts) (str artifact-version "-standalone"))
-               :uberwar-name (or (:uberwar-name opts) artifact-version))
+               :jar-name     (or (:jar-name opts) artifact-version)
+               :war-name     (or (:war-name opts) artifact-version)
+               :uberjar-name (or (:uberjar-name opts) (str artifact-version "-standalone")))
         (update :dependencies     dep-map)
         (update :ext-dependencies dep-map)
         (update :dev-dependencies dep-map)
