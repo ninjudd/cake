@@ -64,8 +64,8 @@
 
 (defn default-tasks []
   (if (= "global" (:artifact-id *project*))
-    '[cake.tasks.global  cake.user]
-    '[cake.tasks.default cake.user]))
+    '[cake.tasks.global  tasks]
+    '[cake.tasks.default tasks]))
 
 (defn combine-task [task1 task2]
   (when-not (= {:replace true} task2)

@@ -28,7 +28,7 @@
    (let [classpath (for [url (.getURLs (ClassLoader/getSystemClassLoader))]
                      (File. (.getFile url)))
          project-files (project/files ["project.clj" "context.clj" "tasks.clj" "dev.clj"] ["tasks.clj" "dev.clj"])]
-     (ns cake.user
+     (ns tasks
        (:use cake.core))
      (doseq [file project-files :when (.exists file)]
        (load-file (.getPath file)))

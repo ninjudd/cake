@@ -1,4 +1,4 @@
-(ns cake.user
+(ns tasks
   (:use cake cake.core cake.ant cake.file
         [cake.utils :only [git]]
         [bake.core :only [log]]
