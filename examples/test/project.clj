@@ -4,7 +4,6 @@
                  [clojure-contrib "1.2.0"]
                  [tokyocabinet "1.23-SNAPSHOT"]]
   :dev-dependencies [[autodoc "0.7.1"]]
-  :context development
   :aot [speak servlet]
   :main speak)
 
@@ -12,7 +11,7 @@
   :foo 1
   :bar 2)
 
-(defcontext development
+(defcontext dev
   :baz 1
   :bar 8)
 

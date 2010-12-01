@@ -19,7 +19,8 @@
   (boolean (or (:v *opts*) (:verbose *opts*))))
 
 (defn current-context []
-  (if-let [context (get-in *opts* [:context 0])]
+  (if-let [context (or (get-in *opts* [:context 0])
+                       (:context *project*))]
     (symbol context)))
 
 (defn project-with-context [context]
@@ -28,7 +29,7 @@
               :context context)))
 
 (defmacro with-context [context & forms]
-  `(let [context# (symbol (name (or ~context (:context *project*))))]
+  `(let [context# (symbol (name ~context))]
      (binding [*project* (project-with-context context#)]
        ~@forms)))
 

@@ -29,7 +29,7 @@
              [swank.util.net.sockets :only [make-server-socket]])
 
   (defn start-swank [host]
-    (wrap-swank-context!)
+    ;; (wrap-swank-context!)
     (let [[host port] (if (.contains host ":") (.split host ":") ["localhost" host])
           out (with-out-str
                 (start-swank-socket-server!
