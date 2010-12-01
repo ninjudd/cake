@@ -48,12 +48,19 @@
          (apply require '~namespaces)
          (swap! ~'required-tasks into '~namespaces))))
 
+(defn- resolve-var [ns sym]
+  (when-let [ns (find-ns ns)]
+    (when-let [var (ns-resolve ns sym)]
+      @@var)))
+
 (defn task-namespaces
   "Returns all required task namespaces for the given namespace (including transitive requirements)."
   [namespace]
+  (try (require namespace)
+       (catch java.io.FileNotFoundException e))
   (into [namespace]
-        (when-let [namespaces (ns-resolve namespace 'required-tasks)]
-          (mapcat task-namespaces @@namespaces))))
+        (mapcat task-namespaces
+                (resolve-var namespace 'required-tasks))))
 
 (defn default-tasks []
   (if (= "global" (:artifact-id *project*))
@@ -70,8 +77,8 @@
 (defn get-tasks []
   (reduce
    (fn [tasks ns]
-     (if-let [task-defs (ns-resolve ns 'task-defs)]
-       (merge-with combine-task tasks @@task-defs)
+     (if-let [ns-tasks (resolve-var ns 'task-defs)]
+       (merge-with combine-task tasks ns-tasks)
        tasks))
    {}
    (mapcat task-namespaces
