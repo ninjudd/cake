@@ -32,7 +32,6 @@
        (:use cake.core))
      (doseq [file project-files :when (.exists file)]
        (load-file (.getPath file)))
-     (when-not *project* (require '[cake.tasks help new]))
      (init-multi-out ".cake/cake.log")
      (server/create port process-command
        :reload (reloader classpath project-files (File. "lib/dev")))
