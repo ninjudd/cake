@@ -23,16 +23,20 @@
        (handle :abort-task
          (println (name task) "aborted:" (:message *condition*)))))))
 
+(defmacro load-project-files [ns & files]
+  `(do (ns ~ns
+         (:use cake.core))
+       (doseq [file# [~@files] :when (.exists file#)]
+         (load-file (.getPath file#)))))
+
 (defn start-server [port]
   (in-project
    (let [classpath (for [url (.getURLs (ClassLoader/getSystemClassLoader))]
                      (File. (.getFile url)))
          project-files (project/files ["project.clj" "context.clj" "tasks.clj" "dev.clj"] ["tasks.clj" "dev.clj"])]
-     (ns cake.user
-       (:use cake.core))
-     (doseq [file project-files :when (.exists file)]
-       (load-file (.getPath file)))
-     (when-not *project* (require '[cake.tasks help new]))
+     (load-project-files project (file "project.clj"))
+     (load-project-files context (file "context.clj"))
+     (load-project-files tasks   (file "tasks.clj") (file project/global-root "tasks.clj"))
      (init-multi-out ".cake/cake.log")
      (server/create port process-command
        :reload (reloader classpath project-files (File. "lib/dev")))
