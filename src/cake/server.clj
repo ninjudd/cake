@@ -26,8 +26,6 @@
       (stacktrace/print-cause-trace e)
       (flush))))
 
-(defonce num-connections (atom 0))
-
 (defn- read-seq []
   (lazy-seq
    (let [form (read *in* false :cake/EOF)]
@@ -54,7 +52,7 @@
                   [prefix prefix, ns ns]
                   (complete/completions prefix ns)))))))
 
-(def default-commands
+(def commands
   {:validate    validate-form
    :completions completions
    :ping        #(println "pong")})
@@ -63,27 +61,28 @@
   (and (instance? clojure.lang.Compiler$CompilerException e)
        (instance? UnsatisfiedLinkError (.getCause e))))
 
-(defn create [port f & commands]
-  (let [commands (apply hash-map commands)]
-    (server-socket/create-server port
-      (fn [ins outs]
-        (with-streams ins outs
-          (try
-            (let [form (read), vars (read)]
-              (clojure.main/with-bindings
-                (set! *command-line-args*  (:args vars))
-                (set! *warn-on-reflection* (:warn-on-reflection *project*))
-                (binding [*vars*    vars
-                          *pwd*     (:pwd vars)
-                          *env*     (:env vars)
-                          *opts*    (:opts vars)
-                          *script*  (:script vars)]
-                  (with-context (current-context)
-                    (if (keyword? form)
-                      (when-let [command (or (commands form) (default-commands form))]
-                        (command))
-                      (f form))))))
-            (catch Throwable e
-              (print-stacktrace e)
-              (when (fatal? e) (System/exit 1))))))
-      0 (InetAddress/getByName "localhost"))))
+(defn create [port f]
+  (server-socket/create-server port
+    (fn [ins outs]
+      (with-streams ins outs
+        ;; (prn *opts* *project*)
+
+        (try
+          (let [form (read), vars (read)]
+            (clojure.main/with-bindings
+              (set! *command-line-args*  (:args vars))
+              (set! *warn-on-reflection* (:warn-on-reflection *project*))
+              (binding [*vars*    vars
+                        *pwd*     (:pwd vars)
+                        *env*     (:env vars)
+                        *opts*    (:opts vars)
+                        *script*  (:script vars)]
+                (with-context (current-context)
+                  (if (keyword? form)
+                    (when-let [command (commands form)]
+                      (command))
+                    (f form))))))
+          (catch Throwable e
+            (print-stacktrace e)
+            (when (fatal? e) (System/exit 1))))))
+    0 (InetAddress/getByName "localhost")))

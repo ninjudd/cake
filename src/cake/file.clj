@@ -20,6 +20,9 @@
   [& path]
   (File. (apply file-name path)))
 
+(defn global-file [& path]
+  (apply file *global-root* path))
+
 (use 'cake.ant)
 
 (defn cp [from to & opts]

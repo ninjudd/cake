@@ -1,12 +1,10 @@
 (ns cake.project
   (:use cake classlojure
-        [cake.file :only [file]]
+        [cake.file :only [file global-file]]
         [cake.ant :only [fileset-seq]]
         [clojure.string :only [join]]
         [cake.utils.useful :only [assoc-or update merge-in tap]])
   (:import [java.io File]))
-
-(def global-root (.getPath (File. (System/getProperty "user.home") ".cake")))
 
 (defn- make-url [file]
   (str "file:" (.getPath file) (if (.isDirectory file) "/" "")))
@@ -15,9 +13,9 @@
   (map make-url
        (concat (map file [(System/getProperty "bake.path")
                           "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"])
-               (fileset-seq {:dir "lib"     :includes "*.jar"})
-               (fileset-seq {:dir "lib/dev" :includes "*.jar"})
-               (fileset-seq {:dir (str global-root "/lib/dev") :includes "*.jar"}))))
+               (fileset-seq {:dir (file "lib")            :includes "*.jar"})
+               (fileset-seq {:dir (file "lib/dev")        :includes "*.jar"})
+               (fileset-seq {:dir (global-file "lib/dev") :includes "*.jar"}))))
 
 (defn ext-classpath []
   (map make-url
@@ -30,15 +28,19 @@
   (when-let [cl (classlojure (classpath))]
     (eval-in cl '(do (require 'cake)
                      (require 'bake.io)
-                     (require 'clojure.main)))
+                     (require 'bake.reload)
+                     (require 'clojure.main)))    
     cl))
 
 (defn reload! []
-  (alter-var-root #'classloader (fn [_] (make-classloader)))
-  (System/gc))
+  (alter-var-root #'classloader (fn [_] (make-classloader))))
 
 (defn reload []
-  (alter-var-root #'classloader (fn [cl] (or cl (make-classloader)))))
+  (alter-var-root #'classloader
+    (fn [cl]
+      (if cl
+        (do (eval-in cl '(bake.reload/reload)) cl)
+        (make-classloader)))))
 
 (defn- quote-if
   "We need to quote the binding keys so they are not evaluated within the bake
@@ -75,6 +77,7 @@
     ~'cake/*vars*         '~*vars*])
 
 (defn project-eval [ns-forms bindings body]
+  (reload)
   (let [[let-bindings object-bindings] (separate-bindings bindings)
         temp-ns (gensym "bake")
         form
@@ -105,10 +108,6 @@
   [& forms]
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
     `(project-eval '~ns-forms ~(quote-if even? bindings) '~body)))
-
-(defn files [local-files global-files]
-  (into (map #(File. %) local-files)
-        (map #(File. global-root %) global-files)))
 
 (defn group [project]
   (if (or (= project 'clojure) (= project 'clojure-contrib))

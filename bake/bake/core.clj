@@ -12,6 +12,10 @@
 (defn log [& message]
   (println (format "%11s %s" (str "[" *current-task* "]") (join " " message))))
 
+(defn cake? []
+  (not= java.net.URLClassLoader
+        (class (.getClassLoader clojure.lang.RT))))
+
 (defn debug? []
   (boolean (or (:d *opts*) (:debug *opts*))))
 

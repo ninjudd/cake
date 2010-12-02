@@ -336,39 +336,19 @@ class JVM
     not pid.nil?
   end
 
-  def init
-    reload_stale_files if running?
-    start
-  end
-
   def refresh
     @pid, @port, @version = IO.read(pidfile).split("\n"); @pid = @pid.to_i; @port = @port.to_i
 
     Process.kill(0, @pid) # make sure pid is valid
     TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
 
-    kill if @version != $version
+    kill if @version != $version or (not $config['disable.auto_restart'] and newer?("#{$project}/lib/dev", pidfile))
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Process::Error => e
     if e.kind_of?(Errno::ECONNREFUSED)
       log(:cake, "defunct jvm") if debug?
       kill(true)
     end
     reset! # no pidfile or invalid pid or connection refused
-  end
-
-  def reload_stale_files
-    with_socket(nil) do |socket|
-      socket.write ":reload {}"
-      socket.close_write
-      if socket.eof?
-        FileUtils.touch(pidfile)
-        @load_time = Time.now
-      else
-        inspect(socket) if debug?
-        log(:reload, "unable to reload all files, restarting") if verbose?
-        kill
-      end
-    end
   end
 
   def java_opts
@@ -453,13 +433,6 @@ private
 
   def make_path(paths)
     paths.flatten.compact.join(PATH_SEP)
-  end
-
-  def inspect(socket)
-    while line = socket.gets
-      break if line.index('reload-failed:') == 0 and not debug?
-      puts line
-    end
   end
 
   def reset!
@@ -643,9 +616,6 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   $version = IO.read(project).split("\n").first.match(/defproject cake \"(.*)\"/)[1]
   log(:deps, "project.clj version is #{$version}") if debug?
 
-  # Force new cake libs if cake's project.clj has changed.
-  #FileUtils.remove_dir(lib, true) if newer?(project, lib) and not $config['cake.disable-auto-deps']
-
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
     cakejar = get_cake(:version => $version, :dest => lib) rescue get_cake(:version => :current, :dest => lib)
@@ -730,7 +700,7 @@ elsif restart?
   cake.kill
 end
 
-cake.init
+cake.start
 
 if $command == :repl
   cake.repl
@@ -742,7 +712,7 @@ elsif $command == :autotest
     cake.send_command(:autotest)
     $stdout.print_flush('.')
     cake.refresh
-    cake.init
+    cake.start
   end
 else
   cake.send_command($command)

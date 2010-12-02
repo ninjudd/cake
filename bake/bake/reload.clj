@@ -1,57 +1,53 @@
 (ns bake.reload
-  "Try to reload files that have changed since the last reload. Based on lazytest.tracker."
-  (:use [lazytest.reload :only [reload]]
-        [lazytest.dependency :only [graph depend dependents remove-key depends?]]
-        [lazytest.nsdeps :only [deps-from-ns-decl]]
-        [bake.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
-        [clojure.set :only [union]]))
+  "Try to reload files that have changed since the last reload. Adapted from Stuart Sierra's lazytest."
+  (:use cake
+        [clojure.set :only [difference]]
+        [bake.core :only [cake?]]
+        [bake.dependency :only [graph]]
+        [bake.nsdeps :only [newer-namespace-decls newer-than update-dependency-graph affected-namespaces]]
+        [clojure.set :only [union]])
+  (:import (java.io File)))
 
-(defn- find-sources [dirs]
-  (mapcat find-clojure-sources-in-dir dirs))
+(defn reload-namespaces
+  "Remove all specified namespaces then reload them."
+  [& symbols]
+  (doseq [sym symbols]
+    (remove-ns sym))
+  (dosync (alter @#'clojure.core/*loaded-libs* difference (set symbols)))
+  (apply require symbols))
 
-(defn- newer-than [timestamp files]
-  (filter #(> (.lastModified %) timestamp) files))
+(def classpath
+  (for [url (.getURLs (ClassLoader/getSystemClassLoader))]
+    (File. (.getFile url))))
 
-(defn- newer-namespace-decls [timestamp dirs]
-  (remove nil? (map read-file-ns-decl (newer-than timestamp (find-sources dirs)))))
+(def project-files
+  (when (cake?)
+    (concat (map #(File. *root* %) ["project.clj" "context.clj" "tasks.clj"])
+            (map #(File. *global-root* %) ["tasks.clj"]))))
 
-(defn- add-to-dep-graph [dep-graph namespace-decls]
-  (reduce (fn [g decl]
-            (let [nn (second decl)
-                  deps (deps-from-ns-decl decl)]
-              (apply depend g nn deps)))
-          dep-graph namespace-decls))
+(def timestamp
+  (atom (System/currentTimeMillis)))
 
-(defn- remove-from-dep-graph [dep-graph new-decls]
-  (apply remove-key dep-graph (map second new-decls)))
+(def dep-graph
+  (atom (update-dependency-graph (graph) (newer-namespace-decls 0 classpath))))
 
-(defn- update-dependency-graph [dep-graph new-decls]
-  (-> dep-graph
-      (remove-from-dep-graph new-decls)
-      (add-to-dep-graph new-decls)))
+(defn reload-project-files
+  ([] (reload-project-files project-files))
+  ([files]
+     (ns tasks
+       (:use cake.core))
+     (doseq [f files :when (.exists f)]
+       (load-file (.getPath f)))))
 
-(defn- affected-namespaces [changed-namespaces old-dependency-graph]
-  (apply union (set changed-namespaces) (map #(dependents old-dependency-graph %)
-                                             changed-namespaces)))
-
-(defn reloader [classpath project-files jar-dir]
-  (let [timestamp (atom (System/currentTimeMillis))
-        graph     (atom (update-dependency-graph (graph) (newer-namespace-decls 0 classpath)))]
-    (fn []
-      (let [then @timestamp
-            now  (System/currentTimeMillis)]
-        (if-let [project-files (seq (newer-than then project-files))]
-          (println "cannot reload project files:" project-files)
-          (if-let [jars (seq (newer-than then (file-seq jar-dir)))]
-            (println "jars have changed:" jars)
-            (when-let [new-decls (seq (newer-namespace-decls then classpath))]
-              (let [new-names (map second new-decls)
-                    affected  (affected-namespaces new-names @graph)]
-                (reset! timestamp now)
-                (swap! graph update-dependency-graph new-decls)
-                (if-let [to-reload (seq (filter find-ns affected))] ; only reload namespaces that are loaded
-                  (if (contains? to-reload 'cake.core)
-                    (println "cannot reload cake.core")
-                    (if-let [cannot-reload (seq (filter #(depends? @graph % 'cake.core) to-reload))]
-                      (println "cannot reload namespaces that depend on cake.core:" cannot-reload)
-                      (apply reload to-reload))))))))))))
+(defn reload []
+  (let [last @timestamp
+        now  (System/currentTimeMillis)]
+    (when-let [new-decls (seq (newer-namespace-decls last classpath))]
+      (let [new-names (map second new-decls)
+            affected  (affected-namespaces new-names @dep-graph)]
+        (reset! timestamp now)
+        (swap! dep-graph update-dependency-graph new-decls)
+        (when-let [to-reload (seq (filter find-ns affected))] ; only reload namespaces that are loaded
+          (apply reload-namespaces to-reload))))
+    (when-let [changed-files (seq (newer-than last project-files))]
+      (reload-project-files changed-files))))
