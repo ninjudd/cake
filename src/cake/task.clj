@@ -60,7 +60,7 @@
        (catch java.io.FileNotFoundException e
          (when-not (= 'tasks namespace)
            (println "warning: unable to find tasks namespace" namespace)
-           (println "         if you've added a new plugin to :dev-dependencies you must run 'cake deps' to install it"))))
+           (println "  if you've added a new plugin to :dev-dependencies you must run 'cake deps' to install it"))))
   (into [namespace]
         (mapcat task-namespaces
                 (resolve-var namespace 'required-tasks))))

@@ -36,8 +36,14 @@
   ([files]
      (ns tasks
        (:use cake.core))
-     (doseq [f files :when (.exists f)]
-       (load-file (.getPath f)))))
+     (doseq [f files :when (.exists f) :let [f (.getPath f)]]
+       (try (load-file f)
+            (catch clojure.lang.Compiler$CompilerException e
+              (when-not (= java.io.FileNotFoundException (class (.getCause e)))
+                (throw e))
+              (println "warning: could not load" f)
+              (println " " (.getMessage e))
+              (println "  if you've added a library to :dev-dependencies you must run 'cake deps' to install it"))))))
 
 (defn reload []
   (let [last @timestamp
