@@ -3,7 +3,7 @@
         [cake.file :only [file global-file]]
         [cake.ant :only [fileset-seq]]
         [clojure.string :only [join]]
-        [cake.utils.useful :only [assoc-or update merge-in tap]])
+        [cake.utils.useful :only [update merge-in tap]])
   (:import [java.io File]))
 
 (defn- make-url [file]
@@ -29,7 +29,7 @@
     (eval-in cl '(do (require 'cake)
                      (require 'bake.io)
                      (require 'bake.reload)
-                     (require 'clojure.main)))    
+                     (require 'clojure.main)))
     cl))
 
 (defn reload! []
@@ -123,18 +123,15 @@
   (let [artifact (name project-name)
         artifact-version (str artifact "-" version)]
     (-> opts
-        (assoc :artifact-id  artifact
-               :group-id     (group project-name)
-               :aot          (or (:aot opts) (:namespaces opts))
-               :version      version
-               :context      (symbol (or (:context opts) "dev"))
-               :jar-name     (or (:jar-name opts) artifact-version)
-               :war-name     (or (:war-name opts) artifact-version)
-               :uberjar-name (or (:uberjar-name opts) (str artifact-version "-standalone")))
-        (assoc-or :dependencies (:deps opts))
-        (assoc-or :ext-depencencies (:dev-deps opts))
-        (assoc-or :dev-dependencies (:dev-deps opts))
-        (update :dependencies     dep-map)
-        (update :ext-dependencies dep-map)
-        (update :dev-dependencies dep-map)
-        (assoc-or :name artifact))))
+        (assoc :artifact-id      artifact
+               :group-id         (group project-name)
+               :version          version
+               :name             (or (:name opts) artifact)
+               :aot              (or (:aot opts) (:namespaces opts))
+               :context          (symbol (or (:context opts) "dev"))
+               :jar-name         (or (:jar-name opts) artifact-version)
+               :war-name         (or (:war-name opts) artifact-version)
+               :uberjar-name     (or (:uberjar-name opts) (str artifact-version "-standalone"))
+               :dependencies     (dep-map (or (:dependencies     opts) (:deps     opts)))
+               :dev-dependencies (dep-map (or (:dev-dependencies opts) (:dev-deps opts)))
+               :ext-dependencies (dep-map (or (:ext-dependencies opts) (:ext-deps opts)))))))
