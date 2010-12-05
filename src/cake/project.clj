@@ -131,6 +131,8 @@
                :jar-name     (or (:jar-name opts) artifact-version)
                :war-name     (or (:war-name opts) artifact-version)
                :uberjar-name (or (:uberjar-name opts) (str artifact-version "-standalone")))
+        (assoc-or :dependencies (:deps opts))
+        (assoc-or :dev-dependencies (:dev-deps opts))
         (update :dependencies     dep-map)
         (update :ext-dependencies dep-map)
         (update :dev-dependencies dep-map)
