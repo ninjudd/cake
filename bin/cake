@@ -378,7 +378,7 @@ class JVM
   def kill(force = $opts[:"9"])
     if pid
       signal = force ? KILL : TERM
-      log(:kill, "sending #{signal} signal to jvm") if debug?
+      log(:kill, "sending #{signal} signal to jvm (#{pid})") if debug?
       Process.kill(signal, pid)
       reset!
     else
