@@ -370,6 +370,7 @@ class JVM
     log(:cake, "starting jvm") if verbose?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
     @pid = daemon %{java #{vm_opts} #{java_opts} clojure.main -e "(require 'cake.main) (cake.main/start-server #{port})"}
+    log(:cake, "cake started with pid #{@pid} on port #{@port}") if debug?
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
   rescue Errno::EADDRNOTAVAIL => e # port already in use
     retry
