@@ -19,7 +19,7 @@
 
 (defn ext-classpath []
   (map make-url
-       (fileset-seq {:dir "lib/ext" :includes "*.jar"})))
+       (fileset-seq {:dir "lib" :includes (join " " (:ext-jars *project*))})))
 
 (defonce classloader nil)
 
