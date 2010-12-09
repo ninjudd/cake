@@ -4,9 +4,9 @@
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
-        [cake.utils.useful :only [absorb verify]])
+        [cake.utils.useful :only [absorb verify into-map]])
   (:require [clojure.xml :as xml])
-  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Mkdir]
+  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Replace]
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]
            [org.apache.maven.artifact.ant InstallTask Pom]
@@ -45,47 +45,32 @@
           (string? m) (add-zipfileset task (file-mapping m m))
           (vector? m) (add-zipfileset task (apply file-mapping m)))))
 
+(defn bakepath [& opts]
+  (let [bakepath (System/getProperty "bake.path")]
+    (merge (into-map opts)
+           (if (.endsWith bakepath ".jar")
+             {:src bakepath}
+             {:dir bakepath}))))
+
 (defn add-source-files [task & [prefix]]
   (when-not (:omit-source *project*)
     (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
     (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"}))
-  (when (:bake-jar *project*)
-    (let [bakepath (System/getProperty "bake.path")]
-      (if (.endsWith bakepath ".jar")
-        (add-zipfileset task {:src bakepath :prefix prefix :excludes "cake.clj"})
-        (add-zipfileset task {:dir bakepath :prefix prefix :excludes "cake.clj" :includes "**/*.clj"})))))
-
-(def cake-context
-"(ns cake)
-
-(defn- merge-in [left right]
-  (if (associative? left)
-    (merge-with merge-in left right)
-    right))
-
-(def *context* '%s)
-
-(def *project*
-  (let [project '%s
-        context (symbol (or (System/getProperty \"clojure.context\")
-                            (System/getenv \"CLOJURE_CONTEXT\")
-                            (:context project)))]
-    (merge-in project (assoc (context *context*)
-                        :context context))))")
+  (when (:app *project*)
+    (add-zipfileset task (bakepath :prefix prefix :excludes "cake.clj"))))
 
 (defn build-context []
-  (when-not (= "cake" (:artifact-id *project*))
-    (mkdir (file "build" "jar"))
-    (with-open [cake-clj (writer (file "build" "jar" "cake.clj"))]
-      (copy (format cake-context
-                    (pr-str *context*)
-                    (pr-str (.getRoot #'*project*)))
-            cake-clj))))
+  (ant Copy {:todir "build/jar"}
+       (add-zipfileset (bakepath :includes "cake.clj")))
+  (let [cake-clj "build/jar/cake.clj"
+        project (alter-var-root #'*project* identity)]
+    (ant Replace {:file cake-clj :token "(comment project)" :value (pr-str `(quote ~project))})
+    (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))})))
 
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
         cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))]
-    (when (:include-context *project*)
+    (when (:app *project*)
       (build-context))
     (ant Jar {:dest-file (jarfile)}
          (add-manifest (manifest))

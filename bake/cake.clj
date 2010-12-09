@@ -3,9 +3,9 @@
            [java.util Properties]))
 
 (def ^{:dynamic true} *current-task* nil)
-(def ^{:dynamic true} *project-root* nil)
-(def ^{:dynamic true} *project*      nil)
-(def ^{:dynamic true} *context*      nil)
+(def ^{:dynamic true} *project-root* (comment project))
+(def ^{:dynamic true} *project*      (comment project))
+(def ^{:dynamic true} *context*      (comment context))
 (def ^{:dynamic true} *script*       nil)
 (def ^{:dynamic true} *opts*         nil)
 (def ^{:dynamic true} *pwd*          nil)
