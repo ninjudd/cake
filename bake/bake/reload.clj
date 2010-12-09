@@ -34,6 +34,7 @@
 (defn reload-project-files
   ([] (reload-project-files project-files))
   ([files]
+     (remove-ns 'tasks)
      (ns tasks
        (:use cake.core))
      (doseq [f files :when (.exists f) :let [f (.getPath f)]]
@@ -55,5 +56,5 @@
         (swap! dep-graph update-dependency-graph new-decls)
         (when-let [to-reload (seq (filter find-ns affected))] ; only reload namespaces that are loaded
           (apply reload-namespaces to-reload))))
-    (when-let [changed-files (seq (newer-than last project-files))]
-      (reload-project-files changed-files))))
+    (when (seq (newer-than last project-files))
+      (reload-project-files project-files))))

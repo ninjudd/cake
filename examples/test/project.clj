@@ -4,6 +4,7 @@
                  [clojure-contrib "1.2.0"]
                  [tokyocabinet "1.23-SNAPSHOT"]]
   :dev-dependencies [[autodoc "0.7.1"]]
+  :tasks [foo]
   :aot [speak servlet]
   :main speak)
 
@@ -16,7 +17,7 @@
   :bar 8)
 
 (deftask foo
-  (prn "foo"))
+  (prn "project.clj"))
 
 (deftask bar #{compile}
   (bake [out System/out
