@@ -19,7 +19,7 @@
 (defmacro undeftask [taskname]
   `(append-task! ~taskname {:replace true}))
 
-(defmacro remove-deps [taskname & deps]
+(defmacro remove-deps [taskname deps]
   `(append-task! ~taskname {:remove-deps ~deps}))
 
 (defmacro require-tasks [& namespaces]
