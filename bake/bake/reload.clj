@@ -2,7 +2,7 @@
   "Try to reload files that have changed since the last reload. Adapted from Stuart Sierra's lazytest."
   (:use cake
         [clojure.set :only [difference]]
-        [bake.core :only [cake?]]
+        [bake.core :only [in-project-classloader?]]
         [bake.dependency :only [graph]]
         [bake.nsdeps :only [newer-namespace-decls newer-than update-dependency-graph affected-namespaces]]
         [clojure.set :only [union]])
@@ -21,7 +21,7 @@
     (File. (.getFile url))))
 
 (def project-files
-  (when (cake?)
+  (when-not (in-project-classloader?)
     (concat (map #(File. *root* %) ["project.clj" "context.clj" "tasks.clj"])
             (map #(File. *global-root* %) ["tasks.clj"]))))
 

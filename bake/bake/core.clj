@@ -12,9 +12,16 @@
 (defn log [& message]
   (println (format "%11s %s" (str "[" *current-task* "]") (join " " message))))
 
-(defn cake? []
-  (not= java.net.URLClassLoader
-        (class (.getClassLoader clojure.lang.RT))))
+(defn in-cake-jvm?
+  "Returns true if we are running from a jvm started by cake."
+  []
+  (not (nil? (System/getProperty "cake.project"))))
+
+(defn in-project-classloader?
+  "Returns true if this code is running in the project classloader."
+  []
+  (= java.net.URLClassLoader
+     (class (.getClassLoader clojure.lang.RT))))
 
 (defn debug? []
   (boolean (or (:d *opts*) (:debug *opts*))))
