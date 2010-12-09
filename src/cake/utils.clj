@@ -1,11 +1,8 @@
 (ns cake.utils
   (:use cake
         [cake.file :only [file]]
-        [cake.ant :only [ant args argline]]
-        [clojure.java.io :only [copy]])
-  (:import [org.apache.tools.ant.taskdefs ExecTask]
-           [java.net JarURLConnection]
-           [java.io File FileInputStream]))
+        [cake.ant :only [ant args argline]])
+  (:import (org.apache.tools.ant.taskdefs ExecTask)))
 
 (def *readline-marker* nil)
 
@@ -53,19 +50,3 @@
     (ant ExecTask {:executable "git" :dir *root* :failonerror true}
       (args params))
     (println "warning:" *root* "is not a git repository")))
-
-(defn resource-stream [name]
-  (if-let [url (.findResource (.getClassLoader clojure.lang.RT) name)]
-    (let [conn (.openConnection url)]
-      (if (instance? JarURLConnection conn)
-        (let [jar (cast JarURLConnection conn)]
-          (.getInputStream jar))
-        (FileInputStream. (File. (.getFile url)))))))
-
-(defn extract-resource [name dest-dir]
-  (if-let [s (resource-stream name)]
-    (let [dest (File. dest-dir name)]
-      (.mkdirs (.getParentFile dest))
-      (copy s dest)
-      dest)
-    (throw (Exception. (format "unable to find %s on classpath" name)))))

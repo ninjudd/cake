@@ -1,8 +1,26 @@
 (ns bake.io
-  (:use cake)
-  (:import [java.io FileInputStream FileOutputStream BufferedOutputStream PrintStream PrintWriter
-                    InputStreamReader OutputStreamWriter]
-           [clojure.lang Atom LineNumberingPushbackReader]))
+  (:use cake
+        [clojure.java.io :only [copy]])
+  (:import (java.io File FileInputStream FileOutputStream BufferedOutputStream PrintStream PrintWriter
+                    InputStreamReader OutputStreamWriter)
+           (java.net JarURLConnection)
+           (clojure.lang Atom LineNumberingPushbackReader)))
+
+(defn resource-stream [name]
+  (if-let [url (.findResource (.getClassLoader clojure.lang.RT) name)]
+    (let [conn (.openConnection url)]
+      (if (instance? JarURLConnection conn)
+        (let [jar (cast JarURLConnection conn)]
+          (.getInputStream jar))
+        (FileInputStream. (File. (.getFile url)))))))
+
+(defn extract-resource [name dest-dir]
+  (if-let [s (resource-stream name)]
+    (let [dest (File. dest-dir name)]
+      (.mkdirs (.getParentFile dest))
+      (copy s dest)
+      dest)
+    (throw (Exception. (format "unable to find %s on classpath" name)))))
 
 (defmacro with-outstreams [[sym var] & forms]
   `(let [root# (alter-var-root #'~var identity)]

@@ -4,7 +4,7 @@
         [cake.project :only [group]]
         [clojure.string :only [join]]
         [clojure.java.io :only [copy]]
-        [cake.utils :only [extract-resource]])
+        [bake.io :only [extract-resource]])
   (:import [org.apache.tools.ant.taskdefs Copy]))
 
 (def default-template
