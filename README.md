@@ -352,9 +352,10 @@ code in the global project. The file doesn't even have to end in .clj.
 
     #!/usr/bin/env cake
 
-## Contributors (in order of appearance)
+## Contributors
 
-- Justin Balthrop ([ninjudd](http://github.com/ninjudd))
-- Lance Bradley ([lancepantz](http://github.com/lancepantz))
-- Anthony Simpson ([Raynes](http://github.com/Raynes))
-- David Santiago ([davidsantiago](http://github.com/davidsantiago))
+- Justin Balthrop ([ninjudd](https://github.com/ninjudd))
+- Lance Bradley ([lancepantz](https://github.com/lancepantz))
+- Anthony Simpson ([Raynes](https://github.com/Raynes))
+- Luke Renn ([lrenn](https://github.com/lrenn))
+- David Santiago ([davidsantiago](https://github.com/davidsantiago))
