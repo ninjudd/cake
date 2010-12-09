@@ -48,7 +48,12 @@
 (defn add-source-files [task & [prefix]]
   (when-not (:omit-source *project*)
     (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
-    (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"})))
+    (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"}))
+  (when (:bake-jar *project*)
+    (let [bakepath (System/getProperty "bake.path")]
+      (if (.endsWith bakepath ".jar")
+        (add-zipfileset task {:src bakepath :prefix prefix :excludes "cake.clj"})
+        (add-zipfileset task {:dir bakepath :prefix prefix :excludes "cake.clj" :includes "**/*.clj"})))))
 
 (def cake-context
 "(ns cake)
