@@ -6,7 +6,8 @@
         [clojure.contrib.condition :only [handler-case *condition*]]
         [cake.utils :only [*readline-marker*]]        
         [bake.io :only [init-multi-out]]
-        [bake.reload :only [reload reload-project-files]])
+        [bake.reload :only [reload reload-project-files]]
+        [cake.tasks.swank :only [start-swank]])
   (:require [cake.tasks default global]
             [cake.project :as project]
             [cake.server :as server])
@@ -28,4 +29,6 @@
   (reload-project-files)
   (in-project
    (init-multi-out ".cake/cake.log")
+   (when-let [autostart (get *config* "swank.autostart")]
+     (start-swank autostart))
    (server/create port process-command)))
