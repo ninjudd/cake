@@ -3,7 +3,8 @@
         [cake.utils :only [git]]
         [bake.core :only [log]]
         [cake.tasks.jar :only [build-uberjar jars uberjarfile]]
-        [cake.tasks.release :only [upload-to-clojars]])
+        [cake.tasks.release :only [upload-to-clojars]]
+        [cake.tasks.version :only [snapshot? snapshot-timestamp]])
   (:import [org.apache.tools.ant.taskdefs Jar Copy Move ExecTask]
            [java.io File]))
 
@@ -30,9 +31,6 @@
          (add-fileset {:file bakejar})
          (add-dev-jars))))
 
-(defn snapshot? [version]
-  (.endsWith version "SNAPSHOT"))
-
 (deftask gem
   "Build standalone gem package."
   (let [version (:version *project*)]
@@ -47,15 +45,6 @@
           (ant ExecTask {:executable "gem" :dir (file "gem")}
                (env {"CAKE_VERSION" version})
                (args ["build" "cake.gemspec"]))))))
-
-(defn ftime [string time]
-  (format (apply str (map #(str "%1$t" %) string)) time))
-
-(defn snapshot-timestamp [version]
-  (if (snapshot? version)
-    (let [t (java.util.Calendar/getInstance)]
-      (.replaceAll version "SNAPSHOT" (str (ftime "Ymd" t) "." (ftime "HMS" t))))
-    version))
 
 (undeftask release)
 (deftask release #{uberjar gem tag}
