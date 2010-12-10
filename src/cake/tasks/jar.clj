@@ -56,7 +56,7 @@
   (when-not (:omit-source *project*)
     (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
     (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"}))
-  (when (:app *project*)
+  (when (:bake *project*)
     (add-zipfileset task (bakepath :prefix prefix :excludes "cake.clj"))))
 
 (defn build-context []
@@ -70,7 +70,7 @@
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
         cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))]
-    (when (:app *project*)
+    (when (:bake *project*)
       (build-context))
     (ant Jar {:dest-file (jarfile)}
          (add-manifest (manifest))
