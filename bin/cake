@@ -342,7 +342,7 @@ class JVM
     Process.kill(0, @pid) # make sure pid is valid
     TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
 
-    kill if @version != $version or (not $config['disable.auto_restart'] and newer?("#{$project}/lib/dev", pidfile))
+    kill if @version != $version or (not $config['disable.auto.restart'] and newer?("#{$project}/lib/dev", pidfile))
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Process::Error => e
     if e.kind_of?(Errno::ECONNREFUSED)
       log(:cake, "defunct jvm") if debug?
@@ -614,7 +614,7 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
     Dir.chdir($cakedir) { system('git pull') }
   end
 
-  $version = IO.read(project).split("\n").first.match(/defproject cake \"(.*)\"/)[1]
+  $version = `git describe`.chomp
   log(:deps, "project.clj version is #{$version}") if debug?
 
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
