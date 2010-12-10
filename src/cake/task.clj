@@ -2,7 +2,8 @@
   (:use cake
         [cake.server :only [print-stacktrace]]
         [cake.file :only [file newer? touch]]
-        [cake.utils.useful :only [update verify append]]))
+        [cake.utils.useful :only [update verify append]]
+        [uncle.core :only [*task-name*]]))
 
 (declare tasks)
 (declare run?)
@@ -111,25 +112,26 @@
 
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
-  [name]
+  [taskname]
   (if-not (bound? #'tasks)
     ;; create the tasks and run? bindings if it hasn't been done yet.
     (binding [tasks (get-tasks)
               run?  {}]
-      (run-task name))
-    (let [task (get tasks name)]
+      (run-task taskname))
+    (let [task (get tasks taskname)]
       (if (and (nil? task)
-               (not (string? name)))
-        (println "unknown task:" name)
-        (verify (not= :in-progress (run? name))
-                (str "circular dependency found in task: " name)
-                (when-not (run? name)
-                  (set! run? (assoc run? name :in-progress))
+               (not (string? taskname)))
+        (println "unknown task:" taskname)
+        (verify (not= :in-progress (run? taskname))
+                (str "circular dependency found in task: " taskname)
+                (when-not (run? taskname)
+                  (set! run? (assoc run? taskname :in-progress))
                   (doseq [dep (:deps task)] (run-task dep))
-                  (binding [*current-task* name
-                            *File* (if-not (symbol? name) (expand-defile-path name))]
+                  (binding [*current-task* taskname
+                            *task-name*    (name taskname)
+                            *File* (if-not (symbol? taskname) (expand-defile-path taskname))]
                     (doseq [action (map resolve (:actions task)) :when action]
                       (action *opts*))
-                    (set! run? (assoc run? name true))
-                    (if (symbol? name)
-                      (touch (task-run-file name) :verbose false)))))))))
+                    (set! run? (assoc run? taskname true))
+                    (if (symbol? taskname)
+                      (touch (task-run-file taskname) :verbose false)))))))))

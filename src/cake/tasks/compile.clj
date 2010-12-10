@@ -1,7 +1,7 @@
 (ns cake.tasks.compile
   (:use cake
         [cake.core :only [deftask bake]]
-        [cake.ant  :only [ant add-fileset fileset-seq path classpath]]
+        [uncle.core :only [ant add-fileset fileset-seq path classpath]]
         [cake.file :only [file newer?]]
         [cake.project :only [reload!]]
         [bake.core :only [verbose? debug? log]]

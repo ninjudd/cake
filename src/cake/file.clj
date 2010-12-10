@@ -23,7 +23,7 @@
 (defn global-file [& path]
   (apply file *global-root* path))
 
-(use 'cake.ant)
+(use 'uncle.core)
 
 (defn cp [from to & opts]
   (ant Copy (into-map opts :file from :tofile to)))

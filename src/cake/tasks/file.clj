@@ -2,7 +2,7 @@
   (:use cake
         [cake.core :only [deftask]]
         [cake.task :only [run-task]]
-        [cake.ant  :only [ant add-fileset]] 
+        [uncle.core :only [ant add-fileset]]
         [cake.file :only [file]]
         [bake.core :only [log]])
   (:import (org.apache.tools.ant.taskdefs Delete Mkdir)))

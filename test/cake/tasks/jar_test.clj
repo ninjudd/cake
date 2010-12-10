@@ -1,6 +1,6 @@
 (ns cake.tasks.jar-test
   (:use clojure.test helpers
-        [cake.ant :only [fileset-seq]]
+        [uncle.core :only [fileset-seq]]
         [cake.file :only [file rm rmdir]]
 	[clojure.java.shell :only [sh]]))
 

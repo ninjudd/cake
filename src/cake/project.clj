@@ -1,7 +1,7 @@
 (ns cake.project
   (:use cake classlojure
         [cake.file :only [file global-file]]
-        [cake.ant :only [fileset-seq]]
+        [uncle.core :only [fileset-seq]]
         [clojure.string :only [join]]
         [cake.utils.useful :only [update merge-in tap]])
   (:import [java.io File]))

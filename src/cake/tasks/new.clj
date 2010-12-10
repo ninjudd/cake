@@ -1,5 +1,5 @@
 (ns cake.tasks.new
-  (:use cake cake.core cake.file cake.ant
+  (:use cake cake.core cake.file uncle.core
         [bake.core :only [log]]
         [cake.project :only [group]]
         [clojure.string :only [join]]

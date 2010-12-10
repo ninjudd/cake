@@ -1,5 +1,5 @@
 (ns tasks
-  (:use cake cake.core cake.ant cake.file
+  (:use cake cake.core cake.file uncle.core
         [cake.utils :only [git]]
         [bake.core :only [log]]
         [cake.tasks.jar :only [build-uberjar jars uberjarfile]]

@@ -1,5 +1,5 @@
 (ns cake.tasks.deps
-  (:use cake cake.core cake.ant cake.file
+  (:use cake cake.core cake.file uncle.core
         [cake.utils :only [cake-exec os-name os-arch]]
         [cake.project :only [group reload reload!]]
         [bake.core :only [log]]

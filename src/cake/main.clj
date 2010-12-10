@@ -2,9 +2,10 @@
   (:use cake
         [cake.task :only [run-task run?]]
         [cake.file :only [file global-file]]
-        [cake.ant  :only [in-project]]
+        [uncle.core :only [in-project]]
         [clojure.contrib.condition :only [handler-case *condition*]]
         [cake.utils :only [*readline-marker*]]        
+        [bake.core :only [debug?]]
         [bake.io :only [init-multi-out]]
         [bake.reload :only [reload reload-project-files]]
         [cake.tasks.swank :only [start-swank]])
@@ -17,7 +18,7 @@
 (defn process-command [[task readline-marker]]
   (reload)
   (binding [*readline-marker* readline-marker]
-    (in-project *outs*
+    (in-project {:outs *outs* :verbose (debug?) :root *root*}
       (doseq [dir ["lib" "classes" "build"]]
         (.mkdirs (file dir)))
       (handler-case :type
@@ -28,7 +29,7 @@
 (defn start-server [port]
   (reload-project-files)
   (init-multi-out ".cake/cake.log")
-  (in-project *outs*
+  (in-project {:outs *outs* :verbose (debug?) :root *root*}
     (when-let [autostart (get *config* "swank.autostart")]
       (start-swank autostart))
     (server/create port process-command)))

@@ -1,7 +1,7 @@
 (ns cake.utils
   (:use cake
         [cake.file :only [file]]
-        [cake.ant :only [ant args argline]])
+        [uncle.core :only [ant args argline]])
   (:import (org.apache.tools.ant.taskdefs ExecTask)))
 
 (def *readline-marker* nil)

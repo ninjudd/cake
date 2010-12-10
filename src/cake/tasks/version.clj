@@ -1,5 +1,5 @@
 (ns cake.tasks.version
-  (:use cake cake.core cake.ant
+  (:use cake cake.core uncle.core
         [bake.core :only [log]]
         [cake.utils :only [ftime]]
         [cake.utils.useful :only [update]]

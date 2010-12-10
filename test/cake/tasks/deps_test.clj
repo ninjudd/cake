@@ -1,6 +1,6 @@
 (ns cake.tasks.deps-test
   (:use clojure.test helpers
-        [cake.ant :only [fileset-seq]]
+        [uncle.core :only [fileset-seq]]
         [cake.file :only [file rmdir]]))
 
 (use-fixtures :once in-test-project)

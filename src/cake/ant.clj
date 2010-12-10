@@ -50,7 +50,7 @@
             (catch NoSuchMethodException e
               (let [instance (.newInstance class)]
                 (try (.invoke (.getMethod class "setProject" signature)
-                       instance (into-array [*ant-project*]))
+                              instance (into-array [*ant-project*]))
                      (catch NoSuchMethodException e))
                 instance))))))
 

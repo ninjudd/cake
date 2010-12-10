@@ -1,7 +1,7 @@
 (ns user
   (:use [clojure.contrib duck-streams]
         [clojure.contrib.java-utils :only (file)]
-        cake cake.core cake.ant
+        cake cake.core uncle.core
         [cake.tasks.jar :only [build-uberjar uberjarfile]])
   (:import [org.apache.tools.ant.taskdefs Mkdir Copy]
            (java.io IOException)))
