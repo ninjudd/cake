@@ -51,7 +51,7 @@ class IO
   def gets_nonblock(delim = "\n")
     line = ""
     while c = read_nonblock(1)
-      line << c      
+      line << c
       break if c == delim
     end
     line
@@ -320,6 +320,13 @@ def ps
   `jps -v`.split("\n").select {|l| l =~ /cake\.project/}
 end
 
+def killall
+  ps.each do |line|
+    pid = line.split(' ').first.to_i
+    Process.kill($opts[:"9"] ? KILL : TERM, pid)
+  end.size > 0
+end
+
 class JVM
   attr_reader :classpath, :libpath, :port, :pid, :pidfile, :load_time
 
@@ -342,7 +349,7 @@ class JVM
     Process.kill(0, @pid) # make sure pid is valid
     TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
 
-    kill if @version != $version or (not $config['disable.auto.restart'] and newer?("#{$project}/lib/dev", pidfile))
+    kill if @version != $version or newer?("#{$project}/lib/dev", pidfile)
   rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Process::Error => e
     if e.kind_of?(Errno::ECONNREFUSED)
       log(:cake, "defunct jvm") if debug?
@@ -399,7 +406,7 @@ class JVM
     puts ";; cannot find readline; your repl won't be very awesome without it" if $no_readline
     load_history
     loop do
-      with_socket do |socket|        
+      with_socket do |socket|
         socket.write %{[repl] #{$vars} "#{REPL_PROMPT}"}
         while @ns = read_until_prompt(socket)
           line = readline
@@ -614,8 +621,14 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
     Dir.chdir($cakedir) { system('git pull') }
   end
 
-  $version = `git describe`.chomp
+  $version = `cd #{$cakedir} && git describe`.chomp
   log(:deps, "project.clj version is #{$version}") if debug?
+
+  # Force new cake libs if cake's project.clj has changed.
+  if newer?(project, lib) and not $config['disable.auto-deps']
+    killall
+    FileUtils.remove_dir(lib, true)
+  end
 
   if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
@@ -664,12 +677,23 @@ else
 end
 
 if $command == :upgrade
-  system($0, "killall")
-  exec($0, "--version")
-end
-
-if $command == :log
+  killall
+  puts "cake upgraded to #{$version}"
+  exit
+elsif $command == :default and $opts[:version]
+  puts "cake #{$version}"
+  exit
+elsif $command == :log
   exec("tail -n#{$opts[:log] || 10} -f #{$project}/.cake/cake.log")
+elsif $command == :killall
+  killall || puts("No matching processes belonging to you were found")
+  exit
+elsif $command == :kill
+  cake.kill
+  exit
+elsif $command == :ps
+  puts ps.sort.reverse
+  exit
 end
 
 cake = JVM.new(
@@ -678,29 +702,7 @@ cake = JVM.new(
   %{-Dcake.project="#{$project}" -Dbake.path="#{bakepath}"}
 )
 
-if $command == :default and $opts[:version]
-  puts "cake #{$version}"
-  exit
-elsif $command == :killall or $command == :kill
-  if $opts[:all] or $opts[:kill] == ['all'] or $command == :killall
-    puts "'cake kill --all' is deprecated, in the future use 'cake killall' instead" if $opts[:all]
-    puts "'cake kill all' is deprecated, in the future use 'cake killall' instead" if $opts[:kill] == ['all']
-    num = ps.each do |line|
-      pid = line.split(' ').first.to_i
-      Process.kill($opts[:"9"] ? KILL : TERM, pid)
-    end.size
-    puts "No matching processes belonging to you were found" if num == 0
-  else
-    cake.kill
-  end
-  exit
-elsif $command == :ps
-  puts ps.sort.reverse
-  exit
-elsif restart?
-  cake.kill
-end
-
+cake.kill if restart?
 cake.start
 
 if $command == :repl
