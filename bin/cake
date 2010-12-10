@@ -630,7 +630,7 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
     FileUtils.remove_dir(lib, true)
   end
 
-  if Dir["#{lib}/*.jar"].empty? or Dir["#{lib}/dev/*.jar"].empty?
+  if Dir["#{lib}/*.jar"].empty?
     # In a new git checkout, need to fetch dependencies.
     cakejar = get_cake(:version => $version, :dest => lib) rescue get_cake(:version => :current, :dest => lib)
     extract(cakejar, "bake.jar", "#{lib}/dev")

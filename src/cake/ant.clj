@@ -7,7 +7,9 @@
   (:import [org.apache.tools.ant Project NoBannerLogger]
            [org.apache.tools.ant.types Path FileSet ZipFileSet EnumeratedAttribute Environment$Variable]
            [org.apache.tools.ant.taskdefs Echo Javac Manifest Manifest$Attribute]
-           [java.beans Introspector]))
+           [java.beans Introspector]
+           [java.io PrintStream]))
+
 
 (def #^{:dynamic true} *ant-project* nil)
 
@@ -113,17 +115,17 @@
     (.addEnv task
      (make Environment$Variable {:key (name key) :value val}))))
 
-(defn init-project []
+(defn init-project [outs]
   (make Project {:basedir *root*}
         (.init)
         (.addBuildListener
          (make NoBannerLogger
                {:message-output-level (if (debug?) Project/MSG_VERBOSE Project/MSG_INFO)
-                :output-print-stream  System/out
-                :error-print-stream   System/err}))))
+                :output-print-stream  outs
+                :error-print-stream   outs}))))
 
-(defmacro in-project [& forms]
-  `(binding [*ant-project* (init-project)]
+(defmacro in-project [outs & forms]
+  `(binding [*ant-project* (init-project (PrintStream. ~outs))]
      ~@forms))
 
 (defmethod coerce [java.io.File String] [_ str] (file str))

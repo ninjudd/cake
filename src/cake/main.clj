@@ -17,18 +17,18 @@
 (defn process-command [[task readline-marker]]
   (reload)
   (binding [*readline-marker* readline-marker]
-    (in-project
-     (doseq [dir ["lib" "classes" "build"]]
-       (.mkdirs (file dir)))
-     (handler-case :type
-       (run-task (symbol (name task)))
-       (handle :abort-task
-         (println (name task) "aborted:" (:message *condition*)))))))
+    (in-project *outs*
+      (doseq [dir ["lib" "classes" "build"]]
+        (.mkdirs (file dir)))
+      (handler-case :type
+        (run-task (symbol (name task)))
+        (handle :abort-task
+          (println (name task) "aborted:" (:message *condition*)))))))
 
 (defn start-server [port]
   (reload-project-files)
-  (in-project
-   (init-multi-out ".cake/cake.log")
-   (when-let [autostart (get *config* "swank.autostart")]
-     (start-swank autostart))
-   (server/create port process-command)))
+  (init-multi-out ".cake/cake.log")
+  (in-project *outs*
+    (when-let [autostart (get *config* "swank.autostart")]
+      (start-swank autostart))
+    (server/create port process-command)))

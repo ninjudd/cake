@@ -6,7 +6,7 @@
 
 (defn in-test-project [f]
   (binding [*root* (file "examples/test")]
-    (ant/in-project (f))))
+    (ant/in-project *outs* (f))))
 
 (defn cake [& args]
   (with-sh-dir *root*
