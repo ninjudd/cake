@@ -18,13 +18,15 @@
                (fileset-seq {:dir (global-file "lib/dev") :includes "*.jar"}))))
 
 (defn ext-classpath []
-  (map make-url
-       (fileset-seq {:dir "lib" :includes (join " " (:ext-jars *project*))})))
+  (when-let [jars (:ext-jars *project*)]
+    (map make-url
+         (fileset-seq {:dir "lib" :includes (join " " jars)}))))
 
 (defonce classloader nil)
 
 (defn make-classloader []
-  (wrap-ext-classloader (ext-classpath))
+  (when (:ext-jars *project*)
+    (wrap-ext-classloader (ext-classpath)))
   (when-let [cl (classlojure (classpath))]
     (eval-in cl '(do (require 'cake)
                      (require 'bake.io)

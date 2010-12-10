@@ -2,7 +2,7 @@
   "Try to reload files that have changed since the last reload. Adapted from Stuart Sierra's lazytest."
   (:use cake
         [clojure.set :only [difference]]
-        [bake.core :only [in-project-classloader?]]
+        [bake.core :only [in-project-classloader? debug?]]
         [bake.dependency :only [graph]]
         [bake.nsdeps :only [newer-namespace-decls newer-than update-dependency-graph affected-namespaces]]
         [clojure.set :only [union]])
@@ -49,12 +49,16 @@
 (defn reload []
   (let [last @timestamp
         now  (System/currentTimeMillis)]
+    (reset! timestamp now)
     (when-let [new-decls (seq (newer-namespace-decls last classpath))]
       (let [new-names (map second new-decls)
             affected  (affected-namespaces new-names @dep-graph)]
-        (reset! timestamp now)
         (swap! dep-graph update-dependency-graph new-decls)
         (when-let [to-reload (seq (filter find-ns affected))] ; only reload namespaces that are loaded
+          (when (debug?)
+            (println "reloading namespaces:" to-reload))
           (apply reload-namespaces to-reload))))
     (when (seq (newer-than last project-files))
+      (when (debug?)
+        (println "reloading project-files:" project-files))
       (reload-project-files project-files))))
