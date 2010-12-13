@@ -1,6 +1,6 @@
 (ns cake.tasks.jar
-  (:use cake cake.core cake.file uncle.core
-        [bake.core :only [current-context log]]
+  (:use cake cake.core cake.ant cake.file
+        [bake.core :only [current-context log project-with-context]]
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
@@ -63,9 +63,11 @@
   (ant Copy {:todir "build/jar"}
        (add-zipfileset (bakepath :includes "cake.clj")))
   (let [cake-clj "build/jar/cake.clj"
-        project (alter-var-root #'*project* identity)]
+        context (current-context)
+        project (project-with-context context)]
     (ant Replace {:file cake-clj :token "(comment project)" :value (pr-str `(quote ~project))})
-    (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))})))
+    (when (nil? context)
+      (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))}))))
 
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))

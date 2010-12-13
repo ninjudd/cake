@@ -34,9 +34,11 @@
     (symbol context)))
 
 (defn project-with-context [context]
-  (merge-in *project-root*
-            (assoc (context *context*)
-              :context context)))
+  (if (nil? context)
+    *project-root*
+    (merge-in *project-root*
+              (assoc (context *context*)
+                :context context))))
 
 (defmacro with-context [context & forms]
   `(let [context# (symbol (name (or ~context (:context *project*))))]
