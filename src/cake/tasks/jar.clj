@@ -1,5 +1,5 @@
 (ns cake.tasks.jar
-  (:use cake cake.core cake.ant cake.file
+  (:use cake cake.core cake.file uncle.core
         [bake.core :only [current-context log project-with-context]]
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
