@@ -122,16 +122,16 @@
       (if (and (nil? task)
                (not (string? taskname)))
         (println "unknown task:" taskname)
-        (verify (not= :in-progress (run? taskname))
-                (str "circular dependency found in task: " taskname)
-                (when-not (run? taskname)
-                  (set! run? (assoc run? taskname :in-progress))
-                  (doseq [dep (:deps task)] (run-task dep))
-                  (binding [*current-task* taskname
-                            *task-name*    (name taskname)
-                            *File* (if-not (symbol? taskname) (expand-defile-path taskname))]
-                    (doseq [action (map resolve (:actions task)) :when action]
-                      (action *opts*))
-                    (set! run? (assoc run? taskname true))
-                    (if (symbol? taskname)
-                      (touch (task-run-file taskname) :verbose false)))))))))
+        (do (verify (not= :in-progress (run? taskname))
+                    (str "circular dependency found in task: " taskname))
+            (when-not (run? taskname)
+              (set! run? (assoc run? taskname :in-progress))
+              (doseq [dep (:deps task)] (run-task dep))
+              (binding [*current-task* taskname
+                        *task-name*    (name taskname)
+                        *File* (if-not (symbol? taskname) (expand-defile-path taskname))]
+                (doseq [action (map resolve (:actions task)) :when action]
+                  (action *opts*))
+                (set! run? (assoc run? taskname true))
+                (if (symbol? taskname)
+                  (touch (task-run-file taskname) :verbose false)))))))))

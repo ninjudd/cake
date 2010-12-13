@@ -40,9 +40,35 @@
   [val coll]
   (some (partial = val) coll))
 
-(defmacro if-ns [ns-reference then-form else-form]
+(defn extract
+  "Extracts the first item that matches pred from coll, returning a vector of that item
+   followed by coll with the items removed."
+  [pred coll]
+  (loop [head ()
+         tail (seq coll)]
+    (let [item (first tail)
+          tail (next tail)]
+      (if (or (nil? tail) (pred item))
+        [item (into tail head)]
+        (recur (conj head item) tail)))))
+
+(defn separate
+  "Split coll into two sequences, one that matches pred and one that doesn't. Unlike, the
+  version in clojure.contrib.seq-utils, this is not lazy, but pred is only called once per item."
+  [pred coll]
+  (loop [tail (seq coll)
+         yes () no ()]
+    (if (nil? tail)
+      [(reverse yes) (reverse no)]
+      (let [item (first tail)
+            tail (next tail)]
+        (if (pred item)
+          (recur tail (conj yes item) no)
+          (recur tail yes (conj no item)))))))
+
+(defmacro if-ns [ns-reference then-form & [else-form]]
   "Try to load a namespace reference. If sucessful, evaluate then-form otherwise evaluate else-form."
-  `(try (ns ~(ns-name *ns*) ~ns-reference)
+  `(try (ns ~(.getName *ns*) ~ns-reference)
         (eval '~then-form)
         (catch Exception e#
           (when (not (instance? java.io.FileNotFoundException e#))
@@ -60,8 +86,11 @@
   "Update value in map where f is a function that takes the old value and the
    supplied args and returns the new value."
   [map key f & args]
-  (let [old (get map key), new (apply f old args)]
-    (if (= old new) map (assoc map key new))))
+  (if (sequential? key)
+    (reduce #(apply update %1 %2 f args) map key)
+    (let [old (get map key)
+          new (apply f old args)]
+      (if (= old new) map (assoc map key new)))))
 
 (defn append
   "Merge two data structures by combining the contents. For maps, merge recursively by
@@ -123,13 +152,13 @@
   `(try ~form (catch Exception e# ~error-form)))
 
 (defmacro verify
-  "Execute body if test returns true, otherwise raise exception."
-  [test exception & body]
-  `(if ~test
-     (do ~@body)
-     (throw (if (string? ~exception)
-              (Exception. ~exception)
-              ~exception))))
+  "Raise exception unless test returns true."
+  [test exception]
+  (when *assert*
+    `(when-not ~test
+       (throw (if (string? ~exception)
+                (AssertionError. ~exception)
+                ~exception)))))
 
 (defn trap
   "Register signal handling function."
@@ -249,6 +278,21 @@
       (assoc m k (apply update-in! (get m k) ks f args))
       (assoc m k (apply f (get m k) args)))))
 
+(defn thrush
+  "Takes the first argument and applies the remaining arguments to it as functions from left to right.
+   This tiny implementation was written by Chris Houser. http://blog.fogus.me/2010/09/28/thrush-in-clojure-redux"
+  [& args]
+  (reduce #(%2 %1) args))
+
+(defn comp-partial
+  "Like comp, except all args but the last are passed to every function with the last arg threaded through
+   these partial functions. So, the rightmost fn is applied to all arguments. Each fn is then applied to the
+   original args with the last arg replaced by the result of the previous fn."
+  [& fns]
+  (fn [& args]
+    (let [f (apply comp (map #(apply partial % (butlast args)) fns))]
+      (f (last args)))))
+
 (defn into-map
   "Convert a list of heterogeneous args into a map. Args can be alternating keys and values,
    maps of keys to values or collections of alternating keys and values."
@@ -293,6 +337,14 @@
         (let [result (.invoke method instance (into-array params))]
           (.setAccessible method false)
           result)))))
+
+(defn on-shutdown
+  "Execute the given function on jvm shutdown."
+  [f]
+  (.addShutdownHook
+   (Runtime/getRuntime)
+   (proxy [Thread] []
+     (run [] (f)))))
 
 (defn- parse-opt [default opts arg]
   (let [m re-matches, key (comp keyword str)]
