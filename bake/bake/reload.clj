@@ -17,7 +17,7 @@
   (apply require symbols))
 
 (def classpath
-  (for [url (.getURLs (ClassLoader/getSystemClassLoader))]
+  (for [url (.getURLs (.getClassLoader clojure.lang.RT))]
     (File. (.getFile url))))
 
 (def project-files
