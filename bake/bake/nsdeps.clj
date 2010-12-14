@@ -66,6 +66,8 @@
       (remove-from-dep-graph new-decls)
       (add-to-dep-graph new-decls)))
 
-(defn affected-namespaces [changed-namespaces old-dependency-graph]
-  (apply union (set changed-namespaces) (map #(dependents old-dependency-graph %)
-                                             changed-namespaces)))
+(defn affected-namespaces [changed-namespaces dep-graph]
+  (apply union
+         (set changed-namespaces)
+         (map #(dependents dep-graph %)
+              changed-namespaces)))

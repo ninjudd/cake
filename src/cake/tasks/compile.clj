@@ -5,7 +5,6 @@
         [cake.file :only [file newer?]]
         [cake.project :only [reload!]]
         [bake.core :only [verbose? debug? log]]
-        [bake.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
         [cake.utils :only [os-name os-arch sudo prompt-read]]
         [cake.utils.useful :only [pluralize]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
@@ -26,45 +25,16 @@
     (when (some #(newer? % start) (file-seq (file "classes")))
       (reload!))))
 
-(defn classfile [ns]
-  (file "classes"
-    (.. (str ns)
-        (replace "-" "_")
-        (replace "." "/")
-        (concat "__init.class"))))
-
 (defn source-dir []
   (let [src (file "src" "clj")]
     (if (.exists src) src (file "src"))))
 
-(defn stale-namespaces [source-path aot]
-  (let [compile?
-        (if (= :all aot)
-          (constantly true)
-          (if (= :exclude (first aot))
-            (complement (partial contains? (set (rest aot))))
-            (let [aot (set aot)]
-              (fn [namespace]
-                (or (= namespace (:main *project*))
-                    (contains? aot namespace))))))]
-    (remove nil?
-      (for [sourcefile (find-clojure-sources-in-dir source-path)]
-        (let [namespace (second (read-file-ns-decl sourcefile))
-              classfile (classfile namespace)]
-          (when (and (compile? namespace) (newer? sourcefile classfile))
-            namespace))))))
-
 (defn compile-clojure [source-path compile-path aot]
-  (when-let [stale (seq (stale-namespaces source-path aot))]
-    (.mkdirs compile-path)
-    (log "Compiling" (pluralize (count stale) "clojure namespace"))
-    (bake (:use [bake.core :only [log]])
-          [libs stale
-           path (.getPath compile-path)]
-      (binding [*compile-path* path]
-        (doseq [lib libs]
-          (log "Compiling namespace" lib)
-          (compile lib))))
+  (.mkdirs compile-path)
+  (when (bake (:use [bake.compile :only [compile-stale]])
+              [source-path  (.getPath source-path)
+               compile-path (.getPath compile-path)]
+              (compile-stale source-path compile-path))
     (reload!)))
 
 (defn copy-native []

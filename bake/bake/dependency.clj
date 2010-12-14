@@ -20,8 +20,7 @@
    :dependents {}})
 
 (defn- transitive
-  "Recursively expands the set of dependency relationships starting
-  at (get m x)"
+  "Recursively expands the set of dependency relationships starting at (get m x)"
   [m x]
   (reduce (fn [s k]
             (union s (transitive m k)))
@@ -33,8 +32,7 @@
   (transitive (:dependencies graph) x))
 
 (defn dependents
-  "Returns the set of all things which depend upon x, directly or
-  transitively."
+  "Returns the set of all things which depend upon x, directly or transitively."
   [graph x]
   (transitive (:dependents graph) x))
 
@@ -52,14 +50,13 @@
   (update-in graph [key x] union #{y}))
 
 (defn depend
-  "Adds to the dependency graph that x depends on deps.  Forbids
-  circular dependencies."
+  "Adds to the dependency graph that x depends on deps. Forbids circular dependencies."
   ([graph x] graph)
   ([graph x dep]
      {:pre [(not (depends? graph dep x))]}
      (-> graph
          (add-relationship :dependencies x dep)
-	 (add-relationship :dependents dep x)))
+         (add-relationship :dependents dep x)))
   ([graph x dep & more]
      (reduce (fn [g d] (depend g x d))
              graph (cons dep more))))
@@ -81,8 +78,7 @@
              graph (cons x more))))
 
 (defn remove-key
-  "Removes the key x from the dependency graph without removing x as a
-  depedency of other keys."
+  "Removes the key x from the dependency graph without removing x as a depedency of other keys."
   ([graph] graph)
   ([graph x]
      (assoc graph
