@@ -13,7 +13,8 @@
    'ps       ["List running cake jvm processes for all projects."]
    'log      ["Tail the cake log file. Optionally pass the number of lines of history to show."]
    'kill     ["Kill running cake jvm processes. Use -9 to force."]
-   'killall  ["Kill all running cake jvm processes for all projects."]})
+   'killall  ["Kill all running cake jvm processes for all projects."]
+   'console  ["Open a jconsole connection to the cake jvm. Optionally pass the number of tiled windows."]})
 
 (defn parse-task-opts [forms]
   (let [[deps forms] (if (set? (first forms))

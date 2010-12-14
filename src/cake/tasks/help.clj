@@ -11,7 +11,7 @@
     (apply println "cake" name deps)
     (doseq [doc docs] (println "  " doc))))
 
-(def system-tasks #{"ps" "kill" "killall" "log" "upgrade"})
+(def system-tasks #{"ps" "kill" "killall" "log" "upgrade" "console"})
 (def hidden-tasks #{"default" "eat" "bake"})
 
 (defn taskdocs [pattern]
