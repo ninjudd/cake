@@ -35,7 +35,10 @@
     cl))
 
 (defn reload! []
-  (alter-var-root #'classloader (fn [_] (make-classloader))))
+  (alter-var-root #'classloader
+    (fn [cl]
+      (when cl (eval-in cl '(shutdown-agents)))
+      (make-classloader))))
 
 (defn reload []
   (alter-var-root #'classloader
