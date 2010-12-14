@@ -19,15 +19,15 @@
 
 (defn- deps-from-libspec [prefix form]
   (cond (list? form) (apply union (map (fn [f] (deps-from-libspec
-						(symbol (str (when prefix (str prefix "."))
-							     (first form)))
-						f))
-				       (rest form)))
-	(vector? form) (deps-from-libspec prefix (first form))
-	(symbol? form) #{(symbol (str (when prefix (str prefix ".")) form))}
-	(keyword? form) #{}
-	:else (throw (IllegalArgumentException.
-		      (pr-str "Unparsable namespace form:" form)))))
+                                                (symbol (str (when prefix (str prefix "."))
+                                                             (first form)))
+                                                f))
+                                       (rest form)))
+        (vector? form) (deps-from-libspec prefix (first form))
+        (symbol? form) #{(symbol (str (when prefix (str prefix ".")) form))}
+        (keyword? form) #{}
+        :else (throw (IllegalArgumentException.
+                      (pr-str "Unparsable namespace form:" form)))))
 
 (defn- deps-from-ns-form [form]
   (when (and (list? form)

@@ -8,6 +8,13 @@
         [clojure.set :only [union]])
   (:import (java.io File)))
 
+(defn classfile [ns]
+  (File. "classes"
+    (.. (str ns)
+        (replace "-" "_")
+        (replace "." "/")
+        (concat "__init.class"))))
+
 (defn reload-namespaces
   "Remove all specified namespaces then reload them."
   [& symbols]
@@ -46,6 +53,11 @@
               (println " " (.getMessage e))
               (println "  if you've added a library to :dev-dependencies you must run 'cake deps' to install it"))))))
 
+(defn- reload? [ns]
+  ; only reload namespaces that are loaded and not aot-compiled
+  (and (find-ns ns)
+       (not (.exists (classfile ns)))))
+
 (defn reload []
   (let [last @timestamp
         now  (System/currentTimeMillis)]
@@ -54,7 +66,7 @@
       (let [new-names (map second new-decls)
             affected  (affected-namespaces new-names @dep-graph)]
         (swap! dep-graph update-dependency-graph new-decls)
-        (when-let [to-reload (seq (filter find-ns affected))] ; only reload namespaces that are loaded
+        (when-let [to-reload (seq (filter reload? affected))]
           (when (debug?)
             (println "reloading namespaces:" to-reload))
           (apply reload-namespaces to-reload))))

@@ -1,18 +1,11 @@
 (ns bake.compile
   (:use cake
         [bake.core :only [log]]
-        [bake.reload :only [dep-graph]]
+        [bake.reload :only [dep-graph classfile]]
         [bake.dependency :only [dependents]]
         [bake.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
         [clojure.set :only [union]])
   (:import (java.io File)))
-
-(defn classfile [ns]
-  (File. "classes"
-    (.. (str ns)
-        (replace "-" "_")
-        (replace "." "/")
-        (concat "__init.class"))))
 
 (defn stale-namespaces [source-path]
   (let [aot (:aot *project*)
