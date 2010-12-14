@@ -676,6 +676,12 @@ else
   end
 end
 
+cake = JVM.new(
+  [$config['cake.classpath'], bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [$config['cake.library.path'], "lib/ext/native", "lib/native", "lib/dev/native"],
+  %{-Dcake.project="#{$project}" -Dbake.path="#{bakepath}"}
+)
+
 if $command == :upgrade
   killall
   puts "cake upgraded to #{$version}"
@@ -695,12 +701,6 @@ elsif $command == :ps
   puts ps.sort.reverse
   exit
 end
-
-cake = JVM.new(
-  [$config['cake.classpath'], bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
-  [$config['cake.library.path'], "lib/ext/native", "lib/native", "lib/dev/native"],
-  %{-Dcake.project="#{$project}" -Dbake.path="#{bakepath}"}
-)
 
 cake.kill if restart?
 cake.start
