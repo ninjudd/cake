@@ -167,7 +167,7 @@ def parse_opts!
   $opts = {}
   ARGV[1..-1].each do |opt|
     case opt
-    when /^@(\w+)$/           then add_opt!(:context, $1)
+    when /^@([-\w]+)$/        then add_opt!(:context, $1)
     when /^-(\w+)$/           then $1.split('').each {|c| add_opt!(c, '')}
     when /^--?([-\w]+)=(.+)$/ then add_opt!($1, *$2.split(','))
     when /^--?([-\w]+)$/      then add_opt!($1, "")
