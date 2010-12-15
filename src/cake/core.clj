@@ -1,20 +1,20 @@
 (ns cake.core
   (:use cake cake.task
         [cake.file :only [mkdir]]
-        [cake.utils.useful :only [update into-map verify merge-in]]
+        [cake.utils.useful :only [update into-map verify merge-in syntax-quote]]
         [clojure.contrib.condition :only [raise]]
         [clojure.string :only [join]])
   (:require [cake.project :as project]))
 
 (defmacro defproject [name version & opts]
-  (let [opts (into-map opts)]
+  (let [opts (syntax-quote (into-map opts))]
     `(do (alter-var-root #'*context*      (fn [_#] {}))
-         (alter-var-root #'*project*      (fn [_#] (project/create '~name ~version '~opts)))
-         (alter-var-root #'*project-root* (fn [_#] (project/create '~name ~version '~opts))))))
+         (alter-var-root #'*project*      (fn [_#] (project/create '~name ~version ~opts)))
+         (alter-var-root #'*project-root* (fn [_#] (project/create '~name ~version ~opts))))))
 
 (defmacro defcontext [name & opts]
-  (let [opts (into-map opts)]
-    `(alter-var-root #'*context* merge-in {'~name '~opts})))
+  (let [opts (syntax-quote (into-map opts))]
+    `(alter-var-root #'*context* merge-in {'~name ~opts})))
 
 (defmacro undeftask [taskname]
   `(append-task! ~taskname {:replace true}))
