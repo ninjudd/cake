@@ -23,7 +23,7 @@ if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   $win  = true
 
   def daemon(cmd)
-    Process.create(:app_name => cmd).process_id
+    Process.create(:app_name => cmd.join(' ')).process_id
   end
 else
   TERM = 'TERM'
@@ -33,14 +33,14 @@ else
 
   class Process::Error; end
   def daemon(cmd)
-    puts cmd if debug?
+    puts cmd.join(' ') if debug?
     pid = fork do
       if not $stdin.tty?
         $stdout.close
         $stderr.close
       end
       Process.setsid
-      exec(cmd)
+      exec(*cmd)
     end
     Process.detach(pid)
     pid
@@ -303,7 +303,7 @@ end
 def extract(jar, file, dest = File.dirname(jar))
   if not File.exists?("#{dest}/#{file}")
     log(:deps, "extracting #{file} from #{jar}") if verbose?
-    ret = system "jar xf #{jar} #{file}"
+    ret = system("jar xf #{jar} #{file}")
     raise "cannot find jar command" unless ret
     FileUtils.makedirs(dest)
     FileUtils.move(file, dest)
@@ -359,13 +359,17 @@ class JVM
   end
 
   def java_opts
-    paths = %{-cp "#{classpath}" -Djava.library.path="#{libpath}"}
-    ["-Xms128M -Xmx256M", ENV['JAVA_OPTS'], $config['project.java_opts'], @java_opts, paths].compact.join(' ')
+    paths = ['-cp', classpath, %{-Djava.library.path="#{libpath}"}]
+    ['-Xms128M', '-Xmx256M', user_opts, @java_opts, paths]
+  end
+
+  def user_opts
+    "#{ENV['JAVA_OPTS']} #{$config['project.java_opts']}".split.compact
   end
 
   def vm_opts
     result = `java -d32 -version 2>&1`
-    '-client -d32' if $? == 0 and result !~ /Cannot run Java in 32 bit mode/
+    ['-client', '-d32'] if $? == 0 and result !~ /Cannot run Java in 32 bit mode/
   end
 
   MIN_PORT = 2**14
@@ -376,7 +380,7 @@ class JVM
 
     log(:cake, "starting jvm") if verbose?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    @pid = daemon %{java #{vm_opts} #{java_opts} clojure.main -e "(require 'cake.main) (cake.main/start-server #{port})"}
+    @pid = daemon ["java", vm_opts, java_opts, "clojure.main", "-e", "(require 'cake.main) (cake.main/start-server #{port})"].flatten.compact
     log(:cake, "cake started with pid #{@pid} on port #{@port}") if debug?
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
   rescue Errno::EADDRNOTAVAIL => e # port already in use
@@ -679,7 +683,7 @@ end
 cake = JVM.new(
   [$config['cake.classpath'], bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
   [$config['cake.library.path'], "lib/ext/native", "lib/native", "lib/dev/native"],
-  %{-Dcake.project="#{$project}" -Dbake.path="#{bakepath}"}
+  ["-Dcake.project=#{$project}", "-Dbake.path=#{bakepath}"]
 )
 
 if $command == :upgrade
