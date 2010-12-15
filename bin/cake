@@ -359,17 +359,10 @@ class JVM
   end
 
   def java_opts
-    paths = ['-cp', classpath, %{-Djava.library.path="#{libpath}"}]
-    ['-Xms128M', '-Xmx256M', user_opts, @java_opts, paths]
-  end
-
-  def user_opts
-    "#{ENV['JAVA_OPTS']} #{$config['project.java_opts']}".split.compact
-  end
-
-  def vm_opts
-    result = `java -d32 -version 2>&1`
-    ['-client', '-d32'] if $? == 0 and result !~ /Cannot run Java in 32 bit mode/
+    enable_server = $config['jvm.server'] == 'true' || `java -d32 -version 2>&1` =~ /Cannot run Java in 32 bit mode/ || $? != 0
+    vm_opts       = enable_server ? ['-server', '-d64', '-Xmx2G', '-XX:MaxPermSize=256M'] : ['-client', '-d32', '-Xms128M', '-Xmx256M']
+    user_opts     = "#{ENV['JAVA_OPTS']} #{$config['jvm.opts']}".split.compact
+    [vm_opts, user_opts, @java_opts,'-cp', classpath, %{-Djava.library.path="#{libpath}"}]
   end
 
   MIN_PORT = 2**14
@@ -380,7 +373,7 @@ class JVM
 
     log(:cake, "starting jvm") if verbose?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    @pid = daemon ["java", vm_opts, java_opts, "clojure.main", "-e", "(require 'cake.main) (cake.main/start-server #{port})"].flatten.compact
+    @pid = daemon ["java", java_opts, "clojure.main", "-e", "(require 'cake.main) (cake.main/start-server #{port})"].flatten.compact
     log(:cake, "cake started with pid #{@pid} on port #{@port}") if debug?
     File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
   rescue Errno::EADDRNOTAVAIL => e # port already in use
@@ -629,7 +622,7 @@ if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
   log(:deps, "project.clj version is #{$version}") if debug?
 
   # Force new cake libs if cake's project.clj has changed.
-  if newer?(project, lib) and not $config['disable.auto-deps']
+  if newer?(project, lib)
     killall
     FileUtils.remove_dir(lib, true)
   end
@@ -681,8 +674,8 @@ else
 end
 
 cake = JVM.new(
-  [$config['cake.classpath'], bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
-  [$config['cake.library.path'], "lib/ext/native", "lib/native", "lib/dev/native"],
+  [$config['jvm.classpath'], bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [$config['jvm.library.path'], "lib/ext/native", "lib/native", "lib/dev/native"],
   ["-Dcake.project=#{$project}", "-Dbake.path=#{bakepath}"]
 )
 
