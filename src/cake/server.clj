@@ -4,6 +4,7 @@
         [bake.core :only [with-context current-context]]
         [clojure.main :only [skip-whitespace]]
         [bake.io :only [with-streams]]
+        [bake.reload :only [reload]]
         [cake.utils.useful :only [if-ns]])
   (:require [cake.utils.server-socket :as server-socket]
             [bake.complete :as complete]
@@ -65,11 +66,10 @@
   (server-socket/create-server port
     (fn [ins outs]
       (with-streams ins outs
-        ;; (prn *opts* *project*)
-
         (try
           (let [form (read), vars (read)]
             (clojure.main/with-bindings
+              (reload)
               (set! *command-line-args*  (:args vars))
               (set! *warn-on-reflection* (:warn-on-reflection *project*))
               (binding [*vars*    vars

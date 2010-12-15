@@ -7,7 +7,7 @@
         [cake.utils :only [*readline-marker*]]        
         [bake.core :only [debug?]]
         [bake.io :only [init-multi-out]]
-        [bake.reload :only [reload reload-project-files]]
+        [bake.reload :only [reload-project-files]]
         [cake.tasks.swank :only [start-swank]]
         [cake.utils.useful :only [on-shutdown]])
   (:require [cake.tasks default global]
@@ -17,7 +17,6 @@
            (java.io File)))
 
 (defn process-command [[task readline-marker]]
-  (reload)
   (binding [*readline-marker* readline-marker]
     (in-project {:outs *outs* :verbose (debug?) :root *root*}
       (doseq [dir ["lib" "classes" "build"]]
