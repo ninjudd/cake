@@ -8,7 +8,8 @@
         [bake.core :only [debug?]]
         [bake.io :only [init-multi-out]]
         [bake.reload :only [reload reload-project-files]]
-        [cake.tasks.swank :only [start-swank]])
+        [cake.tasks.swank :only [start-swank]]
+        [cake.utils.useful :only [on-shutdown]])
   (:require [cake.tasks default global]
             [cake.project :as project]
             [cake.server :as server])
@@ -28,6 +29,8 @@
 
 (defn start-server [port]
   (reload-project-files)
+  (eval (:startup *project*))
+  (on-shutdown #(eval (:shutdown *project*)))
   (init-multi-out ".cake/cake.log")
   (in-project {:outs *outs* :verbose (debug?) :root *root*}
     (when-let [autostart (get *config* "swank.autostart")]
