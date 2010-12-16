@@ -1,24 +1,25 @@
 (ns cake.tasks.jar
-  (:use cake cake.core cake.ant ordered-set cake.file
-        [cake.project :only [current-context log]]
+  (:use cake cake.core cake.file uncle.core
+        [bake.core :only [current-context log project-with-context]]
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
-        [cake.utils.useful :only [absorb verify]])
+        [cake.utils.useful :only [absorb verify into-map]])
   (:require [clojure.xml :as xml])
-  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Mkdir]
+  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Replace]
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]
            [org.apache.maven.artifact.ant InstallTask Pom]
            [java.io File FileOutputStream]
            [java.util.jar JarFile]))
 
-(defn artifact [ext & [modifier]]
-  (let [parts [(:artifact-id *project*) (:version *project*) modifier (current-context)]]
-    (file (str (join "-" (remove nil? parts)) "." ext))))
+(defn artifact [name-key ext]
+  (file (str (name-key *project*)
+             (when-let [context (current-context)]
+               (str "-" context))
+             ext)))
 
-(defn jarfile []
-  (artifact "jar"))
+(defn jarfile [] (artifact :jar-name ".jar"))
 
 (defn manifest []
   (merge (:manifest *project*)
@@ -44,42 +45,35 @@
           (string? m) (add-zipfileset task (file-mapping m m))
           (vector? m) (add-zipfileset task (apply file-mapping m)))))
 
+(defn bakepath [& opts]
+  (let [bakepath (System/getProperty "bake.path")]
+    (merge (into-map opts)
+           (if (.endsWith bakepath ".jar")
+             {:src bakepath}
+             {:dir bakepath}))))
+
 (defn add-source-files [task & [prefix]]
   (when-not (:omit-source *project*)
     (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
-    (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"})))
-
-(def cake-context
-"(ns cake)
-
-(defn- merge-in [left right]
-  (if (associative? left)
-    (merge-with merge-in left right)
-    right))
-
-(def *context* '%s)
-
-(def *project*
-  (let [project '%s
-        context (symbol (or (System/getProperty \"clojure.context\")
-                            (System/getenv \"CLOJURE_CONTEXT\")
-                            (:context project)))]
-    (merge-in project (assoc (context *context*)
-                        :context context))))")
+    (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"}))
+  (when (:bake *project*)
+    (add-zipfileset task (bakepath :prefix prefix :excludes "cake.clj"))))
 
 (defn build-context []
-  (when-not (= "cake" (:artifact-id *project*))
-    (mkdir (file "build" "jar"))
-    (with-open [cake-clj (writer (file "build" "jar" "cake.clj"))]
-      (copy (format cake-context
-                    (pr-str *context*)
-                    (pr-str (.getRoot #'*project*)))
-            cake-clj))))
+  (ant Copy {:todir "build/jar"}
+       (add-zipfileset (bakepath :includes "cake.clj")))
+  (let [cake-clj "build/jar/cake.clj"
+        context (current-context)
+        project (project-with-context context)]
+    (ant Replace {:file cake-clj :token "(comment project)" :value (pr-str `(quote ~project))})
+    (when (nil? context)
+      (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))}))))
 
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
         cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))]
-    (build-context)
+    (when (:bake *project*)
+      (build-context))
     (ant Jar {:dest-file (jarfile)}
          (add-manifest (manifest))
          (add-license)
@@ -101,13 +95,12 @@
   (clean "*.jar")
   (build-jar))
 
-(defn uberjarfile []
-  (artifact "jar" "standalone"))
+(defn uberjarfile [] (artifact :uberjar-name ".jar"))
 
 (defn jars [& opts]
   (let [opts (apply hash-map opts)
         jar  (jarfile)]
-    (into (ordered-set jar)
+    (into [jar]
           (fileset-seq {:dir "lib" :includes "*.jar" :excludes (join "," (:excludes opts))}))))
 
 (defn plexus-components [jar]
@@ -150,15 +143,16 @@
       (when (newer? uberjar binfile)
         (log "Creating standalone executable:" (.getPath binfile))
         (with-open [bin (FileOutputStream. binfile)]
-          (let [shebang (format "#!/usr/bin/env sh\nexec java %s -jar $0 \"$@\"\n"
-                                (*config* "project.java_opts"))]
-            (.write bin (.getBytes shebang)))
+          (let [opts (or (get *config* "project.java_opts") "")
+                unix (format ":;exec java %s -jar $0 \"$@\"\n" opts)
+                dos  (format "@echo off\r\njava %s -jar %%1 \"%%~f0\" %%*\r\ngoto :eof\r\n" opts)]
+            (.write bin (.getBytes unix))
+            (.write bin (.getBytes dos)))
           (copy uberjar bin))
         (ant Chmod {:file binfile :perm "+x"})))
     (println "Cannot create bin without :main namespace in project.clj")))
 
-(defn warfile []
-  (artifact "war"))
+(defn warfile [] (artifact :war-name ".war"))
 
 (defn build-war []
   (let [web     "WEB-INF"

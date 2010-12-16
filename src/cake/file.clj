@@ -5,22 +5,31 @@
   (:import [org.apache.tools.ant.taskdefs Copy Move Touch Delete Mkdir]
            [java.io File]))
 
-(defn expand-path [& path]
+(defn- expand-path [path]
   (let [root (or (first path) "")]
     (cond (instance? File root)  (cons (.getPath root) (rest path))
           (.startsWith root "/") path
           (.startsWith root "~") (cons (.replace root "~" (System/getProperty "user.home")) (rest path))
           :else                  (cons *root* path))))
 
+(defn- substitute-context [path]
+  (if-let [context (:context *project*)]
+    (.replace (str path) "+context+" (name context))
+    path))
+
 (defn file-name [& path]
-  (join (File/separator) (apply expand-path path)))
+  (join (File/separator)
+        (map substitute-context (expand-path path))))
 
 (defn file
   "Create a File object from a string or seq"
   [& path]
   (File. (apply file-name path)))
 
-(use 'cake.ant)
+(defn global-file [& path]
+  (apply file *global-root* path))
+
+(use 'uncle.core)
 
 (defn cp [from to & opts]
   (ant Copy (into-map opts :file from :tofile to)))
@@ -40,6 +49,8 @@
 (defn mkdir [file & opts]
   (ant Mkdir (into-map opts :dir file)))
 
-(defn mtime< [a b]
-  (< (.lastModified (file a))
-     (.lastModified (file b))))
+(defn newer? [& args]
+  (apply > (for [arg args]
+             (if (number? arg)
+               arg
+               (.lastModified (if (string? arg) (file arg) arg))))))

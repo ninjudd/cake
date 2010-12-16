@@ -1,6 +1,6 @@
 (ns cake.tasks.test
   (:use cake cake.core
-        [clojure.contrib.find-namespaces :only [find-namespaces-in-dir]])
+        [bake.find-namespaces :only [find-namespaces-in-dir]])
   (:import [java.io File]))
 
 (defn test-opts []
@@ -14,7 +14,7 @@
 
 (defn run-project-tests [& opts]
   (bake (:use bake.test
-              [cake.project :only [with-context]])
+              [bake.core :only [with-context]])
     [namespaces (find-namespaces-in-dir (java.io.File. "test"))
      opts       (merge (test-opts) (apply hash-map opts))]
     (with-context :test

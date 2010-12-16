@@ -1,6 +1,8 @@
 (ns cake.tasks.deps
-  (:use cake cake.core cake.ant cake.file
-        [cake.project :only [group log]]
+  (:use cake cake.core cake.file uncle.core
+        [cake.utils :only [cake-exec os-name os-arch]]
+        [cake.project :only [group reload reload!]]
+        [bake.core :only [log]]
         [clojure.java.shell :only [sh]])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
            [org.apache.tools.ant.taskdefs Copy Delete Move]
@@ -14,24 +16,6 @@
    ["clojure-snapshots" "http://build.clojure.org/snapshots"]
    ["clojars"           "http://clojars.org/repo"]
    ["maven"             "http://repo1.maven.org/maven2"]])
-
-(defn os-name []
-  (let [name (System/getProperty "os.name")]
-    (condp #(.startsWith %2 %1) name
-      "Linux"    "linux"
-      "Mac OS X" "macosx"
-      "SunOS"    "solaris"
-      "Windows"  "windows"
-      "unknown")))
-
-(defn os-arch []
-  (or (first (:arch *opts*))
-      (*config* "project.arch")
-      (let [arch (System/getProperty "os.arch")]
-        (case arch
-          "amd64" "x86_64"
-          "i386"  "x86"
-          arch))))
 
 (defn add-license [task attrs]
   (when attrs
@@ -63,7 +47,8 @@
 
 (defn subproject-path [dep]
   (when *config*
-    (*config* (str "subproject." (name dep)))))
+    (or (get *config* (str "subproject." (group dep) "." (name dep)))
+        (get *config* (str "subproject." (name dep))))))
 
 (defn add-jarset [task path exclusions]
   (let [exclusions (map #(re-pattern (str % "-\\d.*")) exclusions)]
@@ -111,8 +96,7 @@
   (when (.exists (file "build/lib"))
     (ant Delete {:dir "lib"})
     (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
-  (invoke clean {})
-  (bake-restart))
+  (invoke clean {}))
 
 (defn stale-deps? [deps-str deps-file]
   (or (not (.exists deps-file)) (not= deps-str (slurp deps-file))))
@@ -129,6 +113,10 @@
     (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
       (do (install-subprojects)
           (fetch-deps)
-          (spit deps-file deps-str))
-      (when (= ["force"] (:compile *opts*))
-        (invoke clean {})))))
+          (spit deps-file deps-str)
+          (reload!))
+      (do (when (= ["force"] (:compile *opts*))
+            (invoke clean {}))
+          (if (or (:r *opts*) (:reload *opts*))
+            (reload!)
+            (reload))))))

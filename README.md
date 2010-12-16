@@ -12,8 +12,8 @@ _This software is a pre-release, please submit an issue on github if you run int
 
 ## Installation
 
-There are three ways to get Cake. The simplest method is just to install the gem. If
-you're new, that's what we recommend.
+There are three ways to get Cake. The simplest method is just to install the gem. If you're new,
+that's what we recommend.
 
 ### Using gem
 
@@ -21,13 +21,17 @@ you're new, that's what we recommend.
 
 ### Standalone script
 
-1. [Download the script](http://github.com/ninjudd/cake-standalone/raw/master/cake)
+1. [Download the script](http://releases.clojure-cake.org/cake)
 2. Put it somewhere in your path and `chmod +x cake` to make it executable
 
 ### Git repository
 
 1. `git clone git://github.com/ninjudd/cake.git`
 2. Symlink bin/cake into your path and make it executable
+
+Note: some users have reported problems with clojure and java 1.5, so you may want to make sure
+you're on 1.6 with `java -version` if you are having problems. On OS X, you can switch to java 1.6
+using `/Applications/Utilities/Java Preferences.app`.
 
 ## Getting Started
 
@@ -65,7 +69,7 @@ Cake provides default tasks for most of the things you probably do on a regular 
     cake install   ;; Install jar to local repository.
     cake release   ;; Release project jar to clojars.
     cake deploy    ;; Deploy war to a group of servers.
-    cake upgrde    ;; Upgrade cake to the most current version.
+    cake upgrade    ;; Upgrade cake to the most current version.
     cake eval      ;; Eval the given forms in the project JVM.
     cake filter    ;; Thread each stdin line through the given forms, printing the results.
     cake war       ;; Create a web archive containing project source and class files.
@@ -75,23 +79,23 @@ Cake provides default tasks for most of the things you probably do on a regular 
 
 Cake also provides several system tasks for managing the persistent JVM.
 
-    cake start     ;; Start cake jvm processes.
-    cake stop      ;; Stop cake jvm processes.
-    cake restart   ;; Restart cake jvm processes.
-    cake reload    ;; Reload any .clj files that have changed or restart.
     cake ps        ;; List running cake jvm processes for all projects.
-    cake kill      ;; Kill running cake jvm processes. Use -9 to force or --all for all projects.
+    cake kill      ;; Kill running cake jvm processes. Use -9 to force.
+    cake killall   ;; Kill all running cake jvm processes for all projects.
+    cake log       ;; Tail the cake log file. Optionally pass the number of lines of history to show.
+    cake upgrade   ;; Upgrade cake to the most current version.
 
 [Default Task Documentation](http://wiki.github.com/ninjudd/cake/default-tasks)
 
 ## Custom Tasks
 
-Custom tasks are created using the `deftask` and `defile` macros in either project.clj, 
-tasks.clj or within your src directory. Any namespaces within src containing tasks will need to 
-be added to the `:tasks` vector in project.clj and will be usable by other projects.
+Custom tasks can be created using the `deftask` macro in either `project.clj`, `tasks.clj`
+or within your `src` directory. Any namespaces within `src` containing tasks must be added
+to the `:tasks` vector in `project.clj` and will be usable by other projects as plugins.
 
-Like many build tools, Cake uses a dependency-based programming model. This means that if other tasks your task is dependent on share a dependency, that dependency will only be ran once. For more details, check out Martin Fowler's
-[excellent article](http://martinfowler.com/articles/rake.html#DependencyBasedProgramming)
+Like many build tools, Cake uses a dependency-based programming model. This means that if two
+tasks share a dependency, that dependency will only be run once. For more details, check out
+Martin Fowler's [excellent article](http://martinfowler.com/articles/rake.html#DependencyBasedProgramming)
 on Rake. Here is the example from that article using Cake syntax:
 
     (deftask code-gen
@@ -114,24 +118,30 @@ on Rake. Here is the example from that article using Cake syntax:
       (println "running tests...")
       ...)
 
-Dependencies for a task are denoted by a set. For the `deftask` macro, dependencies are tasks that should be invoked before the task being defined. 
+Dependencies for a task are denoted by a set after the task name. In this case, each dependency
+is just the name of a task that should be invoked before the task being defined.
 
 ### File Tasks
 
-The `defile` macro is used to define file generation tasks. Instead of a symbol, the task is named by a string that is the path to the file relative to the project root. Dependencies of `defile` tasks are essentially when clauses that say to invoke the file task only if any of the dependencies have changed since the last time the file was generated.
+The `defile` macro is used to define file generation tasks. Instead of a symbol, the task
+is named by a string that is the path to the file relative to the project
 
-    (defile "lib/deps.clj" #{"project.clj"}
-      "This task is only ran if project.clj is newer than lib/deps.clj"
-      (println "generating lib/deps.clj from project.clj...")
+    (defile "web.xml" #{"web.yaml"}
+      "This task is only run if web.yaml is newer than web.xml"
+      (println "generating web.xml from web.yaml...")
       ...)
 
-You can also mix file and task dependencies for both macros. Within the dependency set, strings represent file generation tasks and symbols represent regular tasks.
+As shown by this example, `defile` dependencies can be the name of a file. Two things will happen in
+this case:
 
-    (deftask uberwar #{"web.xml" compile}
-      "This appends a condition to the task. `uberwar` will only be ran if web.xml was touched, or compile was ran, since `uberwar` was last invoked.")
+ 1. the file task for `web.yaml`, if it exists, will be run before the `web.xml` task.
+ 2. the body of the `web.xml` task will only be run if `web.yaml` is newer than `web.xml.
 
-TODO: Re-opening task documentation
-TODO: :when clause documentation
+You can also mix file and task dependencies for both macros. Within the dependency set,
+strings represent file tasks and symbols represent regular tasks.
+
+    (deftask deploy #{"web.xml" uberwar}
+      "Always generate web.xml and uberwar before deploying")
 
 ## Command-line Arguments
 
@@ -222,6 +232,40 @@ task for some other reason, you can use `invoke`.
        (println "Executing secondary task...")
        ...)
 
+### Contexts
+
+Cake contexts allow you to easily configure your application to run in different contexts.
+Some common contexts are `dev/qa/stage/production`. Contexts are declared using the `defcontext`
+macro and can be placed in `project.clj` or in `context.clj` in your project root.
+
+    (defcontext qa
+      :deploy {:hosts ["qa1.yourcorp.com" "qa2.yourcorp.com"]
+               :copy  [[:war "web.xml"]]}
+      :db {:database "qa"
+           :username "test"
+           :host     "qadb.yourcorp.com"})
+
+    (defcontext production
+      :deploy {:hosts ["web1.yourcorp.com" "web2.yourcorp.com" "web3.yourcorp.com"]
+               :copy  [[:war "web.xml"]]}
+      :db {:database "production"
+           :username "live"
+           :host     "master-db.yourcorp.com"})
+
+Contexts are implemented as an overlay on top of `cake/*project*`, so defaults can be
+added directly to `defproject` and current context data will appear in `*project*`. In
+this example, to access your database config in code, just do something like this:
+
+    (with-connection (:db *project*)
+      ...)
+
+Cake commands can also be run in a specific context using the `--context` command line
+option or the `@` command line shortcut. So the following two commands both start a repl
+using the `qa` context:
+
+    cake repl --context=qa
+    cake repl @qa
+
 ### Native Library Dependencies
 
 Cake will automatically extract precompiled native libraries for your os and architecture
@@ -308,9 +352,10 @@ code in the global project. The file doesn't even have to end in .clj.
 
     #!/usr/bin/env cake
 
-## Contributors (in order of appearance)
+## Contributors
 
-- Justin Balthrop ([ninjudd](http://github.com/ninjudd))
-- Lance Bradley ([lancepantz](http://github.com/lancepantz))
-- Anthony Simpson ([Raynes](http://github.com/Raynes))
-- David Santiago ([davidsantiago](http://github.com/davidsantiago))
+- Justin Balthrop ([ninjudd](https://github.com/ninjudd))
+- Lance Bradley ([lancepantz](https://github.com/lancepantz))
+- Anthony Simpson ([Raynes](https://github.com/Raynes))
+- Luke Renn ([lrenn](https://github.com/lrenn))
+- David Santiago ([davidsantiago](https://github.com/davidsantiago))

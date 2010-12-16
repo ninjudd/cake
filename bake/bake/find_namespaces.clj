@@ -1,4 +1,3 @@
--;; copied from clojure.contrib.find-namespaces
 ;;; find_namespaces.clj: search for ns declarations in dirs, JARs, or CLASSPATH
 
 ;; by Stuart Sierra, http://stuartsierra.com/
@@ -12,17 +11,13 @@
 ;; agreeing to be bound by the terms of this license.  You must not
 ;; remove this notice, or any other, from this software.
 
+;; copied from clojure.contrib.find-namespaces
 
 (ns
-  #^{:author "Stuart Sierra",
+  #^{:author "Stuart Sierra"
      :doc "Search for ns declarations in dirs, JARs, or CLASSPATH"}
-  clojure.contrib.find-namespaces
-  (:require [clojure.contrib.classpath :as cp]
-            [clojure.contrib.jar :as jar])
-  (import (java.io File FileReader BufferedReader PushbackReader
-                   InputStreamReader)
-          (java.util.jar JarFile)))
-
+  bake.find-namespaces
+  (import (java.io File FileReader BufferedReader PushbackReader InputStreamReader)))
 
 ;;; Finding namespaces in a directory tree
 
@@ -82,56 +77,3 @@
   source files; returns the symbol names of the declared namespaces."
   [#^File dir]
   (map second (find-ns-decls-in-dir dir)))
-
-
-;;; Finding namespaces in JAR files
-
-(defn clojure-sources-in-jar
-  "Returns a sequence of filenames ending in .clj found in the JAR file."
-  [#^JarFile jar-file]
-  (filter #(.endsWith % ".clj") (jar/filenames-in-jar jar-file)))
-
-(defn read-ns-decl-from-jarfile-entry
-  "Attempts to read a (ns ...) declaration from the named entry in the
-  JAR file, and returns the unevaluated form.  Returns nil if the read
-  fails, or if the first form is not a ns declaration."
-  [#^JarFile jarfile #^String entry-name]
-  (with-open [rdr (PushbackReader.
-                   (BufferedReader.
-                    (InputStreamReader.
-                     (.getInputStream jarfile (.getEntry jarfile entry-name)))))]
-    (read-ns-decl rdr)))
-
-(defn find-ns-decls-in-jarfile
-  "Searches the JAR file for Clojure source files containing (ns ...)
-  declarations; returns the unevaluated ns declarations."
-  [#^JarFile jarfile]
-  (filter identity
-          (map #(read-ns-decl-from-jarfile-entry jarfile %)
-               (clojure-sources-in-jar jarfile))))
-
-(defn find-namespaces-in-jarfile
-  "Searches the JAR file for Clojure source files containing (ns ...)
-  declarations.  Returns a sequence of the symbol names of the
-  declared namespaces."
-  [#^JarFile jarfile]
-  (map second (find-ns-decls-in-jarfile jarfile)))
-
-
-;;; Finding namespaces anywhere on CLASSPATH
-
-(defn find-ns-decls-on-classpath
-  "Searches CLASSPATH (both directories and JAR files) for Clojure
-  source files containing (ns ...) declarations.  Returns a sequence
-  of the unevaluated ns declaration forms."
-  []
-  (concat
-   (mapcat find-ns-decls-in-dir (cp/classpath-directories))
-   (mapcat find-ns-decls-in-jarfile (cp/classpath-jarfiles))))
-
-(defn find-namespaces-on-classpath
-  "Searches CLASSPATH (both directories and JAR files) for Clojure
-  source files containing (ns ...) declarations.  Returns a sequence
-  of the symbol names of the declared namespaces."
-  []
-  (map second (find-ns-decls-on-classpath)))

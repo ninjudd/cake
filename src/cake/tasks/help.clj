@@ -1,5 +1,7 @@
 (ns cake.tasks.help
-  (:use cake cake.core))
+  (:use cake
+        [cake.core :only [deftask]]
+        [cake.task :only [tasks implicit-tasks]]))
 
 (def line "-------------------------------------------")
 
@@ -9,16 +11,19 @@
     (apply println "cake" name deps)
     (doseq [doc docs] (println "  " doc))))
 
-(def system-tasks #{"stop" "start" "restart" "reload" "ps" "kill"})
+(def system-tasks #{"ps" "kill" "killall" "log" "upgrade" "console"})
+(def hidden-tasks #{"default" "eat" "bake"})
 
 (defn taskdocs [pattern]
   (filter
    (fn [[name doc]]
-     (and (not= "default" name)
+     (and (not (contains? hidden-tasks name))
           (re-find pattern name)
           (or (:a *opts*) doc)))
    (into (for [[t doc] implicit-tasks] [(name t) doc])
-         (for [[t task] @tasks] [(name t) (seq (:doc task))]))))
+         (for [taskname (keys tasks)]
+           (let [task (get tasks taskname)]
+             [(name taskname) (seq (:docs task))])))))
 
 (defn list-tasks [pattern system?]
   (let [taskdocs (into {} (taskdocs pattern))]
@@ -37,13 +42,13 @@
 
 (defn task-doc [& task-names]
   (doseq [name task-names :let [sym (symbol name)]]
-    (if-let [task (@tasks sym)]
-      (print-task name (:deps task) (:doc task))
+    (if-let [task (get tasks sym)]
+      (print-task name (:deps task) (:docs task))
       (if-let [doc (implicit-tasks sym)]
         (print-task name [] doc)))
     (list-tasks (re-pattern name) false)))
 
-(deftask help
+(deftask help #{deps}
   "Print tasks with documentation. Use 'cake help TASK' for more details."
   "Use -s to list system tasks and -a to list all tasks, including those without documentation."
   (if-let [tasks (:help *opts*)]

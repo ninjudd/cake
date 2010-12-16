@@ -1,10 +1,11 @@
 (ns cake.tasks.new
-  (:use cake cake.core cake.file cake.ant
-        [cake.project :only [group log]]
+  (:use cake cake.core cake.file uncle.core
+        [bake.core :only [log]]
+        [cake.project :only [group]]
         [clojure.string :only [join]]
-        [cake.utils.io :only [extract-resource]])
+        [clojure.java.io :only [copy]]
+        [bake.io :only [extract-resource]])
   (:import [org.apache.tools.ant.taskdefs Copy]))
-
 
 (def default-template
 "(defproject +project+ \"0.0.1-SNAPSHOT\"
@@ -32,7 +33,7 @@
     (if (.exists root)
       (println "error:" project "already exists in this directory")
       (do
-        (log (str "Creating a new project based on ~/cake/templates/" template))
+        (log (str "Creating a new project based on ~/.cake/templates/" template))
         (ant Copy {:todir root} (add-fileset {:dir (str (file template-dir template))}))
         (rename-files root project)
         (scan-replace-contents (file-seq root) project)))))
@@ -48,7 +49,7 @@
     (spit (file template "project.clj") default-template)
     (log "Created template file: project.clj")
     (spit (file template ".gitignore")
-          (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" "+project+"] (repeat "\n"))))
+          (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" "./+project+"] (repeat "\n"))))
     (log "Created template file: .gitignore")
     (extract-resource "LICENSE" template)
     (log "Created template LICENSE file (Eclipse Public License)")))

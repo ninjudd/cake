@@ -5,6 +5,7 @@
   [(count *project*) (keys *project*)])
 
 (deftask foo
+  (prn "foo.clj")
   (bake
     (:use clojure.test)
     [a (bar)]

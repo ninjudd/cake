@@ -1,8 +1,10 @@
 (ns cake.tasks.version
-  (:use cake cake.core cake.ant
-        [cake.project :only [log]]
+  (:use cake cake.core uncle.core
+        [bake.core :only [log]]
+        [cake.utils :only [ftime]]
         [cake.utils.useful :only [update]]
-        [clojure.string :only [join]])
+        [clojure.string :only [join]]
+	[cake.utils :only [git]])
   (:import [org.apache.tools.ant.taskdefs Replace]))
 
 (def version-levels [:major :minor :patch])
@@ -50,10 +52,17 @@
              (update-version action))
     (println (:artifact-id *project*) (:version *project*))))
 
+(defn snapshot? [version]
+  (.endsWith version "SNAPSHOT"))
+
+(defn snapshot-timestamp [version]
+  (if (snapshot? version)
+    (let [t (java.util.Calendar/getInstance)]
+      (.replaceAll version "SNAPSHOT" (str (ftime "Ymd" t) "." (ftime "HMS" t))))
+    version))
+
 (deftask tag
   "Create a git tag for the current version."
-  (let [version (:version *project*)]
-    (if (.endsWith version "SNAPSHOT")
-      (println "refusing to create tag for snapshot version:" version)
-      (do (git "tag" "-a" version "-m" (format "'version %s'" version))
-          (log "created git tag" version)))))
+  (let [version (snapshot-timestamp (:version *project*))]
+    (git "tag" "-fa" version "-m" (format "'version %s'" version))
+    (log "created git tag" version)))

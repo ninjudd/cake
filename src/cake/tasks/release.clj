@@ -1,9 +1,10 @@
 (ns cake.tasks.release
   (:use cake cake.core cake.file
-        [cake.project :only [verbose? debug? log]]
+        [bake.core :only [verbose? debug? log]]
         [cake.tasks.jar :only [jarfile uberjarfile warfile]]
         [clojure.java.io :only [reader copy]]
-        [cake.utils.useful :only [verify assoc-or]])
+        [cake.utils.useful :only [verify assoc-or]]
+	[cake.utils :only [prompt-read]])
   (:import [com.jcraft.jsch JSch ChannelExec Logger UserInfo JSchException UIKeyboardInteractive]
            [java.io FileInputStream]))
 
@@ -155,7 +156,7 @@
     file))
 
 (deftask deploy
-  "Deploy files to a group of servers."
+  "Deploy project to a group of servers."
 
   "Add :deploy to defproject or defcontext to enable. Also add any dependencies that need
    to be built before deploy e.g. (deftask deploy #{war}). Supported :deploy keys are:
@@ -166,25 +167,25 @@
      :password   \"password\"
      :identity   \"ssh-public-key\"
      :passphrase \"ssh-key-passphrase\"
-     :pre-upload [\"echo pre-upload commands\"
-                  \"/etc/init.d/server stop\"]
-     :files      [[\"file1\" \"file2\" \"/dest\"]
-                  [:war \"/another/dest\"]
-                  [:jar :uberjar \"/home/username\"]]
-     :commands   [\"echo remote commands\"
-                  \"/etc/init.d/server start\"]"
+     :pre  [\"echo pre-upload commands\"
+            \"/etc/init.d/server stop\"]
+     :copy [[\"file1\" \"file2\" \"/dest\"]
+            [:war \"/another/dest\"]
+            [:jar :uberjar \"/home/username\"]]
+     :post [\"echo remote commands\"
+            \"/etc/init.d/server start\"]"
   (if (:deploy *project*)
     (let [deploy  (:deploy *project*)
           context (:context *project*)]
       (verify deploy (str "no deploy options specified for context" context))
       (log "Deploying to" context)
       (ssh-session deploy
-        (doseq [command (:pre-upload deploy)]
+        (doseq [command (:pre deploy)]
           (ssh-exec command))
-        (doseq [files (:files deploy)]
+        (doseq [files (:copy deploy)]
           (let [dest  (last files)
                 files (map lookup-file (butlast files))]
             (upload files dest)))
-        (doseq [command (:commands deploy)]
+        (doseq [command (:post deploy)]
           (ssh-exec command))))
     (println "no :deploy key in project.clj")))
