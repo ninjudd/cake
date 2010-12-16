@@ -327,6 +327,10 @@ def killall
   end.size > 0
 end
 
+def tail_log
+  exec("tail -n#{$opts[:log] || 10} -f #{$project}/.cake/cake.log")
+end
+
 class JVM
   attr_reader :classpath, :libpath, :port, :pid, :pidfile, :load_time
 
@@ -687,7 +691,7 @@ elsif $command == :default and $opts[:version]
   puts "cake #{$version}"
   exit
 elsif $command == :log
-  exec("tail -n#{$opts[:log] || 10} -f #{$project}/.cake/cake.log")
+  tail_log
 elsif $command == :killall
   killall || puts("No matching processes belonging to you were found")
   exit
@@ -720,3 +724,5 @@ elsif $command == :autotest
 else
   cake.send_command($command)
 end
+
+tail_log if $opts[:l]
