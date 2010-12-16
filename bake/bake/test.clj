@@ -1,7 +1,8 @@
 (ns bake.test
   (:use clojure.test
         [cake :only [*config*]]
-        [bake.reload :only [last-reloaded reload]])
+        [bake.reload :only [last-reloaded reload]]
+        [bake.notify :only [notify]])
   (:import [java.io StringWriter]))
 
 (def last-tested (atom nil))
@@ -42,9 +43,11 @@
                (doseq [[name f] tests]
                  (each-fixtures #(test-var f)))))
             (report (assoc @*report-counters* :type :summary))
-            (when (or (not autotest?) (< 0 (apply + (map @*report-counters* [:fail :error]))))
-              (print (.toString *test-out*))
-              (flush))))))
+            (when (or (not autotest?) (< 0 (apply + (map @*report-counters* [:fail :error]))))              
+              (let [test-out (.toString *test-out*)]
+                (print test-out) (flush)
+                (when autotest?
+                  (notify test-out))))))))
     (when-not autotest?
       (println "----")
       (println "Finished in" (/ (- (System/nanoTime) start) (Math/pow 10 9)) "seconds.\n"))))
