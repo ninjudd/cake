@@ -327,8 +327,8 @@ def killall
   end.size > 0
 end
 
-def tail_log
-  exec("tail -n#{$opts[:log] || 10} -f #{$project}/.cake/cake.log")
+def tail_log(num_lines)
+  exec("tail -n#{num_lines || 10} -f #{$project}/.cake/cake.log")
 end
 
 class JVM
@@ -691,7 +691,7 @@ elsif $command == :default and $opts[:version]
   puts "cake #{$version}"
   exit
 elsif $command == :log
-  tail_log
+  tail_log($opts[:log])
 elsif $command == :killall
   killall || puts("No matching processes belonging to you were found")
   exit
@@ -725,4 +725,4 @@ else
   cake.send_command($command)
 end
 
-tail_log if $opts[:l]
+tail_log(0) if $opts[:l]
