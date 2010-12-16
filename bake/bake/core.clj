@@ -45,8 +45,14 @@
      (binding [*project* (project-with-context context#)]
        ~@forms)))
 
+(defn set-project! [project]
+  (alter-var-root #'*project* (fn [_] project)))
+
+(defn set-context! [context]
+  (let [context (or context (:context *project*))]
+    (set-project! (project-with-context context))))
+
 (defmacro with-context! [context & forms]
-  `(let [context# (symbol (name (or ~context (:context *project*))))]
-     (alter-var-root #'*project* (fn [_#] (project-with-context context#)))
-     (do ~@forms)
-     (alter-var-root #'*project* *project-root*)))
+  `(try (set-context! ~context)
+        (do ~@forms)
+        (set-project! *project-root*)))

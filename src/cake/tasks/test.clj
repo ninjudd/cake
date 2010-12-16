@@ -28,4 +28,6 @@
 (deftask autotest #{compile}
   "Automatically run tests whenever your project code changes."
   "Specify tests to run just like the test task. Specify the interval with --interval."
-  (run-project-tests :quiet true))
+  (run-project-tests)
+  (while true
+    (run-project-tests :autotest true)))

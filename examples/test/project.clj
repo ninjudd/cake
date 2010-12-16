@@ -5,6 +5,7 @@
                  [tokyocabinet "1.23-SNAPSHOT"]]
   :dev-dependencies [[autodoc "0.7.1"]]
   :tasks [foo]
+  :swank-init (println "SWANKY!")
   :aot [speak servlet]
   :main speak)
 
