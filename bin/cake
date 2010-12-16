@@ -711,16 +711,6 @@ if $command == :console
   system("jconsole" + " #{cake.pid}" * num_windows + "&")
 elsif $command == :repl
   cake.repl
-elsif $command == :autotest
-  cake.send_command(:test)
-  interval = $opts[:interval] ? $opts[:interval].first : $config['autotest.interval'] || 5
-  while true
-    sleep(interval.to_i)
-    cake.send_command(:autotest)
-    $stdout.print_flush('.')
-    cake.refresh
-    cake.start
-  end
 else
   cake.send_command($command)
 end
