@@ -1,40 +1,32 @@
 (ns cake.tasks.swank
   (:use cake cake.core
-        [cake.utils.useful :only [if-ns]])
+        [cake.utils.useful :only [if-ns]]
+        [bake.core :only [current-context]])
   (:import [java.io StringWriter PrintWriter]))
 
 (def current-port (atom nil))
 
-(defn- serve-swank
+(defn- serve-swank [context]
   "Run swank connection thread in the project classloader."
-  [socket]
-  (bake (:require swank.swank swank.core.server)
-        [socket socket]
-        (let [socket-serve     (ns-resolve 'swank.core.server 'socket-serve)
-              connection-serve (ns-resolve 'swank.swank 'connection-serve)
-              opts {:encoding (or (System/getProperty "swank.encoding") "iso-latin-1-unix")}]
-          (spit "/tmp/swank" (prn-str socket socket-serve connection-serve))
-          (socket-serve connection-serve socket opts))))
-
-(defn- wrap-swank-context!
-  "Wrap all swank threads in a with-context binding." []
-  (bake (:use [swank.util.concurrent.thread :only [start-thread]]
-              [bake.core :only [with-context current-context]]) []
-        (alter-var-root
-         #'start-thread
-         (fn [start-thread]
-           (fn [f] (start-thread #(with-context (current-context) (f))))))))
+  (fn [socket]
+    (bake (:use [bake.core :only [set-context!]])
+          (:require swank.swank swank.core.server)
+          [socket socket, context context]
+          (let [socket-serve     (ns-resolve 'swank.core.server 'socket-serve)
+                connection-serve (ns-resolve 'swank.swank 'connection-serve)
+                opts {:encoding (or (System/getProperty "swank.encoding") "iso-latin-1-unix")}]
+            (set-context! context)
+            (socket-serve connection-serve socket opts)))))
 
 (if-ns (:use [swank.core.server :only [start-swank-socket-server!]]
              [swank.util.net.sockets :only [make-server-socket]])
 
   (defn start-swank [host]
-    ;; (wrap-swank-context!)
     (let [[host port] (if (.contains host ":") (.split host ":") ["localhost" host])
           out (with-out-str
                 (start-swank-socket-server!
                  (make-server-socket {:port (Integer. port) :host host})
-                 serve-swank {}))]
+                 (serve-swank (current-context)) {}))]
       (if (.contains out "java.net.BindException")
         (println "unable to start swank-clojure server, port already in use")
         (do (compare-and-set! current-port nil port)
