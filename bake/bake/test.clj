@@ -60,8 +60,8 @@
   (when (:autotest opts)
     (wait-for-reload (* 1000 (Integer. (or (get *config* "autotest.interval") 5)))))
   (let [start    (System/currentTimeMillis)
-        failures (count (remove not (map (partial run-ns-tests opts)
-                                         namespaces)))]
+        results  (map (partial run-ns-tests opts) namespaces)
+        failures (count (remove not results))]
     (when (= 0 failures)
       (when (and (:autotest opts)
                  (< @last-passed @last-tested))
@@ -70,4 +70,4 @@
     (reset! last-tested start)
     (when-not (:autotest opts)
       (println "----")
-      (println "Finished in" (/ (- (System/currentTimeMillis) start) 1000) "seconds.\n"))))
+      (println "Finished in" (/ (- (System/currentTimeMillis) start) 1000.0) "seconds.\n"))))
