@@ -707,8 +707,9 @@ cake.kill if restart?
 cake.start
 
 if $command == :console
-  num_windows = $opts[:console] ? $opts[:console].first.to_i : 1
-  system("jconsole" + " #{cake.pid}" * num_windows + "&")
+  num_windows = $opts[:console].first || 1
+  interval    = $opts[:i] ? $opts[:i].first : 4
+  system("jconsole -interval=#{interval}" + " #{cake.pid}" * num_windows.to_i + "&")
 elsif $command == :repl
   cake.repl
 else
