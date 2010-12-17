@@ -6,5 +6,7 @@
   (print message)
   (flush)
   (when-not (= "true" (get *config* "notifications.disable"))
-    (try (sh "growlnotify" "-s" (str "cake " *current-task*) "-m" (str message))
+    (try (sh "growlnotify"
+             "-s" (str "cake " *current-task*)
+             "-m" (str message))
          (catch java.io.IOException e))))

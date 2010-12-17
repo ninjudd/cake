@@ -63,7 +63,6 @@
         failures (count (remove not (map (partial run-ns-tests opts)
                                          namespaces)))]
     (when (= 0 failures)
-      (prn @last-passed @last-tested)
       (when (and (:autotest opts)
                  (< @last-passed @last-tested))
         (notify "All tests passed"))
