@@ -173,12 +173,18 @@
             [:war \"/another/dest\"]
             [:jar :uberjar \"/home/username\"]]
      :post [\"echo remote commands\"
-            \"/etc/init.d/server start\"]"
+            \"/etc/init.d/server start\"]
+
+   Optionally, a list of specific nodes to deploy to may be specified, along with a context:
+     cake deploy server-001 server-002 @production"
   (if (:deploy *project*)
     (let [deploy  (:deploy *project*)
+          nodes   (seq (:deploy *opts*))
+          deploy  (if nodes (assoc deploy :hosts nodes) deploy)
           context (:context *project*)]
       (verify deploy (str "no deploy options specified for context" context))
       (log "Deploying to" context)
+      (when nodes (log "nodes:" nodes))
       (ssh-session deploy
         (doseq [command (:pre deploy)]
           (ssh-exec command))
