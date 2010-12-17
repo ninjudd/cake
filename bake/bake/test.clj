@@ -47,26 +47,28 @@
            (doseq [[name f] tests]
              (each-fixtures #(test-var f)))))
         (report (assoc @*report-counters* :type :summary))
-        (let [passed?  (= 0 (apply + (map @*report-counters* [:fail :error])))
+        (let [failed?  (< 0 (apply + (map @*report-counters* [:fail :error])))
               test-out (.toString *test-out*)]
-          (when-not (and passed? (:autotest opts))
-            (print test-out)
-            (flush)
-            (when (:autotest opts)
-              (notify test-out)))
-          passed?)))))
+          (if (:autotest opts)
+            (when failed?
+              (notify test-out))
+            (do (print test-out)
+                (flush)))
+          failed?)))))
 
 (defn run-project-tests [namespaces opts]
-  (let [start (System/nanoTime)]
-    (when (:autotest opts)
-      (wait-for-reload (* 1000 (Integer. (or (get *config* "autotest.interval") 5)))))
-    (when (= 0 (count (filter not (map (partial run-ns-tests opts)
-                                       namespaces))))
+  (when (:autotest opts)
+    (wait-for-reload (* 1000 (Integer. (or (get *config* "autotest.interval") 5)))))
+  (let [start    (System/currentTimeMillis)
+        failures (count (remove not (map (partial run-ns-tests opts)
+                                         namespaces)))]
+    (when (= 0 failures)
+      (prn @last-passed @last-tested)
       (when (and (:autotest opts)
                  (< @last-passed @last-tested))
         (notify "All tests passed"))
-      (reset! last-passed (System/currentTimeMillis)))
-    (reset! last-tested (System/currentTimeMillis))
+      (reset! last-passed start))
+    (reset! last-tested start)
     (when-not (:autotest opts)
       (println "----")
-      (println "Finished in" (/ (- (System/nanoTime) start) (Math/pow 10 9)) "seconds.\n"))))
+      (println "Finished in" (/ (- (System/currentTimeMillis) start) 1000) "seconds.\n"))))
