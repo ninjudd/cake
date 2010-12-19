@@ -596,7 +596,7 @@ parse_opts!
 $script   = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd      = Dir.getwd
 $project  = project_dir($pwd)
-$cakedir  = File.expand_path(File.dirname(File.dirname(readlink(__FILE__))))
+$cakedir  = File.dirname(File.dirname(File.expand_path(readlink(__FILE__), File.dirname(__FILE__))))
 $releases = "http://releases.clojure-cake.org"
 $m2       = "#{$home}/.m2/repository"
 $config   = Configuration.new("#{$home}/.cake/config", ".cake/config")
@@ -615,7 +615,7 @@ end
 lib     = "#{$cakedir}/lib"
 project = "#{$cakedir}/project.clj"
 
-if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
+if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?(project)
   log(:cake, "running from git checkout") if verbose?
   if $command == :upgrade
     log(:upgrade, "pulling latest code from git")
