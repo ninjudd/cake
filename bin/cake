@@ -596,7 +596,8 @@ parse_opts!
 $script   = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd      = Dir.getwd
 $project  = project_dir($pwd)
-$cakedir  = File.dirname(File.dirname(File.expand_path(readlink(__FILE__), File.dirname(__FILE__))))
+$file     = File.expand_path(__FILE__)
+$cakedir  = File.dirname(File.dirname(File.expand_path(readlink($file), File.dirname($file))))
 $releases = "http://releases.clojure-cake.org"
 $m2       = "#{$home}/.m2/repository"
 $config   = Configuration.new("#{$home}/.cake/config", ".cake/config")
