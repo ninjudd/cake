@@ -596,7 +596,8 @@ parse_opts!
 $script   = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd      = Dir.getwd
 $project  = project_dir($pwd)
-$cakedir  = File.expand_path(File.dirname(File.dirname(readlink(__FILE__))))
+$file     = File.expand_path(__FILE__)
+$cakedir  = File.dirname(File.dirname(File.expand_path(readlink($file), File.dirname($file))))
 $releases = "http://releases.clojure-cake.org"
 $m2       = "#{$home}/.m2/repository"
 $config   = Configuration.new("#{$home}/.cake/config", ".cake/config")
@@ -615,7 +616,7 @@ end
 lib     = "#{$cakedir}/lib"
 project = "#{$cakedir}/project.clj"
 
-if File.exists?("#{$cakedir}/.gitignore") and File.exists?(project)
+if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?(project)
   log(:cake, "running from git checkout") if verbose?
   if $command == :upgrade
     log(:upgrade, "pulling latest code from git")
@@ -707,8 +708,9 @@ cake.kill if restart?
 cake.start
 
 if $command == :console
-  num_windows = $opts[:console] ? $opts[:console].first.to_i : 1
-  system("jconsole" + " #{cake.pid}" * num_windows + "&")
+  num_windows = $opts[:console].first || 1
+  interval    = $opts[:i] ? $opts[:i].first : 4
+  system("jconsole -interval=#{interval}" + " #{cake.pid}" * num_windows.to_i + "&")
 elsif $command == :repl
   cake.repl
 else

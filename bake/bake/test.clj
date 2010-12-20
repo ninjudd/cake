@@ -1,53 +1,73 @@
 (ns bake.test
   (:use clojure.test
         [cake :only [*config*]]
-        [bake.reload :only [last-reloaded reload]]
+        [bake.reload :only [last-reloaded last-modified reload]]
         [bake.notify :only [notify]])
-  (:import [java.io StringWriter]))
+  (:import [java.io StringWriter IOException]))
 
-(def last-tested (atom nil))
+(def last-passed    (atom (System/currentTimeMillis)))
+(def last-tested    (atom (System/currentTimeMillis)))
+(def last-exception (atom 0))
 
-(defn test-pred [opts]
+(defn run? [opts ns]
   (let [tags       (set (opts :tags))
         functions  (set (opts :functions))
         namespaces (set (opts :namespaces))]
-    (fn [ns [name f]]
+    (fn [[name f]]
       (and (:test (meta f))
            (or (:all opts)
                (namespaces ns)
                (some tags (:tags (meta f)))
                (functions (symbol (str ns "/" name))))))))
 
-(defn run-project-tests [namespaces {autotest? :autotest :as opts}]
-  (let [start    (System/nanoTime)
-        run?     (test-pred opts)
-        interval (* 1000 (Integer. (or (get *config* "autotest.interval") 5)))]
-    (when autotest?
-      (spit "/tmp/autotest" start)
-      (while (and @last-tested (> @last-tested @last-reloaded))
-        (reload)
-        (print ".") (flush)
-        (Thread/sleep interval)))
-    (reset! last-tested (System/currentTimeMillis))
-    (doseq [ns namespaces]
-      (require ns)
-      (when-let [tests (seq (filter (partial run? ns) (ns-publics ns)))]
-        (let [ns-meta (meta (find-ns ns))
-              once-fixtures (join-fixtures (:clojure.test/once-fixtures ns-meta))
-              each-fixtures (join-fixtures (:clojure.test/each-fixtures ns-meta))]
-          (binding [*test-out* (StringWriter.)
-                    *report-counters* (ref *initial-report-counters*)]
-            (report {:type :begin-test-ns :ns ns})
-            (once-fixtures
-             (fn []
-               (doseq [[name f] tests]
-                 (each-fixtures #(test-var f)))))
-            (report (assoc @*report-counters* :type :summary))
-            (when (or (not autotest?) (< 0 (apply + (map @*report-counters* [:fail :error]))))              
-              (let [test-out (.toString *test-out*)]
-                (print test-out) (flush)
-                (when autotest?
-                  (notify test-out))))))))
-    (when-not autotest?
+(defn wait-for-reload [interval]
+  (while (or (< @last-reloaded @last-tested)
+             (< @last-reloaded @last-exception))
+    (Thread/sleep interval)
+    (try (print ".") (flush)
+         (reload)
+         (reset! last-exception 0)
+         (catch Throwable e
+           (when (instance? IOException e) (throw e))
+           (when (> @last-modified @last-exception)
+             (notify (str (class e) ": " (.getMessage e))))
+           (reset! last-exception (System/currentTimeMillis))))))
+
+(defn run-ns-tests [opts ns]
+  (require ns)
+  (when-let [tests (seq (filter (run? opts ns) (ns-publics ns)))]
+    (let [ns-meta (meta (find-ns ns))
+          once-fixtures (join-fixtures (:clojure.test/once-fixtures ns-meta))
+          each-fixtures (join-fixtures (:clojure.test/each-fixtures ns-meta))]
+      (binding [*test-out* (StringWriter.)
+                *report-counters* (ref *initial-report-counters*)]
+        (report {:type :begin-test-ns :ns ns})
+        (once-fixtures
+         (fn []
+           (doseq [[name f] tests]
+             (each-fixtures #(test-var f)))))
+        (report (assoc @*report-counters* :type :summary))
+        (let [failed?  (< 0 (apply + (map @*report-counters* [:fail :error])))
+              test-out (.toString *test-out*)]
+          (if (:autotest opts)
+            (when failed?
+              (notify test-out))
+            (do (print test-out)
+                (flush)))
+          failed?)))))
+
+(defn run-project-tests [namespaces opts]
+  (when (:autotest opts)
+    (wait-for-reload (* 1000 (Integer. (or (get *config* "autotest.interval") 5)))))
+  (let [start    (System/currentTimeMillis)
+        results  (map (partial run-ns-tests opts) namespaces)
+        failures (count (remove not results))]
+    (when (= 0 failures)
+      (when (and (:autotest opts)
+                 (< @last-passed @last-tested))
+        (notify "All tests passed"))
+      (reset! last-passed start))
+    (reset! last-tested start)
+    (when-not (:autotest opts)
       (println "----")
-      (println "Finished in" (/ (- (System/nanoTime) start) (Math/pow 10 9)) "seconds.\n"))))
+      (println "Finished in" (/ (- (System/currentTimeMillis) start) 1000.0) "seconds.\n"))))

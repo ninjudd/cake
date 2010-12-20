@@ -32,8 +32,8 @@
     (concat (map #(File. *root* %) ["project.clj" "context.clj" "tasks.clj"])
             (map #(File. *global-root* %) ["tasks.clj"]))))
 
-(def last-reloaded
-  (atom (System/currentTimeMillis)))
+(def last-modified (atom (System/currentTimeMillis)))
+(def last-reloaded (atom (System/currentTimeMillis)))
 
 (def dep-graph
   (atom (update-dependency-graph (graph) (newer-namespace-decls 0 classpath))))
@@ -59,19 +59,21 @@
        (not (.exists (classfile ns)))))
 
 (defn reload []
-  (let [last @last-reloaded
+  (let [last @last-modified
         now  (System/currentTimeMillis)]
     (when-let [new-decls (seq (newer-namespace-decls last classpath))]
       (let [new-names (map second new-decls)
             affected  (affected-namespaces new-names @dep-graph)]
         (swap! dep-graph update-dependency-graph new-decls)
         (when-let [to-reload (seq (filter reload? affected))]
-          (reset! last-reloaded now)
+          (reset! last-modified now)
           (when (debug?)
             (println "reloading namespaces:" to-reload))
-          (apply reload-namespaces to-reload))))
+          (apply reload-namespaces to-reload)
+          (reset! last-reloaded now))))
     (when (seq (newer-than last project-files))
-      (reset! last-reloaded now)
+      (reset! last-modified now)
       (when (debug?)
         (println "reloading project-files:" project-files))
-      (reload-project-files project-files))))
+      (reload-project-files project-files)
+      (reset! last-reloaded now))))
