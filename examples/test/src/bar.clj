@@ -4,5 +4,8 @@
 (defn foo []
   (println "this is a bar, FOO!"))
 
-(defn inc [n]
+(defn bar []
+  8)
+
+(defn bar-inc [n]
   (+ 2 n))
