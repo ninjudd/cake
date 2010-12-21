@@ -64,8 +64,10 @@
 
 (defn extract-native [jars dest]
   (doseq [jar jars]
+    (ant Copy {:todir (str dest "/native") :flatten true}
+         (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))
     (ant Copy {:todir dest :flatten true}
-         (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))))
+         (add-zipfileset {:src jar :includes "lib/*.jar" }))))
 
 (defn fetch [deps dest]
   (when (seq deps)
@@ -77,7 +79,7 @@
            (.addFileset (get-reference ref-id)))))
   (extract-native
    (fileset-seq {:dir dest :includes "*.jar"})
-   (str dest "/native")))
+   dest))
 
 (defn make-pom []
   (let [refid "cake.pom"
