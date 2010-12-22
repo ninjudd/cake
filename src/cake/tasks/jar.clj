@@ -60,7 +60,7 @@
     (add-zipfileset task (bakepath :prefix prefix :excludes "cake.clj"))))
 
 (defn build-context []
-  (ant Copy {:todir "build/jar"}
+  (ant Copy {:todir "build/jar" :overwrite true}
        (add-zipfileset (bakepath :includes "cake.clj")))
   (let [cake-clj "build/jar/cake.clj"
         context (current-context)
