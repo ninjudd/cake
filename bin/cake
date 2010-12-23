@@ -248,7 +248,7 @@ rescue Errno::EEXIST
   FileUtils.makedirs(dir)
 end
 
-GET = system('which -s wget') ? "wget -O" : "curl -fo" # prefer wget because it retries on incomplete transfers
+GET = system('which wget > /dev/null') ? "wget -O" : "curl -fo" # prefer wget because it retries on incomplete transfers
 def download(url, path, opts = {})
   file = File.basename(url)
 
