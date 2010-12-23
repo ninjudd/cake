@@ -1,5 +1,6 @@
 (ns cake.task
   (:use cake
+        [clojure.set :only [difference]]
         [cake.server :only [print-stacktrace]]
         [cake.file :only [file newer? touch]]
         [cake.utils.useful :only [update verify append]]
@@ -74,9 +75,9 @@
 
 (defn combine-task [task1 task2]
   (when-not (= {:replace true} task2)
-    (let [task1 (or (if-not (:replace task2) task1)
+    (let [task1 (or (when-not (:replace task2) task1)
                     {:actions [] :docs [] :deps #{}})]
-      (append (apply dissoc task1 (:remove-deps task2))
+      (append (update task1 :deps difference (:remove-deps task2))
               (select-keys task2 [:actions :docs :deps])))))
 
 (defn get-tasks []
