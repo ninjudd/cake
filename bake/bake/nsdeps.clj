@@ -17,14 +17,16 @@
         [bake.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
         [bake.dependency :only [depend dependents remove-key depends?]]))
 
+(defn- prepend [prefix sym]
+  (symbol (str (when prefix (str prefix "."))
+               sym)))
+
 (defn- deps-from-libspec [prefix form]
-  (cond (list? form) (apply union (map (fn [f] (deps-from-libspec
-                                                (symbol (str (when prefix (str prefix "."))
-                                                             (first form)))
-                                                f))
-                                       (rest form)))
-        (vector? form) (deps-from-libspec prefix (first form))
-        (symbol? form) #{(symbol (str (when prefix (str prefix ".")) form))}
+  (cond (coll? form) (if (or prefix (some keyword? form) (= 1 (count form)))
+                       (deps-from-libspec prefix (first form))
+                       (apply union (map #(deps-from-libspec (prepend prefix (first form)) %)
+                                         (rest form))))
+        (symbol? form) #{(prepend prefix form)}
         (keyword? form) #{}
         :else (throw (IllegalArgumentException.
                       (pr-str "Unparsable namespace form:" form)))))

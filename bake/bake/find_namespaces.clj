@@ -51,10 +51,10 @@
   cannot be found.  The ns declaration must be the first Clojure form
   in the file, except for (comment ...)  forms."
   [#^PushbackReader rdr]
-  (try (let [form (read rdr)]
+  (try (loop [form (read rdr)]
          (cond
            (ns-decl? form) form
-           (comment? form) (recur rdr)
+           (comment? form) (recur (read rdr))
            :else nil))
        (catch Exception e nil)))
 

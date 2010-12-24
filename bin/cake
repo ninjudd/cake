@@ -248,16 +248,18 @@ rescue Errno::EEXIST
   FileUtils.makedirs(dir)
 end
 
+GET = system('which wget > /dev/null') ? "wget -O" : "curl -fo" # prefer wget because it retries on incomplete transfers
 def download(url, path, opts = {})
   file = File.basename(url)
 
   if opts[:force] or not File.exists?(path)
     mkdir_force(File.dirname(path))
-    open(url, progress_bar(url)) do |remote|
-      open(path, "wb") do |local|
-        while (buf = remote.read(8192)); local.write buf; end
-      end
-    end; puts
+    open(url) {} # check to see if the remote file exists
+    puts "Downloading #{url}..."
+    system("#{GET} #{path} #{url}") || begin
+      FileUtils.rm_f(path)
+      raise "unable to fetch #{url} with curl or wget"
+    end
   end
   return path unless opts[:dest]
 
@@ -284,11 +286,6 @@ def get_clojure(opts = {})
   download("#{repo}/#{path}/clojure-#{version}.jar", "#{$m2}/#{path}/clojure-#{version}.jar", opts)
 end
 
-def progress_bar(label, ch = '=', bg = '', width = 77, out = $stdout, progress = 0, total = nil)
-  { :progress_proc => lambda {|c| progress += ((width * c/total).to_i - progress).times { out.print_flush(ch) }},
-    :content_length_proc => lambda {|t| printf("%s\n[%#{width}s]\r[", label, bg); total = t}}
-end
-
 def cake_version(version_type)
   return version_type unless version_type.kind_of?(Symbol)
   version = open("#{$releases}/#{version_type}").gets
@@ -304,7 +301,7 @@ def extract(jar, file, dest = File.dirname(jar))
   if not File.exists?("#{dest}/#{file}")
     log(:deps, "extracting #{file} from #{jar}") if verbose?
     ret = system("jar xf #{jar} #{file}")
-    raise "cannot find jar command" unless ret
+    raise "error extracting with jar command" unless ret
     FileUtils.makedirs(dest)
     FileUtils.move(file, dest)
   end
@@ -364,7 +361,7 @@ class JVM
 
   def java_opts
     enable_server = $config['jvm.server'] == 'true' || `java -d32 -version 2>&1` =~ /Cannot run Java in 32 bit mode/ || $? != 0
-    vm_opts       = enable_server ? ['-server', '-d64', '-Xmx2G', '-XX:MaxPermSize=256M'] : ['-client', '-d32', '-Xms128M', '-Xmx256M']
+    vm_opts       = enable_server ? ['-server', '-d64', '-Xmx2G', '-XX:MaxPermSize=256M'] : ['-client', '-d32', '-Xms128M', '-Xmx256M', '-XX:MaxPermSize=128M']
     user_opts     = "#{ENV['JAVA_OPTS']} #{$config['jvm.opts']}".split.compact
     [vm_opts, user_opts, @java_opts,'-cp', classpath, %{-Djava.library.path="#{libpath}"}]
   end
@@ -548,7 +545,7 @@ private
     if opts[:echo] == false
       output = `stty -echo 2>&1`
       log($command, output) if verbose?
-      echo_off = $?.exitstatus == 0
+      echo_off = $? == 0
       prompt << ' (WARNING, input will be visible on console!)' unless echo_off
       prompt << ':'
     end

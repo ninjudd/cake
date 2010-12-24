@@ -20,7 +20,7 @@
   `(append-task! ~taskname {:replace true}))
 
 (defmacro remove-deps [taskname deps]
-  `(append-task! ~taskname {:remove-deps ~deps}))
+  `(append-task! ~taskname {:remove-deps '~deps}))
 
 (defmacro require-tasks [& namespaces]
   `(require-tasks! ~namespaces))

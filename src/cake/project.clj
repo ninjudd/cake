@@ -83,28 +83,29 @@
 
 (defn project-eval [ns-forms bindings body]
   (reload)
-  (let [[let-bindings object-bindings] (separate-bindings bindings)
-        temp-ns (gensym "bake")
-        form
-        `(do (ns ~temp-ns
-               (:use ~'cake)
-               ~@ns-forms)
-             (fn [ins# outs# ~@(keys object-bindings)]
-               (try
-                 (clojure.main/with-bindings
-                   (bake.io/with-streams ins# outs#
-                     (binding ~(shared-bindings)
-                       (let ~(quote-if odd? let-bindings)
-                         ~@body))))
-                 (finally
-                  (remove-ns '~temp-ns)))))]
-    (try (apply eval-in classloader
-                `(clojure.main/with-bindings (eval '~form))
-                *ins* *outs* (vals object-bindings))
-         (catch Throwable e
-           (println "error evaluating:")
-           (prn body)
-           (throw e)))))
+  (when classloader
+    (let [[let-bindings object-bindings] (separate-bindings bindings)
+          temp-ns (gensym "bake")
+          form
+          `(do (ns ~temp-ns
+                 (:use ~'cake)
+                 ~@ns-forms)
+               (fn [ins# outs# ~@(keys object-bindings)]
+                 (try
+                   (clojure.main/with-bindings
+                     (bake.io/with-streams ins# outs#
+                       (binding ~(shared-bindings)
+                         (let ~(quote-if odd? let-bindings)
+                           ~@body))))
+                   (finally
+                    (remove-ns '~temp-ns)))))]
+      (try (apply eval-in classloader
+                  `(clojure.main/with-bindings (eval '~form))
+                  *ins* *outs* (vals object-bindings))
+           (catch Throwable e
+             (println "error evaluating:")
+             (prn body)
+             (throw e))))))
 
 (defmacro bake
   "Execute code in a your project classloader. Bindings allow passing state to the project
@@ -137,6 +138,7 @@
                :jar-name         (or (:jar-name opts) artifact-version)
                :war-name         (or (:war-name opts) artifact-version)
                :uberjar-name     (or (:uberjar-name opts) (str artifact-version "-standalone"))
-               :dependencies     (dep-map (or (:dependencies     opts) (:deps     opts)))
-               :dev-dependencies (dep-map (or (:dev-dependencies opts) (:dev-deps opts)))
-               :ext-dependencies (dep-map (or (:ext-dependencies opts) (:ext-deps opts)))))))
+               :dependencies     (dep-map (concat (:dependencies        opts) (:deps        opts)
+                                                  (:native-dependencies opts) (:native-deps opts)))
+               :dev-dependencies (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts)))
+               :ext-dependencies (dep-map (concat (:ext-dependencies    opts) (:ext-deps    opts)))))))
