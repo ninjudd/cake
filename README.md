@@ -152,7 +152,9 @@ and are mapped to `:keyname`. Unnamed arguments are mapped to `:taskname`. Repea
 values can be specified by repeating a key or by using commas in the value.  Single and
 double dashes are both supported though a single dash followed by word characters without
 internal dashes or an equal sign is assumed to be single character argument flags and are
-split accordingly.
+split accordingly. A double dash marks the end of command line options that will be parsed
+by cake and put into `*opts*`; they will still be available in the raw version,
+`*command-line-args*`.
 
 Here are some example cake commands followed be the corresponding values of `*opts*`:
 
@@ -162,7 +164,7 @@ Here are some example cake commands followed be the corresponding values of `*op
     cake test :unit :functional foo.test.login-controller
     {:test [":unit" ":functional" "foo.test.login-controller"]}
 
-    cake compile --compile-native=x86,debug --verbose
+    cake compile --compile-native=x86,debug --verbose -- -unparsed also-unparsed
     {:compile-native ["x86", "debug"] :verbose [""]}
 
     cake foo -vD -no-wrap -color=blue,green --style=baroque -color=red
