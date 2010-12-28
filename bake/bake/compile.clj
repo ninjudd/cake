@@ -21,7 +21,8 @@
                 (let [namespace (second (read-file-ns-decl sourcefile))
                       classfile (classfile namespace)]
                   (if (and (> (.lastModified sourcefile) (.lastModified classfile)))
-                    (union stale (dependents @dep-graph namespace))
+                    (union stale (conj (dependents @dep-graph namespace)
+                                       namespace))
                     stale)))
               #{} (find-clojure-sources-in-dir (File. source-path))))))
 
