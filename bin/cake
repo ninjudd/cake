@@ -318,9 +318,12 @@ def ps
   `jps -v`.split("\n").select {|l| l =~ /cake\.project/}
 end
 
+def cake_pids
+  ps.collect {|line| line.split(' ').first.to_i}
+end
+
 def killall
-  ps.each do |line|
-    pid = line.split(' ').first.to_i
+  cake_pids.each do |pid|
     Process.kill($opts[:"9"] ? KILL : TERM, pid)
   end.size > 0
 end
@@ -352,8 +355,8 @@ class JVM
     TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
 
     kill if @version != $version or newer?("#{$project}/lib/dev", pidfile)
-  rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Process::Error => e
-    if e.kind_of?(Errno::ECONNREFUSED)
+  rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Errno::EPERM, Process::Error => e
+    if e.kind_of?(Errno::ECONNREFUSED) and cake_pids.include?(@pid)
       log(:cake, "defunct jvm") if debug?
       kill(true)
     end
