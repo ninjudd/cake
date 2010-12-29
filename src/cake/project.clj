@@ -1,5 +1,6 @@
 (ns cake.project
   (:use cake classlojure
+        [bake.core :only [debug?]]
         [cake.file :only [file global-file]]
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [join]]

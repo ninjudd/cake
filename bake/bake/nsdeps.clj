@@ -48,7 +48,9 @@
   (mapcat find-clojure-sources-in-dir dirs))
 
 (defn newer-than [timestamp files]
-  (filter #(> (.lastModified %) timestamp) files))
+  (filter #(>= (quot (.lastModified %) 1000)
+               (quot timestamp         1000))
+          files))
 
 (defn newer-namespace-decls [timestamp dirs]
   (remove nil? (map read-file-ns-decl (newer-than timestamp (find-sources dirs)))))

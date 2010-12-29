@@ -8,7 +8,9 @@
   (:import [org.apache.tools.ant.taskdefs Replace]))
 
 (def version-levels [:major :minor :patch])
-(def defline (str "(defproject " (:artifact-id *project*) " \"%s\""))
+
+(defn defline [version]
+  (format "(defproject %s \"%s\"" (:artifact-id *project*) version))
 
 (defn version-map [version]
   (let [[version snapshot] (.split version "-")]
@@ -38,8 +40,8 @@
 (defn update-version [action]
   (let [new-version (if (= "bump" action) (version-str (bump)) action)]
     (ant Replace {:file "project.clj"
-                  :token (format defline (:version *project*))
-                  :value (format defline new-version)})
+                  :token (defline (:version *project*))
+                  :value (defline new-version)})
     new-version))
 
 (deftask version
