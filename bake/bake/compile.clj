@@ -18,9 +18,8 @@
                   (contains? aot ns)))))]
     (filter compile?
       (reduce (fn [stale sourcefile]
-                (let [namespace (second (read-file-ns-decl sourcefile))
-                      classfile (classfile namespace)]
-                  (if (and (> (.lastModified sourcefile) (.lastModified classfile)))
+                (when-let [namespace (second (read-file-ns-decl sourcefile))]
+                  (if (and (> (.lastModified sourcefile) (.lastModified (classfile namespace))))
                     (union stale (conj (dependents @dep-graph namespace)
                                        namespace))
                     stale)))
