@@ -1,10 +1,65 @@
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
-<html> <head>
-<title></title>
+<html>
+<head>
+
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.4.4.min.js"></script>
+
+<script type="text/javascript">
+
+current  = new Date();
+base_url = "http://irc.clojure-cake.org";
+one_day  = 1000*60*60*24;
+
+function prev() {
+    current.setTime(current.getTime() - one_day);
+    updateLog();
+}
+
+function next() {
+    current.setTime(current.getTime() + one_day);
+    updateLog();
+}
+
+function pad(num) {
+    return (num < 10) ? '0' + num : num;
+}
+
+function updateLog() {
+    now = (new Date()).getTime();
+    if (current.getTime() > now) {
+        current.setTime(now);
+    }
+    day = current.getFullYear() + "-" + pad(current.getMonth() + 1) + "-" + pad(current.getDate());
+    document.getElementById('day').innerText = day;
+
+    url = base_url + "/" + day + ".txt";
+    $.get(url, function(data) {
+        $('#log').html(data);
+    });
+}
+
+$(document).ready(function() {
+    updateLog();
+});
+
+</script>
+
+<style type="text/css">
+a { text-decoration:none }
+a{color: grey;}
+a:visited{color: grey;}
+</style>
+
 </head>
 
-<frameset rows="30px,*">
-  <frame src="header.html">
-  <frame name="logs"/>
-</frameset>
-</html>
+<body>
+<code>
+<h3>
+<a href="irc://irc.freenode.net/#cake.clj">#cake.clj</a>
+<a href="javascript:prev()">&lt;</a> <span id="day"></span> <a href="javascript:next()">&gt;</a>
+</h3>
+
+<pre id="log">
+</pre>
+
+</code>
+</body>
