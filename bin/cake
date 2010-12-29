@@ -336,7 +336,7 @@ class JVM
     @classpath = make_path(classpath)
     @libpath   = make_path(libpath)
     @java_opts = java_opts
-    @pidfile   = ".cake/cake.pid"
+    @pidfile   = ".cake/#{ENV['USER']}.pid"
     @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
     refresh
   end
