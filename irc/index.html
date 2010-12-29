@@ -38,6 +38,9 @@ function updateLog() {
 }
 
 $(document).ready(function() {
+    $('#log').ajaxError(function() {
+        $(this).html("[null] there are no logs available for this date");
+    });
     updateLog();
 });
 
