@@ -289,7 +289,7 @@ end
 
 def cake_version(version_type)
   return version_type unless version_type.kind_of?(Symbol)
-  version = open("#{$releases}/#{version_type}").gets
+  version = open("#{$releases}/#{version_type}").gets.chomp
   log(:deps, "most recent #{version_type} version is #{version}") if debug?
   version
 end
