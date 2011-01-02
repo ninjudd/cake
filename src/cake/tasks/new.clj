@@ -15,13 +15,22 @@
 
 (def template-dir (file "~" ".cake" "templates"))
 
+(defn rename-file [old-file root project]
+  (let [name (.getName old-file)
+        as-path (.replace name "+project+" (if (= old-file root)
+                                             project
+                                             (.replace project "." (System/getProperty "file.separator")))) 
+        replaced (.replace as-path "-" "_")]
+    [name as-path]))
+
 (defn rename-files [root project]
   (log "Renaming directories with +project+ in their name")
   (doseq [old-file (reverse (sort-by (comp count str) (file-seq root)))
-          :let [name (.getName old-file)
-                replaced (.replace name "+project+" (.replace project "-" "_"))]
+          :let [[name replaced] (rename-file old-file root project)]
           :when (not= name replaced)]
-    (.renameTo old-file (file (.getParent old-file) replaced))))
+    (let [f (file (.getParent old-file) replaced)]
+      (.mkdirs f)
+      (.renameTo old-file f))))
 
 (defn scan-replace-contents [files project]
   (log (str "Replacing +project+ with '" project "' in all files."))
