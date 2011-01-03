@@ -1,6 +1,11 @@
 (ns bake.core
   (:use cake
-        [clojure.string :only [join]]))
+        [clojure.string :only [join]])
+  (:require [clojure.stacktrace :as stacktrace]))
+
+(defn print-stacktrace [e]
+  (stacktrace/print-cause-trace e)
+  (flush))
 
 (defn merge-in
   "Merge two nested maps."

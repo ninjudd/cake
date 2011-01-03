@@ -34,7 +34,7 @@
   (when (bake (:use [bake.compile :only [compile-stale]])
               [source-path  (.getPath source-path)
                compile-path (.getPath compile-path)]
-              (compile-stale source-path compile-path))
+              (compile-stale source-path compile-path))    
     (reload!)))
 
 (defn copy-native []

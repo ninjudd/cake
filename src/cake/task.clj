@@ -1,7 +1,7 @@
 (ns cake.task
   (:use cake
         [clojure.set :only [difference]]
-        [cake.server :only [print-stacktrace]]
+        [bake.core :only [print-stacktrace]]
         [cake.file :only [file newer? touch]]
         [cake.utils.useful :only [update verify append]]
         [uncle.core :only [*task-name*]]))

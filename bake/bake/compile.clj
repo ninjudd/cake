@@ -1,6 +1,6 @@
 (ns bake.compile
   (:use cake
-        [bake.core :only [log]]
+        [bake.core :only [log print-stacktrace]]
         [bake.reload :only [dep-graph classfile]]
         [bake.dependency :only [dependents]]
         [bake.find-namespaces :only [find-clojure-sources-in-dir read-file-ns-decl]]
@@ -30,5 +30,7 @@
     (let [stale (stale-namespaces source-path)]
       (doseq [ns stale]
         (log "Compiling namespace" ns)
-        (compile ns))
+        (try (compile ns)
+             (catch ExceptionInInitializer e
+               (print-stacktrace e))))
       (< 0 (count stale)))))

@@ -1,31 +1,17 @@
 (ns cake.server
   (:use cake
         [cake.project :only [bake]]
-        [bake.core :only [with-context current-context]]
+        [bake.core :only [with-context current-context print-stacktrace]]
         [clojure.main :only [skip-whitespace]]
         [bake.io :only [with-streams]]
         [bake.reload :only [reload]]
         [cake.utils.useful :only [if-ns]])
   (:require [cake.utils.server-socket :as server-socket]
-            [bake.complete :as complete]
-            [clojure.stacktrace :as stacktrace])
+            [bake.complete :as complete])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream
                     FileOutputStream ByteArrayInputStream StringReader FileNotFoundException]
            [clojure.lang LineNumberingPushbackReader LispReader$ReaderException]
            [java.net InetAddress]))
-
-(if-ns (:require [clj-stacktrace.repl :as clj-stacktrace])
-  (do
-    (defn print-stacktrace [e]
-      (if-let [pst-color (get *config* "clj-stacktrace")]
-        (do (printf "%s: " (.getName (class e)))
-            (clj-stacktrace/pst-on *out* (= "color" pst-color) e))
-        (do (stacktrace/print-cause-trace e)
-            (flush)))))
-  (do
-    (defn print-stacktrace [e]
-      (stacktrace/print-cause-trace e)
-      (flush))))
 
 (defn- read-seq []
   (lazy-seq
