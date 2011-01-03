@@ -53,6 +53,8 @@
         snapshot? (snapshot? version)
         version   (if snapshot? (snapshot-timestamp version) version)
         jar       (format "jars/cake-%s.jar" version)]
+    (binding [*root* (file "releases")]
+      (git "pull"))
     (ant Copy {:file (uberjarfile) :tofile (file "releases" jar)})
     (spit (file "releases/current") version)
     (when-not snapshot?

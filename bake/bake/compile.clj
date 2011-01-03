@@ -31,6 +31,6 @@
       (doseq [ns stale]
         (log "Compiling namespace" ns)
         (try (compile ns)
-             (catch ExceptionInInitializer e
+             (catch ExceptionInInitializerError e
                (print-stacktrace e))))
       (< 0 (count stale)))))
