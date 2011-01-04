@@ -61,3 +61,8 @@
   `(try (set-context! ~context)
         (do ~@forms)
         (set-project! *project-root*)))
+
+(defn context? [ctx-name]
+  "Returns true iff the argument is the currently selected context. Argument can
+   be anything that clojure.core/name turns into a string."
+  (= (name (:context *project*)) (name ctx-name)))
