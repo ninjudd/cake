@@ -132,14 +132,14 @@
   ([tag values]
      (list
       [:decl!]
-      [:project {:xsi:schemaLocation "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
-                 :xmlns "http://maven.apache.org/POM/4.0.0"}
+      [:project {:xmlns "http://maven.apache.org/POM/4.0.0"}
        [:modelVersion "4.0.0"]
        (map (partial apply prxml-tags)
             (select-keys values
-                         [:artifact-id :group-id :version :name
-                          :description :license
-                          :dependencies :repositories]))])))
+                         (rseq
+                          [:artifact-id :group-id :version :name
+                           :description :license
+                           :dependencies :repositories])))])))
 
 (defn make-pom []
   (spit "pom.xml"
