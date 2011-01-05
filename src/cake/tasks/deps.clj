@@ -3,7 +3,9 @@
         [cake.utils :only [cake-exec os-name os-arch]]
         [cake.project :only [group reload reload!]]
         [bake.core :only [log]]
-        [clojure.java.shell :only [sh]])
+        [clojure.java.shell :only [sh]]
+        [clojure.contrib.prxml :only [prxml *prxml-indent*]])
+  (:require [clojure.string :as s])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
            [org.apache.tools.ant.taskdefs Copy Delete Move]
            [org.apache.maven.model Dependency Exclusion License]
@@ -81,14 +83,69 @@
    (fileset-seq {:dir dest :includes "*.jar"})
    dest))
 
+(defn to-camel-case [str]
+  (s/replace str
+             #"-(\w)"
+             (comp s/upper-case second)))
+
+(defn from-camel-case [name]
+  (s/replace name
+             #"(?<![A-Z])[A-Z]+"
+             (comp (partial str "-")
+                   s/lower-case)))
+
+(defn pomify [key]
+  (->> key name to-camel-case (keyword nil)))
+
+(defmulti prxml-tags
+  (fn [tag value] (keyword "cake.tasks.deps" (name tag))))
+
+(defmethod prxml-tags :default
+  ([tag value]
+     (when value
+       [(pomify tag) value])))
+
+(defmethod prxml-tags ::list
+  ([tag values]
+     [(pomify tag) (map (partial prxml-tags
+                                 (-> tag name (s/replace #"ies$" "y") keyword))
+                        values)]))
+
+(doseq [c [::dependencies
+           ::repositories]]
+  (derive c ::list))
+
+(defmethod prxml-tags ::dependency
+  ([_ [dep opts]]
+     [:dependency
+      (map (partial apply prxml-tags)
+           {:group-id    (group dep)
+            :artifact-id (name dep)
+            :version     (:version opts)
+            :classifier  (:classifier opts)})]))
+
+(defmethod prxml-tags ::repository
+  ([_ [id url]]
+     [:repository [:id id] [:url url]]))
+
+(defmethod prxml-tags ::project
+  ([tag values]
+     (list
+      [:decl!]
+      [:project {:xmlns "http://maven.apache.org/POM/4.0.0"}
+       [:modelVersion "4.0.0"]
+       (map (partial apply prxml-tags)
+            (select-keys values
+                         (rseq
+                          [:artifact-id :group-id :version :name
+                           :description :license
+                           :dependencies :repositories])))])))
+
 (defn make-pom []
-  (let [refid "cake.pom"
-        file  (file "pom.xml")
-        attrs (select-keys *project* [:artifact-id :group-id :version :name :description])]
-    (ant Pom (assoc attrs :id refid)
-      (add-license (:license *project*))
-      (add-dependencies (:dependencies *project*)))
-    (ant WritePomTask {:pom-ref-id refid :file file})))
+  (spit "pom.xml"
+        (with-out-str
+          (binding [*prxml-indent* 2]
+            (prxml (prxml-tags :project *project*))))))
 
 (defn fetch-deps []
   (log "Fetching dependencies...")

@@ -116,9 +116,9 @@
     `(project-eval '~ns-forms ~(quote-if even? bindings) '~body)))
 
 (defn group [project]
-  (if (or (= project 'clojure) (= project 'clojure-contrib))
+  (if ('#{clojure clojure-contrib} project)
     "org.clojure"
-    (or (namespace project) (name project))))
+    (some #(% project) [namespace name])))
 
 (defn dep-map [deps]
   (into {}
