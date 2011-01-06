@@ -134,7 +134,9 @@
                :version          version
                :name             (or (:name opts) artifact)
                :aot              (or (:aot opts) (:namespaces opts))
-               :context          (symbol (or (:context opts) "dev"))
+               :context          (symbol (or (get *config* "project.context")
+                                             (:context opts)
+                                             "dev"))
                :jar-name         (or (:jar-name opts) artifact-version)
                :war-name         (or (:war-name opts) artifact-version)
                :uberjar-name     (or (:uberjar-name opts) (str artifact-version "-standalone"))
