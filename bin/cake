@@ -35,7 +35,7 @@ else
   def daemon(cmd)
     puts cmd.join(' ') if debug?
     pid = fork do
-      if not $stdin.tty?
+      if $config['jvm.detach-output'] or not $stdin.tty?
         $stdout.close
         $stderr.close
       end
