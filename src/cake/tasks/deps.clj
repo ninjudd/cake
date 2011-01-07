@@ -3,8 +3,7 @@
         [cake.utils :only [cake-exec os-name os-arch]]
         [cake.project :only [group reload reload!]]
         [bake.core :only [log]]
-        [clojure.java.shell :only [sh]]
-        [clojure.contrib.prxml :only [prxml *prxml-indent*]])
+        [clojure.java.shell :only [sh]])
   (:require [clojure.string :as s])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]
            [org.apache.tools.ant.taskdefs Copy Delete Move]
@@ -83,19 +82,19 @@
    (fileset-seq {:dir dest :includes "*.jar"})
    dest))
 
-(defn to-camel-case [str]
+(defn camelize [str]
   (s/replace str
              #"-(\w)"
              (comp s/upper-case second)))
 
-(defn from-camel-case [name]
+(defn dasherize [name]
   (s/replace name
              #"(?<![A-Z])[A-Z]+"
              (comp (partial str "-")
                    s/lower-case)))
 
 (defn pomify [key]
-  (->> key name to-camel-case (keyword nil)))
+  (->> key name camelize (keyword nil)))
 
 (defmulti prxml-tags
   (fn [tag value] (keyword "cake.tasks.deps" (name tag))))
