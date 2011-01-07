@@ -91,11 +91,12 @@
            (into (default-tasks) (:tasks *project*)))))
 
 (defn to-taskname [taskname]
-  (symbol
-   (name (ns-name *ns*))
-   (if (string? taskname)
-     (str "file-" (.replaceAll taskname "/" "-"))
-     (str "task-" (name taskname)))))
+  (gensym
+   (str (name (ns-name *ns*))
+        "/"
+        (if (string? taskname)
+          (str "file-" (.replaceAll taskname "/" "-"))
+          (str "task-" (name taskname))))))
 
 (defn task-run-file [taskname]
   (file ".cake" "run" taskname))
