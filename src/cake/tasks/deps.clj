@@ -141,12 +141,6 @@
                            :description :license
                            :dependencies :repositories])))])))
 
-(defn make-pom []
-  (spit "pom.xml"
-        (with-out-str
-          (binding [*prxml-indent* 2]
-            (prxml (prxml-tags :project *project*))))))
-
 (defn fetch-deps []
   (log "Fetching dependencies...")
   (fetch (:dependencies *project*) (file "build/lib"))
@@ -161,12 +155,10 @@
 (defn stale-deps? [deps-str deps-file]
   (or (not (.exists deps-file)) (not= deps-str (slurp deps-file))))
 
-(deftask pom "Generate pom.xml from project.clj."
-  (when (or (newer? (file "project.clj") (file "pom.xml")) (= ["force"] (:pom *opts*)))
-    (log "creating pom.xml")
-    (make-pom)))
+(defile "pom.xml" #{"project.clj"}
+  (prxml-tags :project *project*))
 
-(deftask deps #{pom}
+(deftask deps #{"pom.xml"}
   "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
   (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :ext-dependencies :dev-dependencies])))
         deps-file (file "lib" "deps.clj")]
