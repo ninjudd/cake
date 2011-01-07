@@ -1,10 +1,12 @@
 (ns cake.task
   (:use cake
         [clojure.set :only [difference]]
-        [bake.core :only [print-stacktrace]]
+        [bake.core :only [print-stacktrace log]]
         [cake.file :only [file newer? touch]]
         [cake.utils.useful :only [update verify append]]
-        [uncle.core :only [*task-name*]]))
+        [uncle.core :only [*task-name*]]
+        [clojure.java.io :only [writer]]
+        [clojure.contrib.prxml :only [*prxml-indent* prxml]]))
 
 (declare tasks)
 (declare run?)
@@ -113,6 +115,56 @@
 (defn- expand-defile-path [path]
   (file (.replaceAll path "\\+context\\+" (str (:context *project*)))))
 
+(defmulti generate-file
+  (fn [forms]
+    (let [parts (-> *File* (.toString) (.split "\\."))]
+      (when (< 1 (count parts))
+        (-> parts last keyword)))))
+
+(defmacro with-outfile [& forms]
+  `(with-open [f# (writer *File*)]
+     (binding [*out* f#]
+       ~@forms)))
+
+(defmethod generate-file nil
+  [forms]
+  (with-outfile
+    (doseq [form forms]
+      (println form)
+      (println))))
+
+(defmethod generate-file :clj
+  [forms]
+  (with-outfile
+    (doseq [form forms]
+      (prn form)
+      (println))))
+
+(defmethod generate-file :xml
+  [forms]
+  (with-outfile
+    (binding [*prxml-indent* 2]
+      (prxml forms))
+    (println)))
+
+(defn- run-actions
+  "Execute task actions in order. Construct file output if task is a defile"
+  [task]
+  (let [results (doall (for [action (map resolve (:actions task)) :when action]
+                         (action *opts*)))]
+    (when *File*
+      (when-let [output (seq (remove nil? results))]
+        (log "generating file")
+        (generate-file output)))))
+
+(defmacro without-circular-deps [taskname & forms]
+  `(do (verify (not= :in-progress (run? ~taskname))
+               (str "circular dependency found in task: " ~taskname))
+       (when-not (run? ~taskname)
+         (set! run? (assoc run? ~taskname :in-progress))
+         ~@forms
+         (set! run? (assoc run? ~taskname true)))))
+
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
   [taskname]
@@ -125,16 +177,11 @@
       (if (and (nil? task)
                (not (string? taskname)))
         (println "unknown task:" taskname)
-        (do (verify (not= :in-progress (run? taskname))
-                    (str "circular dependency found in task: " taskname))
-            (when-not (run? taskname)
-              (set! run? (assoc run? taskname :in-progress))
-              (doseq [dep (:deps task)] (run-task dep))
-              (binding [*current-task* taskname
-                        *task-name*    (name taskname)
-                        *File* (if-not (symbol? taskname) (expand-defile-path taskname))]
-                (doseq [action (map resolve (:actions task)) :when action]
-                  (action *opts*))
-                (set! run? (assoc run? taskname true))
-                (if (symbol? taskname)
-                  (touch (task-run-file taskname) :verbose false)))))))))
+        (without-circular-deps taskname
+          (doseq [dep (:deps task)] (run-task dep)) ;; run dependencies
+          (binding [*current-task* taskname
+                    *task-name*    (name taskname)
+                    *File* (if-not (symbol? taskname) (expand-defile-path taskname))]
+            (run-actions task))
+          (when (symbol? taskname)
+            (touch (task-run-file taskname) :verbose false)))))))
