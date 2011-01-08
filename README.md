@@ -360,3 +360,4 @@ code in the global project. The file doesn't even have to end in .clj.
 - Luke Renn ([lrenn](https://github.com/lrenn))
 - David Santiago ([davidsantiago](https://github.com/davidsantiago))
 - Alan Malloy ([amalloy](https://github.com/amalloy))
+- Martin Sander ([marvinthepa](https://github.com/marvinthepa))
