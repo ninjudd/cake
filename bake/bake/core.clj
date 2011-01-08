@@ -31,6 +31,9 @@
 (defn debug? []
   (boolean (or (:d *opts*) (:debug *opts*))))
 
+(defn force? []
+  (boolean (or (:F *opts*) (:force *opts*))))
+
 (defn verbose? []
   (boolean (or (:v *opts*) (:verbose *opts*))))
 

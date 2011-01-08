@@ -43,7 +43,7 @@
   ([files]
      (remove-ns 'tasks)
      (ns tasks
-       (:use cake.core))
+       (:use cake cake.core))
      (doseq [f files :when (.exists f) :let [f (.getPath f)]]
        (try (load-file f)
             (catch clojure.lang.Compiler$CompilerException e
