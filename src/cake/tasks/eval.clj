@@ -33,7 +33,11 @@
 (deftask run #{compile}
   "Execute a script in the project jvm."
   {[script] :run}
-  (bake [script (str *pwd* "/" script)]
+  (bake [script (str
+                 (let [fscript (java.io.File. script)]
+                   (if (.isAbsolute fscript)
+                     fscript
+                     (file *pwd* script))))]
         (load-file script)))
 
 (deftask repl #{compile}
