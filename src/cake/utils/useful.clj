@@ -72,7 +72,8 @@
   `(try (ns ~(.getName *ns*) ~ns-reference)
         (eval '~then-form)
         (catch Exception e#
-          (when (not (instance? java.io.FileNotFoundException e#))
+          (when-not (or (instance? java.io.FileNotFoundException e#)
+                        (instance? ClassNotFoundException e#))
             (println "Error loading" '~ns-reference (.getMessage e#)))
           (eval '~else-form))))
 
