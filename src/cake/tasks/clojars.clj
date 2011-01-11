@@ -3,14 +3,14 @@
             [clojure.java.io :as io])
   (:use cake cake.core))
 
-(def *clojars-repo-url* "http://clojars.org/repo")
-(def *clojars-all-jars-url* (str *clojars-repo-url* "/all-jars.clj"))
-(def *clojars-all-poms-url* (str *clojars-repo-url* "/all-poms.txt"))
+(def clojars-repo-url "http://clojars.org/repo")
+(def clojars-all-jars-url (str clojars-repo-url "/all-jars.clj"))
+(def clojars-all-poms-url (str clojars-repo-url "/all-poms.txt"))
 
 (defn http-get-text-seq [url] (line-seq (io/reader url)))
 
 (defn get-latest-version [library-name]
-  (let [response (http-get-text-seq *clojars-all-jars-url*)
+  (let [response (http-get-text-seq clojars-all-jars-url)
 	lib-name (symbol library-name)]
     (second (last (filter #(= (first %) lib-name)
 			  (for [line response]
@@ -40,7 +40,7 @@
          (println s-to "wasn't found in your project.clj file.")))))
 
 (defn clojars-search [term]
-  (let [response (http-get-text-seq *clojars-all-jars-url*)]
+  (let [response (http-get-text-seq clojars-all-jars-url)]
     (println "\n\nLibraries on Clojars.org that contain the term: " term)
     (println "--------------------------------------------------------------------------------")
     (doseq [entry (for [line response :when (.contains line term)]
@@ -49,7 +49,7 @@
     (println "\n\n")))
 
 (defn clojars-versions [library-name]
-  (let [response (http-get-text-seq *clojars-all-jars-url*)]
+  (let [response (http-get-text-seq clojars-all-jars-url)]
     (println "\n\nAvailable versions for library: " library-name)
     (println "--------------------------------------------------------------------------------")
     (doseq [entry (filter #(= (first %) (symbol library-name))
@@ -67,7 +67,7 @@
 
 (defn get-pom-locations
   ([library-name version]
-     (let [response (http-get-text-seq *clojars-all-poms-url*)
+     (let [response (http-get-text-seq clojars-all-poms-url)
 	   pom-dir (get-pom-dir library-name version)]
        (for [line response :when (.startsWith line pom-dir)]
 	 line))))
@@ -78,7 +78,7 @@
 
 (defn to-clojars-url
   ([file-location]
-     (str *clojars-repo-url* "/" file-location)))
+     (str clojars-repo-url "/" file-location)))
 
 (defn get-latest-pom-file
   ([library-name version]
