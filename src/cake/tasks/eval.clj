@@ -4,6 +4,7 @@
         [cake.file :only [file]]
         [bake.repl :only [repl]]))
 
+(def ^:dynamic *script-opts*)
 
 (defn- read-form [string]
   (let [form (if (= "-" string)
@@ -38,7 +39,8 @@
                    (if (.isAbsolute fscript)
                      fscript
                      (file *pwd* script))))]
-        (load-file script)))
+        (binding [*command-line-args* (-> *opts* :run rest)]
+          (load-file script))))
 
 (deftask repl #{compile}
   "Start an interactive shell with history and tab completion."
