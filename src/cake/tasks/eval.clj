@@ -4,8 +4,6 @@
         [cake.file :only [file]]
         [bake.repl :only [repl]]))
 
-(def ^:dynamic *script-opts*)
-
 (defn- read-form [string]
   (let [form (if (= "-" string)
                (read)
