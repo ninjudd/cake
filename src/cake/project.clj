@@ -3,7 +3,8 @@
         [bake.core :only [debug?]]
         [cake.file :only [file global-file]]
         [uncle.core :only [fileset-seq]]
-        [clojure.string :only [join]]
+        [clojure.string :only [join trim-newline]]
+        [clojure.java.shell :only [sh]]
         [cake.utils.useful :only [update merge-in tap]])
   (:import [java.io File]))
 
@@ -125,8 +126,21 @@
     (for [[dep version & opts] deps]
       [dep (apply hash-map :version version opts)])))
 
-(defn create [project-name version opts]
-  (let [artifact (name project-name)
+(defmulti get-version identity)
+
+(defmethod get-version :git [_]
+  (:out (sh "git" "describe" "--tags")))
+
+(defmethod get-version :default [r]
+  (println "No pre-defined get-version method for that key."))
+
+(defn create [project-name opts]
+  (let [base-version (:version opts)
+        version (trim-newline
+                 (if (string? base-version)
+                   base-version
+                   (get-version base-version)))
+        artifact (name project-name)
         artifact-version (str artifact "-" version)]
     (-> opts
         (assoc :artifact-id      artifact
