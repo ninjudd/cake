@@ -29,6 +29,10 @@
 (defn global-file [& path]
   (apply file *global-root* path))
 
+(defmacro with-root [root & forms]
+  `(binding [*root* ~root]
+     ~@forms))
+
 (use 'uncle.core)
 
 (defn cp [from to & opts]

@@ -8,6 +8,7 @@
 (def ^{:dynamic true} *context*      (comment context))
 (def ^{:dynamic true} *script*       nil)
 (def ^{:dynamic true} *opts*         nil)
+(def ^{:dynamic true} *args*         nil)
 (def ^{:dynamic true} *pwd*          nil)
 (def ^{:dynamic true} *env*          nil)
 (def ^{:dynamic true} *vars*         nil)

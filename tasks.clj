@@ -53,14 +53,14 @@
         snapshot? (snapshot? version)
         version   (if snapshot? (snapshot-timestamp version) version)
         jar       (format "jars/cake-%s.jar" version)]
-    (binding [*root* (file "releases")]
+    (with-root (file "releases")
       (git "pull"))
     (ant Copy {:file (uberjarfile) :tofile (file "releases" jar)})
     (spit (file "releases/current") version)
     (when-not snapshot?
       (ant Copy {:file (file "bin" "cake") :tofile (file "releases" "cake")})
       (spit (file "releases/stable") version))
-    (binding [*root* (file "releases")]
+    (with-root (file "releases")
       (git "add" jar "cake" "current" "stable")
       (git "commit" "--allow-empty" "-m" (format "'release cake %s'" (:version *project*)))
       (git "push"))

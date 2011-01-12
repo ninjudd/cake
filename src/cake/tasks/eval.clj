@@ -1,7 +1,7 @@
 (ns cake.tasks.eval
   (:use cake
         [cake.core :only [deftask bake]]
-        [cake.file :only [file]]
+        [cake.file :only [with-root file]]
         [bake.repl :only [repl]]))
 
 (defn- read-form [string]
@@ -32,12 +32,9 @@
 (deftask run #{compile}
   "Execute a script in the project jvm."
   {[script] :run}
-  (bake [script (str
-                 (let [fscript (java.io.File. script)]
-                   (if (.isAbsolute fscript)
-                     fscript
-                     (file *pwd* script))))]
-        (binding [*command-line-args* (-> *opts* :run rest)]
+  (bake [script (with-root *pwd* (str (file script)))
+         args   (rest (drop-while (partial not= script) *args*))]
+        (binding [*command-line-args* args]
           (load-file script))))
 
 (deftask repl #{compile}
