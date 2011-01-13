@@ -316,6 +316,9 @@ end
 
 def ps
   `jps -v`.split("\n").select {|l| l =~ /cake\.project/}
+rescue Errno::ENOENT => e
+  puts "jps was not found on your PATH. Please add it."
+  raise e
 end
 
 def cake_pids
