@@ -60,7 +60,7 @@
 (defn install-subprojects []
   (doseq [type [:dependencies :dev-dependencies], [dep opts] (*project* type)]
     (when-let [path (subproject-path dep)]
-      (binding [*root* path]
+      (with-root path
         (cake-exec "install")))))
 
 (defn extract-native [jars dest]

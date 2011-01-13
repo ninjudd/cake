@@ -56,12 +56,12 @@
           (let [form (read), vars (read)]
             (clojure.main/with-bindings
               (reload)
-              (set! *command-line-args*  (:args vars))
               (set! *warn-on-reflection* (:warn-on-reflection *project*))
               (binding [*vars*    vars
                         *pwd*     (:pwd vars)
                         *env*     (:env vars)
                         *opts*    (:opts vars)
+                        *args*    (:args vars)
                         *script*  (:script vars)]
                 (with-context (current-context)
                   (if (keyword? form)
