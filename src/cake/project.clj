@@ -5,7 +5,8 @@
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [cake.utils.useful :only [update merge-in tap]])
+        [cake.utils.useful :only [update merge-in tap]]
+        [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
 (defn- make-url [file]
@@ -130,6 +131,9 @@
 
 (defmethod get-version :git [_]
   (:out (sh "git" "describe" "--tags")))
+
+(defmethod get-version :hg [_]
+  (-> ".hgtags" reader line-seq last (.split " ") last))
 
 (defmethod get-version :default [r]
   (println "No pre-defined get-version method for that key."))
