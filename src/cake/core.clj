@@ -8,15 +8,11 @@
   (:require [cake.project :as project]))
 
 (defmacro defproject [name & [version & opts :as all]]
-  (let [raw-opts (into-map (if (string? version) (conj opts [:version version]) all))
-        opts (syntax-quote raw-opts)]
-    `(let [replacement# (project/create '~name
-                                        (if (seq? (:version ~opts))
-                                          (assoc ~opts :version ~(:version raw-opts))
-                                          ~opts))]
+  (let [opts (syntax-quote (into-map (if (string? version) (conj opts [:version version]) all)))]
+    `(let [project# (project/create '~name ~opts)]
        (alter-var-root #'*context*      (fn [_#] {}))
-       (alter-var-root #'*project*      (fn [_#] replacement#))
-       (alter-var-root #'*project-root* (fn [_#] replacement#)))))
+       (alter-var-root #'*project*      (fn [_#] project#))
+       (alter-var-root #'*project-root* (fn [_#] project#)))))
 
 (defmacro defcontext [name & opts]
   (let [opts (syntax-quote (into-map opts))]
