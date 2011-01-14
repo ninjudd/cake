@@ -1,7 +1,7 @@
 (ns cake.tasks.clojars
   (:require [clojure.string :as s]
             [clojure.java.io :as io])
-  (:use cake cake.core))
+  (:use cake cake.core [bake.core :only [log]]))
 
 (def clojars-repo-url "http://clojars.org/repo")
 (def clojars-all-jars-url (str clojars-repo-url "/all-jars.clj"))
@@ -17,27 +17,28 @@
 			    (read-string line)))))))
 
 (defn clojars-install
-  ([library-name]
+  ([library-name dev]
      (if-let [version (get-latest-version library-name)]
-       (clojars-install library-name version)
+       (clojars-install library-name version dev)
        (println "Can't find version of" library-name "on clojars.org\r\n"
                 "If the library is in another repository, please provide a version argument.")))
-  ([library-name library-version]
-     (clojars-install library-name library-version :dependencies))
-  ([library-name library-version to]
-     (let [s-to (str to)
-           project (line-seq (io/reader "project.clj"))
-           dep-line (some #(and (re-find (re-pattern s-to) %) %) project)
-           pad (and dep-line (-> dep-line (s/split #"\[" 2) first count inc))]
-       (if pad
-         (spit "project.clj"
-               (s/replace (slurp "project.clj")
-                          (re-pattern (str s-to "\\s*\\["))
-                          (str s-to " [[" library-name
-                               " \"" library-version "\"]"
-                               (when-not (re-find #"\[\]" dep-line)
-                                 (str "\n" (s/join (repeat pad " ")))))))
-         (println s-to "wasn't found in your project.clj file.")))))
+  ([library-name library-version dev]
+     (let [s-to (if dev #{":dev-deps" ":dev-dependencies"} #{":dependencies" ":deps"})
+           project (line-seq (io/reader "project.clj"))]
+       (if-let [dep-line (some
+                          (fn [x] (and (some #(re-find (re-pattern %) x) s-to) x))
+                          project)]
+         (let [to (some s-to (.split dep-line " "))
+               pad (and dep-line (-> dep-line (s/split #"\[" 2) first count inc))]
+           (spit "project.clj"
+                 (s/replace (slurp "project.clj")
+                            (re-pattern (str to "\\s*\\["))
+                            (str to " [[" library-name
+                                 " \"" library-version "\"]"
+                                 (when-not (re-find #"\[\]" dep-line)
+                                   (str "\n" (s/join (repeat pad " ")))))))
+           (log "Added" library-name library-version "to your" (str to ".")))
+         (println "Neither" (first s-to) "nor" (last s-to) "were found in your project.clj.")))))
 
 (defn clojars-search [term]
   (let [response (http-get-text-seq clojars-all-jars-url)]
@@ -150,8 +151,9 @@
   {term :search}
   (->> term (s/join " ") clojars-search))
 
-(deftask install-lib
+(deftask add-dep
   "Install a library from into your project."
-  "The library will be added to the [dev-]dependency vector in your project.clj."
-  {args :install-lib}
-  (apply clojars-install args))
+  "The library will be added to the :deps or :dependencies vector in your project.clj.
+   If you pass the --dev option, it'll be added to :dev-deps or :dev-dependencies."
+  {args :add-dep dev :dev}
+  (apply clojars-install (conj args dev)))
