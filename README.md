@@ -83,7 +83,6 @@ Cake also provides several system tasks for managing the persistent JVM.
     cake kill      ;; Kill running cake jvm processes. Use -9 to force.
     cake killall   ;; Kill all running cake jvm processes for all projects.
     cake log       ;; Tail the cake log file. Optionally pass the number of lines of history to show.
-    cake upgrade   ;; Upgrade cake to the most current version.
 
 [Default Task Documentation](http://wiki.github.com/ninjudd/cake/default-tasks)
 
