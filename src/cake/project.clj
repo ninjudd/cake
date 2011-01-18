@@ -130,7 +130,7 @@
 (defmulti get-version identity)
 
 (defmethod get-version :git [_]
-  (:out (sh "git" "describe" "--tags")))
+  (:out (sh "git" "describe" "--tags" "--abbrev=0")))
 
 (defmethod get-version :hg [_]
   (-> ".hgtags" reader line-seq last (.split " ") last))
