@@ -23,7 +23,7 @@
   (let [[deps forms] (if (set? (first forms))
                       [(first forms) (rest forms)]
                       [#{} forms])
-        deps (map #(if-not (symbol? %) (eval %) %) deps)
+        deps (set (map #(if-not (symbol? %) (eval %) %) deps))
         [docs forms] (split-with string? forms)
         [destruct forms] (if (map? (first forms))
                            [(first forms) (rest forms)]
