@@ -360,3 +360,14 @@ code in the global project. The file doesn't even have to end in .clj.
 - David Santiago ([davidsantiago](https://github.com/davidsantiago))
 - Alan Malloy ([amalloy](https://github.com/amalloy))
 - Martin Sander ([marvinthepa](https://github.com/marvinthepa))
+
+## YourKit
+
+YourKit's Java Profiler was a terrific help to us in finding classloader memory leaks when we
+switched Cake to use a single JVM with a separate project classloader.
+
+YourKit is kindly supporting open source projects with its full-featured Java Profiler.
+YourKit, LLC is the creator of innovative and intelligent tools for profiling
+Java and .NET applications. Take a look at YourKit's leading software products:
+[YourKit Java Profiler](http://www.yourkit.com/java/profiler/index.jsp) and
+[YourKit .NET Profiler](http://www.yourkit.com/.net/profiler/index.jsp).
