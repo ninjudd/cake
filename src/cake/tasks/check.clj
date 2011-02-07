@@ -6,6 +6,7 @@
         [cake.tasks.compile :only [source-dir]]))
 
 (deftask check
+  "Check syntax and warn on reflection."
   (let [source-path (source-dir)]
     (bake (:use [bake.core :only [log print-stacktrace]]
                 [bake.find-namespaces :only [find-clojure-sources-in-dir
