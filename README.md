@@ -277,8 +277,8 @@ must be located in `native/<os-name>/<os-arch>/` within the jar.
     os-arch -> x86_64 | x86 | arm | sparc
 
 Cake also adds these directories to `java.library.path` when starting the JVM. If you want
-to add additional paths to `java.library.path`, you can add Java properties called
-`cake.library.path` and `project.library.path` to `.cake/config`.
+to add additional paths to `java.library.path`, you can add a property called
+`jvm.library.path` to `.cake/config`.
 
 ### Subproject Dependencies
 
