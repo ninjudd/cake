@@ -298,7 +298,7 @@ show up in your main project, but this is probably best in most cases.
 If you really do want changes to clojure source files to show up immediately, you can always
 add the subproject `src` directory to your project classpath in `.cake/config` like this:
 
-    project.classpath = /Users/justin/projects/useful/src
+    jvm.classpath = /Users/justin/projects/useful/src
 
 ## A Persistent JVM
 
