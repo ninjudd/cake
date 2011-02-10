@@ -277,8 +277,8 @@ must be located in `native/<os-name>/<os-arch>/` within the jar.
     os-arch -> x86_64 | x86 | arm | sparc
 
 Cake also adds these directories to `java.library.path` when starting the JVM. If you want
-to add additional paths to `java.library.path`, you can add Java properties called
-`cake.library.path` and `project.library.path` to `.cake/config`.
+to add additional paths to `java.library.path`, you can add a property called
+`jvm.library.path` to `.cake/config`.
 
 ### Subproject Dependencies
 
@@ -298,7 +298,7 @@ show up in your main project, but this is probably best in most cases.
 If you really do want changes to clojure source files to show up immediately, you can always
 add the subproject `src` directory to your project classpath in `.cake/config` like this:
 
-    project.classpath = /Users/justin/projects/useful/src
+    jvm.classpath = /Users/justin/projects/useful/src
 
 ## A Persistent JVM
 
