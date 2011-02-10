@@ -9,6 +9,8 @@
         [cake.utils.useful :only [pluralize]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
+(declare copy-native)
+
 (defn compile-java [src]
   (let [start (System/currentTimeMillis)]
     (when (.exists src)
@@ -24,6 +26,10 @@
                         (:java-compile *project*))))
     (when (some #(newer? % start) (file-seq (file "classes")))
       (reload!))))
+
+(deftask compile-java #{deps compile-native}
+  (copy-native)
+  (compile-java (file "src" "jvm")))
 
 (defn source-dir []
   (let [src (file "src" "clj")]
@@ -41,10 +47,8 @@
   (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}
        (add-fileset {:dir "build/native/lib"})))
 
-(deftask compile #{deps compile-native}
+(deftask compile #{deps compile-native compile-java}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
-  (copy-native)
-  (compile-java (file "src" "jvm"))
   (compile-clojure (source-dir) (file "classes") (:aot *project*))
   (compile-clojure (file "test") (file "test" "classes") (:aot-test *project*)))
 
