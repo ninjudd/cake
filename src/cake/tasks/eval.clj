@@ -12,14 +12,14 @@
       form
       (list 'prn form))))
 
-(deftask eval #{compile}
+(deftask eval #{compile-java}
   "Eval the given forms in the project JVM."
   "Read a form from stdin for each - provided."
   {forms :eval}
   (bake [forms (map read-form forms)]
         (eval `(do ~@forms))))
 
-(deftask filter #{compile}
+(deftask filter #{compile-java}
   "Thread each line in stdin through the given forms, printing the results."
   "The line is passed as a string with a trailing newline, and println is called with the result of the final form."
   {forms :filter}
@@ -29,7 +29,7 @@
           (spit "/tmp/foo" (prn-str `(-> ~line ~@forms println)))
           (eval `(-> ~line ~@forms println)))))
 
-(deftask run #{compile}
+(deftask run #{compile-java}
   "Execute a script in the project jvm."
   {[script] :run}
   (bake [script (with-root *pwd* (str (file script)))
@@ -37,7 +37,7 @@
         (binding [*command-line-args* args]
           (load-file script))))
 
-(deftask repl #{compile}
+(deftask repl #{compile-java}
   "Start an interactive shell with history and tab completion."
   {cake? :cake}
   (if cake?

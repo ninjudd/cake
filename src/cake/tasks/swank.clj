@@ -37,7 +37,7 @@
     (println "error loading swank-clojure.")
     (println "see http://clojure-cake.org/swank for installation instructions")))
 
-(deftask swank #{compile}
+(deftask swank #{compile-java}
   "Report status of swank server and start it if not running."
   {[host] :swank}
   (if @current-port
