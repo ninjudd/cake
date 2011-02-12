@@ -20,12 +20,12 @@
     (with-context :test
       (run-project-tests namespaces opts))))
 
-(deftask test #{compile}
+(deftask test #{compile-java}
   "Run project tests."
   "Specify which tests to run as arguments like: namespace, namespace/function, or :tag"
   (run-project-tests))
 
-(deftask autotest #{compile}
+(deftask autotest #{compile-java}
   "Automatically run tests whenever your project code changes."
   "Specify tests to run just like the test task. Specify the interval with --interval."
   (run-project-tests)
