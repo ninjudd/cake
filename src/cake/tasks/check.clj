@@ -3,11 +3,13 @@
   (:use cake
         cake.core
         [cake.file :only [file rmdir]]
+        [cake.project :only [reload!]]
         [cake.tasks.compile :only [source-dir]]))
 
 (deftask check #{compile-java}
   "Check syntax and warn on reflection."
   (let [source-path (source-dir)]
+    (reload!)
     (bake (:use [bake.core :only [log print-stacktrace]]
                 [bake.find-namespaces :only [find-clojure-sources-in-dir
                                              read-file-ns-decl]]
@@ -29,4 +31,5 @@
                           (print-stacktrace e))))
                   (do
                     (log "Skipping namespace " (second src-file-ns-decl))
-                    (log "  Reason: Dependency on cake.core")))))))))
+                    (log "  Reason: Dependency on cake.core")))))))
+    (reload!)))
