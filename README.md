@@ -267,6 +267,8 @@ using the `qa` context:
     cake repl --context=qa
     cake repl @qa
 
+You can also make use of contexts in your built artifacts. Add the key `:bake` to your project with value `true`, and cake will generate a file and insert it into your jar so that the context in effect at the time the jar was built will be available as it the code was still running in cake.
+
 ### Native Library Dependencies
 
 Cake will automatically extract precompiled native libraries for your os and architecture
