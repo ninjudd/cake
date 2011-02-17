@@ -153,7 +153,7 @@ double dashes are both supported though a single dash followed by word character
 internal dashes or an equal sign is assumed to be single character argument flags and are
 split accordingly. A double dash marks the end of command line options that will be parsed
 by cake and put into `*opts*`; they will still be available in the raw version,
-`*command-line-args*`.
+`*args*`.
 
 Here are some example cake commands followed be the corresponding values of `*opts*`:
 
