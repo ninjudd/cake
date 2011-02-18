@@ -1,7 +1,8 @@
 (ns cake.utils
   (:use cake
         [cake.file :only [file]]
-        [uncle.core :only [ant args argline]])
+        [uncle.core :only [ant args argline]]
+        [bake.core :only [os-name]])
   (:import (org.apache.tools.ant.taskdefs ExecTask)))
 
 (def *readline-marker* nil)
@@ -11,24 +12,6 @@
         echo (if (false? (:echo opts)) "@" "")]
     (println (str echo *readline-marker* prompt))
     (read-line)))
-
-(defn os-name []
-  (let [name (System/getProperty "os.name")]
-    (condp #(.startsWith %2 %1) name
-      "Linux"    "linux"
-      "Mac OS X" "macosx"
-      "SunOS"    "solaris"
-      "Windows"  "windows"
-      "unknown")))
-
-(defn os-arch []
-  (or (first (:arch *opts*))
-      (get *config* "project.arch")
-      (let [arch (System/getProperty "os.arch")]
-        (case arch
-          "amd64" "x86_64"
-          "i386"  "x86"
-          arch))))
 
 (defn sudo [& arglist]
   (let [password (prompt-read "Password" :echo false)

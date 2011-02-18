@@ -4,8 +4,8 @@
         [uncle.core :only [ant add-fileset fileset-seq path classpath]]
         [cake.file :only [file newer?]]
         [cake.project :only [reload!]]
-        [bake.core :only [verbose? debug? log]]
-        [cake.utils :only [os-name os-arch sudo prompt-read]]
+        [bake.core :only [verbose? debug? log os-name os-arch]]
+        [cake.utils :only [sudo prompt-read]]
         [cake.utils.useful :only [pluralize]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
@@ -40,7 +40,7 @@
   (when (bake (:use [bake.compile :only [compile-stale]])
               [source-path  (.getPath source-path)
                compile-path (.getPath compile-path)]
-              (compile-stale source-path compile-path))    
+              (compile-stale source-path compile-path))
     (reload!)))
 
 (defn copy-native []
@@ -61,6 +61,6 @@
   (let [files (vec (map str (fileset-seq {:dir (file "lib" "native")
                                           :includes "*"})))
         default "/usr/lib/java/"
-        dest (prompt-read (format "java.library.path [%s]:" default))	
+        dest (prompt-read (format "java.library.path [%s]:" default))
         dest (if (= "" dest) default dest)]
     (apply sudo "cp" (conj files dest))))
