@@ -139,21 +139,23 @@
               (send-ack out)
               (wait-for-ack in)))))))
 
-(defn upload-to-clojars [jarfile]
-  (log "Releasing jar:" jarfile)
-  (ssh-session {:host "clojars.org" :username "clojars"}
-    (upload ["pom.xml" jarfile])))
-
-(deftask release #{jar}
-  "Release project jar to clojars."
-  (upload-to-clojars (jarfile)))
-
 (defn- lookup-file [file]
   (case file
     :jar     (jarfile)
     :uberjar (uberjarfile)
     :war     (warfile)
     file))
+
+(deftask release #{jar}
+  "Release project jar (to clojars by default)."
+  (let [release  (:release *project*)
+        files    (or (:files    release) [:jar "pom.xml"])
+        host     (or (:host     release) "clojars.org")
+        username (or (:username release) "clojars")
+        dest     (or (:dest     release) ".")]
+    (when (#{"y" "Y"} (prompt-read (format "Are you sure you want to release to %s? [y/N]" host)))
+      (ssh-session {:host host :username username}
+        (upload (map lookup-file files) dest)))))
 
 (deftask deploy
   "Deploy project to a group of servers."
