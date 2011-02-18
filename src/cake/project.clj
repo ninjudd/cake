@@ -5,7 +5,7 @@
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [cake.utils.useful :only [update merge-in tap]]
+        [cake.utils.useful :only [update merge-in into-map]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
@@ -123,9 +123,10 @@
     (some #(% project) [namespace name])))
 
 (defn dep-map [deps]
-  (into {}
-    (for [[dep version & opts] deps]
-      [dep (apply hash-map :version version opts)])))
+  (let [[deps default-opts] (split-with (complement keyword?) deps)]
+    (into {}
+          (for [[dep version & opts] deps]
+            [dep (into-map :version version default-opts opts)]))))
 
 (defmulti get-version identity)
 
