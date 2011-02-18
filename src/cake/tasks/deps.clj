@@ -1,8 +1,8 @@
 (ns cake.tasks.deps
   (:use cake cake.core cake.file uncle.core
-        [cake.utils :only [cake-exec os-name os-arch]]
+        [cake.utils :only [cake-exec]]
         [cake.project :only [group reload reload!]]
-        [bake.core :only [log]]
+        [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]])
   (:require [clojure.string :as s])
   (:import [org.apache.maven.artifact.ant DependenciesTask RemoteRepository WritePomTask Pom]

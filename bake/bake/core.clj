@@ -65,7 +65,25 @@
         (do ~@forms)
         (set-project! *project-root*)))
 
-(defn context? [ctx-name]
-  "Returns true iff the argument is the currently selected context. Argument can
+(defn context? [context]
+  "Returns true if the argument is the currently selected context. Argument can
    be anything that clojure.core/name turns into a string."
-  (= (name (:context *project*)) (name ctx-name)))
+  (= (name (:context *project*)) (name context)))
+
+(defn os-name []
+  (let [name (System/getProperty "os.name")]
+    (condp #(.startsWith %2 %1) name
+      "Linux"    "linux"
+      "Mac OS X" "macosx"
+      "SunOS"    "solaris"
+      "Windows"  "windows"
+      "unknown")))
+
+(defn os-arch []
+  (or (first (:arch *opts*))
+      (get *config* "project.arch")
+      (let [arch (System/getProperty "os.arch")]
+        (case arch
+          "amd64" "x86_64"
+          "i386"  "x86"
+          arch))))
