@@ -130,8 +130,7 @@
   [forms]
   (with-outfile
     (doseq [form forms]
-      (println form)
-      (println))))
+      (println form))))
 
 (defmethod generate-file :clj
   [forms]
