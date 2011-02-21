@@ -3,7 +3,6 @@
         [cake.utils :only [git]]
         [bake.core :only [log]]
         [cake.tasks.jar :only [build-uberjar jars uberjarfile]]
-        [cake.tasks.release :only [upload-to-clojars]]
         [cake.tasks.version :only [snapshot? snapshot-timestamp]])
   (:import [org.apache.tools.ant.taskdefs Jar Copy Move ExecTask]
            [java.io File]))
