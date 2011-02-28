@@ -63,7 +63,8 @@
   [namespace]
   (try (require namespace)
        (catch java.io.FileNotFoundException e
-         (when-not (= 'tasks namespace)
+         (when (and (not= 'tasks namespace)
+                    (not= "deps" (first *args*)))
            (println "warning: unable to find tasks namespace" namespace)
            (println "  if you've added a new plugin to :dev-dependencies you must run 'cake deps' to install it"))))
   (into [namespace]
