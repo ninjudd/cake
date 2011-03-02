@@ -604,7 +604,7 @@ $file     = File.expand_path(__FILE__)
 $cakedir  = File.dirname(File.dirname(File.expand_path(readlink($file), File.dirname($file))))
 $releases = "http://releases.clojure-cake.org"
 $m2       = "#{$home}/.m2/repository"
-$config   = Configuration.new("#{$home}/.cake/config", "cake-config", ".cake/config")
+$config   = Configuration.new("#{$home}/.cake/config", "cake.config", ".cake/config")
 $vars     = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
 $timeout  = ($config['connect.timeout'] || 20).to_i
 
