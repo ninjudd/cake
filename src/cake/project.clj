@@ -3,9 +3,9 @@
         [bake.core :only [debug?]]
         [cake.file :only [file global-file]]
         [uncle.core :only [fileset-seq]]
-        [clojure.string :only [join trim-newline]]
+        [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [cake.utils.useful :only [update merge-in into-map]]
+        [cake.utils.useful :only [update merge-in into-map absorb]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
@@ -14,8 +14,10 @@
 
 (defn classpath []
   (map make-url
-       (concat (map file [(System/getProperty "bake.path")
-                          "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"])
+       (concat (map file (into [(System/getProperty "bake.path")
+                                "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"]
+                               (absorb (get *config* "project.classpath")
+                                       (split (re-pattern File/pathSeparator)))))
                (fileset-seq {:dir (file "lib")            :includes "*.jar"})
                (fileset-seq {:dir (file "lib/dev")        :includes "*.jar"})
                (fileset-seq {:dir (global-file "lib/dev") :includes "*.jar"}))))
