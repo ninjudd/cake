@@ -27,5 +27,6 @@
     {}))
 
 (def ^{:dynamic true} *config*
-  (merge (read-config (File. (System/getProperty "user.home") ".cake/config"))
-         (read-config (File. ".cake/config"))))
+  (apply merge (map read-config [(File. (System/getProperty "user.home") ".cake/config")
+                                 (File. "cake-config")
+                                 (File. ".cake/config")])))
