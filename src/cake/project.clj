@@ -12,12 +12,18 @@
 (defn- make-url [file]
   (str "file:" (.getPath file) (if (.isDirectory file) "/" "")))
 
+(defn- path-files [paths]
+  (mapcat (fn [path]
+            (if-let [[_ path] (re-matches #"(.*)/\*" path)]
+              (fileset-seq {:dir path :includes "*.jar"})
+              [(file path)]))
+          (absorb paths (split (re-pattern File/pathSeparator)))))
+
 (defn classpath []
   (map make-url
-       (concat (map file (into [(System/getProperty "bake.path")
-                                "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"]
-                               (absorb (get *config* "project.classpath")
-                                       (split (re-pattern File/pathSeparator)))))
+       (concat (map file [(System/getProperty "bake.path")
+                          "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"])
+               (path-files (get *config* "project.classpath"))
                (fileset-seq {:dir (file "lib")            :includes "*.jar"})
                (fileset-seq {:dir (file "lib/dev")        :includes "*.jar"})
                (fileset-seq {:dir (global-file "lib/dev") :includes "*.jar"}))))
