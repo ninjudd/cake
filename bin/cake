@@ -683,7 +683,7 @@ else
 end
 
 cake = JVM.new(
-  [$config['jvm.classpath'], bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
   [$config['jvm.library.path'], "lib/ext/native", "lib/native", "lib/dev/native"],
   ["-Dcake.project=#{$project}", "-Dbake.path=#{bakepath}"]
 )

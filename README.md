@@ -298,7 +298,7 @@ show up in your main project, but this is probably best in most cases.
 If you really do want changes to clojure source files to show up immediately, you can always
 add the subproject `src` directory to your project classpath in `.cake/config` like this:
 
-    jvm.classpath = /Users/justin/projects/useful/src
+    project.classpath = /Users/justin/projects/useful/src
 
 ## A Persistent JVM
 
@@ -318,7 +318,7 @@ refuse to close the JVM, printing a warning instead.
 ### Custom JVM Options
 
 If you need custom command-line options for your JVMs, you can use the `JAVA_OPTS`
-environment variable for the JVM. You can also specify options for an individual project 
+environment variable for the JVM. You can also specify options for an individual project
 by adding the Java property `jvm.opts` to `.cake/config`. For example:
 
     jvm.opts = -Xms1024M -Xmx2048M -Dfoo=bar
