@@ -105,7 +105,7 @@
 	deps-seq (partition 3 (for [x (xml-seq deps-xml)
 				    :when (or (= (:tag x) :artifactId)
 					      (= (:tag x) :groupId)
-					      (= (:tag x) :version))] 
+					      (= (:tag x) :version))]
 				(hash-map (:tag x) (first (:content x)))))]
     (into #{} (for [v deps-seq] (apply merge v)))
     (map :content (:content (first deps-xml)))))
@@ -133,27 +133,40 @@
 	 (print-library-dependencies library-name version)))))
 
 (deftask dependencies
-  "Look up the dependencies on a library on clojars."
+  "Look up the dependencies of a library on clojars."
   {[library-name version] :dependencies}
-  (print-library-dependencies library-name version))
+  (if (nil? library-name)
+    (println "Usage: cake dependencies <library-name> [version]")
+    (print-library-dependencies library-name version)))
 
 (deftask describe
   "Describe a library on clojars."
-  (apply clojars-describe (:describe *opts*)))
+  {[library-name] :describe}
+  (if (nil? library-name)
+    (println "Usage: cake describe <library-name>")
+    (clojars-describe library-name)))
 
 (deftask versions
   "List all available versions of a library on clojars."
   {[library-name] :versions}
-  (clojars-versions library-name))
+  (if (nil? library-name)
+    (println "Usage: cake versions <library-name>")
+    (clojars-versions library-name)))
 
 (deftask search
   "Search clojars.org for libraries."
-  {term :search}
-  (->> term (s/join " ") clojars-search))
+  {terms :search}
+  (if (nil? terms)
+    (println "Usage: cake search <terms>")
+    (->> terms (s/join " ") clojars-search)))
 
 (deftask add-dep
   "Install a library from into your project."
   "The library will be added to the :deps or :dependencies vector in your project.clj.
    If you pass the --dev option, it'll be added to :dev-deps or :dev-dependencies."
-  {args :add-dep dev :dev}
-  (apply clojars-install (conj args dev)))
+  {[library-name version] :add-dep [dev] :dev}
+  (if (nil? library-name)
+    (println "Usage: cake add-dep <library-name> [version] [--dev]")
+    (if version
+      (clojars-install library-name version dev)
+      (clojars-install library-name dev))))
