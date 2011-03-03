@@ -368,7 +368,7 @@ class JVM
 
   def java_opts
     enable_server = $config['jvm.server'] == 'true' || `java -d32 -version 2>&1` =~ /Cannot run Java in 32 bit mode/ || $? != 0
-    vm_opts       = enable_server ? ['-server', '-d64', '-Xmx2G', '-XX:MaxPermSize=256M'] : ['-client', '-d32', '-Xms128M', '-Xmx256M', '-XX:MaxPermSize=128M']
+    vm_opts       = enable_server ? ['-server', '-d64', '-Xmx512M', '-XX:MaxPermSize=256M'] : ['-client', '-d32', '-Xms128M', '-Xmx256M', '-XX:MaxPermSize=128M']
     user_opts     = "#{ENV['JAVA_OPTS']} #{$config['jvm.opts']}".split.compact
     [vm_opts, user_opts, @java_opts,'-cp', classpath, %{-Djava.library.path=#{libpath}}]
   end
