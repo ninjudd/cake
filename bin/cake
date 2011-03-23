@@ -237,7 +237,10 @@ def project_dir(dir)
 end
 
 def readlink(file)
-  File.readlink(file)
+  link = File.readlink(file)
+  return file if link == file
+  link = "#{File.dirname(file)}/#{link}" unless link.index('/') == 0
+  readlink(link)
 rescue NotImplementedError, Errno::EINVAL
   file
 end
