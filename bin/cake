@@ -649,21 +649,34 @@ if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?(project)
   cakepath = ["#{$cakedir}/src", "#{lib}/*", "#{lib}/dev/*"]
   bakepath = "#{$cakedir}/bake"
 else
-  cakejar = "#{lib}/cake.jar"
-  bakejar = "#{lib}/bake.jar"
-  if File.exists?(cakejar) and File.exists?(bakejar)
+  if File.exists?("#{lib}exec/cake.jar")
+    # Inside a brew install.
+    log(:cake, "running from brew") if verbose?
+
+    if $command == :upgrade
+      log(:upgrade, "checking for updates to cake brew")
+      system('brew install --force https://github.com/mxcl/homebrew/raw/master/Library/Formula/cake.rb')
+    end
+
+    $version = File.basename($cakedir)
+    $clojure = get_clojure
+
+    cakepath = ["#{lib}exec/cake.jar", $clojure]
+    bakepath = extract("#{lib}exec/cake.jar", "bake.jar")
+  elsif File.exists?("#{lib}/cake.jar") and File.exists?("#{lib}/bake.jar")
     # Inside a gem install.
     log(:cake, "running from gem") if verbose?
+
     if $command == :upgrade
       log(:upgrade, "checking for updates to cake gem")
       system('gem update cake --no-ri --no-rdoc')
     end
 
-    $version = File.basename(File.dirname(lib)).split('-')[1]
+    $version = File.basename($cakedir).split('-')[1]
     $clojure = "#{lib}/clojure.jar"
 
-    cakepath = [cakejar, $clojure]
-    bakepath = bakejar
+    cakepath = ["#{lib}/cake.jar", $clojure]
+    bakepath = "#{lib}/bake.jar"
   else
     # Standalone script.
     log(:cake, "running from standalone script") if verbose?
