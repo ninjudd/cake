@@ -44,8 +44,10 @@
     (reload!)))
 
 (defn copy-native []
-  (ant Copy {:todir (format "native/%s/%s" (os-name) (os-arch))}
-       (add-fileset {:dir "build/native/lib"})))
+  (let [os-name (os-name)
+        os-arch (os-arch)]
+    (ant Copy {:todir (format "native/%s/%s" os-name os-arch)}
+         (add-fileset {:dir (format "build/native/%s/%s/lib" os-name os-arch)}))))
 
 (deftask compile #{deps compile-native compile-java}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
