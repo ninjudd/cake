@@ -300,7 +300,7 @@ add the subproject `src` directory to your project classpath in `.cake/config` l
 
     project.classpath = /Users/justin/projects/useful/src
 
-In order to add multiple project path  to your classpath, you need to separate them with a colon:
+In order to add multiple project paths to your classpath, you need to separate them with a colon:
 
     project.classpath = /Users/justin/projects/useful/src:/Users/justin/projects/also-useful/src
 
