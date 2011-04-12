@@ -33,33 +33,28 @@
              (notify (str (class e) ": " (.getMessage e))))
            (reset! last-exception (System/currentTimeMillis))))))
 
-(defn- do-all-tests [opts ns]
-  (let [tests  (seq (filter (run? opts ns) (ns-publics ns)))
-        ns-meta (meta (find-ns ns))
-        once-fixtures (join-fixtures (:clojure.test/once-fixtures ns-meta))
-        each-fixtures (join-fixtures (:clojure.test/each-fixtures ns-meta))]
-    (once-fixtures
-      (fn []
-        (doseq [[name f] tests]
-          (each-fixtures #(test-var f)))))))
-
 (defn run-ns-tests [opts ns]
   (require ns)
-  (binding [*test-out* (StringWriter.)
-            *report-counters* (ref *initial-report-counters*)]
-    (report {:type :begin-test-ns :ns ns})
-    (if-let [hook (get (ns-publics ns) 'test-ns-hook)]
-      (hook)
-      (do-all-tests opts ns))
-    (report (assoc @*report-counters* :type :summary))
-    (let [failed?  (< 0 (apply + (map @*report-counters* [:fail :error])))
-          test-out (.toString *test-out*)]
-      (if (:autotest opts)
-        (when failed?
-          (notify test-out))
-        (do (print test-out)
-          (flush)))
-      failed?)))
+  (when-let [tests (seq (filter (run? opts ns) (ns-publics ns)))]
+    (let [ns-meta (meta (find-ns ns))
+          once-fixtures (join-fixtures (:clojure.test/once-fixtures ns-meta))
+          each-fixtures (join-fixtures (:clojure.test/each-fixtures ns-meta))]
+      (binding [*test-out* (StringWriter.)
+                *report-counters* (ref *initial-report-counters*)]
+        (report {:type :begin-test-ns :ns ns})
+        (once-fixtures
+         (fn []
+           (doseq [[name f] tests]
+             (each-fixtures #(test-var f)))))
+        (report (assoc @*report-counters* :type :summary))
+        (let [failed?  (< 0 (apply + (map @*report-counters* [:fail :error])))
+              test-out (.toString *test-out*)]
+          (if (:autotest opts)
+            (when failed?
+              (notify test-out))
+            (do (print test-out)
+                (flush)))
+          failed?)))))
 
 (defn run-project-tests [namespaces opts]
   (when (:autotest opts)
