@@ -8,5 +8,5 @@
   (when-not (= "true" (get *config* "notifications.disable"))
     (try (sh "growlnotify"
              "-s" (str "cake " *current-task*)
-             "-m" (str message))
+             :in (str message))
          (catch java.io.IOException e))))
