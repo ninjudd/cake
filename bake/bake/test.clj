@@ -41,7 +41,8 @@
           each-fixtures (join-fixtures (:clojure.test/each-fixtures ns-meta))]
       (binding [*test-out* (StringWriter.)
                 *report-counters* (ref *initial-report-counters*)]
-        (report {:type :begin-test-ns :ns ns})
+        (with-test-out
+          (println "\ncake test" (ns-name ns)))
         (once-fixtures
          (fn []
            (doseq [[name f] tests]
