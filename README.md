@@ -153,7 +153,7 @@ double dashes are both supported though a single dash followed by word character
 internal dashes or an equal sign is assumed to be single character argument flags and are
 split accordingly. A double dash marks the end of command line options that will be parsed
 by cake and put into `*opts*`; they will still be available in the raw version,
-`*command-line-args*`.
+`*args*`.
 
 Here are some example cake commands followed be the corresponding values of `*opts*`:
 
@@ -267,6 +267,8 @@ using the `qa` context:
     cake repl --context=qa
     cake repl @qa
 
+You can also make use of contexts in your built artifacts. Add the key `:bake` to your project with value `true`, and cake will generate a file and insert it into your jar so that the context in effect at the time the jar was built will be available as it the code was still running in cake.
+
 ### Native Library Dependencies
 
 Cake will automatically extract precompiled native libraries for your os and architecture
@@ -363,7 +365,9 @@ code in the global project. The file doesn't even have to end in .clj.
 - Luke Renn ([lrenn](https://github.com/lrenn))
 - David Santiago ([davidsantiago](https://github.com/davidsantiago))
 - Alan Malloy ([amalloy](https://github.com/amalloy))
+- Jeff Rose ([rosejn](https://github.com/rosejn))
 - Martin Sander ([marvinthepa](https://github.com/marvinthepa))
+
 
 ## YourKit
 
