@@ -44,18 +44,32 @@
                      (require 'clojure.main)))
     cl))
 
+(defn set-classpath!
+  "Set the JVM classpath property to the current clojure classloader."
+  [classloader]
+  (System/setProperty "java.class.path"
+                      (join ":" (for [url (.getURLs classloader)]
+                                  (let [path (.getPath url)]
+                                    (if (.endsWith path "/")
+                                      (.substring path 0 (- (count path) 1))
+                                      path))))))
+
 (defn reload! []
   (alter-var-root #'classloader
     (fn [cl]
       (when cl (eval-in cl '(shutdown-agents)))
-      (make-classloader))))
+      (let [classloader (make-classloader)]
+        (set-classpath! classloader)
+        classloader))))
 
 (defn reload []
   (alter-var-root #'classloader
     (fn [cl]
       (if cl
         (do (eval-in cl '(bake.reload/reload)) cl)
-        (make-classloader)))))
+        (let [classloader (make-classloader)]
+          (set-classpath! classloader)
+          classloader)))))
 
 (defn- quote-if
   "We need to quote the binding keys so they are not evaluated within the bake
