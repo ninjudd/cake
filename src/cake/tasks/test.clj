@@ -15,7 +15,7 @@
 (defn run-project-tests [& opts]
   (bake (:use bake.test
               [bake.core :only [with-context]])
-    [namespaces (find-namespaces-in-dir (java.io.File. "test"))
+    [namespaces (find-namespaces-in-dir (java.io.File. (:test-path *project*)))
      opts       (merge (test-opts) (apply hash-map opts))]
     (with-context :test
       (run-project-tests namespaces opts))))
