@@ -147,8 +147,9 @@
   (binding [*exclusions* ['clojure 'clojure-contrib]]
     (fetch (:dev-dependencies *project*) (file "build/lib/dev")))
   (when (.exists (file "build/lib"))
-    (ant Delete {:dir "lib"})
-    (ant Move {:file "build/lib" :tofile "lib" :verbose true}))
+    (ant Delete {:dir (:library-path *project*)})
+    (ant Move {:file "build/lib" :tofile (:library-path *project*)
+               :verbose true}))
   (invoke clean {}))
 
 (defn stale-deps? [deps-str deps-file]
@@ -160,7 +161,7 @@
 (deftask deps #{"pom.xml"}
   "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
   (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :ext-dependencies :dev-dependencies])))
-        deps-file (file "lib" "deps.clj")]
+        deps-file (file (:library-path *project*) "deps.clj")]
     (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
       (do (install-subprojects)
           (fetch-deps)

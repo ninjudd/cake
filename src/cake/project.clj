@@ -21,16 +21,32 @@
 
 (defn classpath []
   (map make-url
-       (concat (map file [(System/getProperty "bake.path")
-                          "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"])
+       (concat (map file
+                    (flatten [(System/getProperty "bake.path")
+                              (or (:source-path *project*)
+                                  ["src/" "src/clj/"])
+                              (:java-source-path *project*)
+                              (:test-path *project*)
+                              (str (file (:test-path *project*) "classes"))
+                              (:resources-path *project*)
+                              (:dev-resources-path *project*)
+                              "classes/"]))
+               ;; extra-classpath-dirs might be nil, but concat will remove it.
+               (if (:extra-classpath-dirs *project*)
+                 [(file (:extra-classpath-dirs *project*))])
                (path-files (get *config* "project.classpath"))
-               (fileset-seq {:dir (file "lib")            :includes "*.jar"})
-               (fileset-seq {:dir (file "lib/dev")        :includes "*.jar"})
+               (fileset-seq {:dir (file (:library-path *project*))
+                             :includes "*.jar"})
+               (fileset-seq {:dir (file (:library-path *project*) "dev")
+                             :includes "*.jar"})
+               ;; This is from the user's .cake dir. No setting for it.
                (fileset-seq {:dir (global-file "lib/dev") :includes "*.jar"}))))
 
 (defn ext-classpath []
   (map make-url
-       (fileset-seq {:dir "lib/ext" :includes "*.jar"})))
+       (fileset-seq {:dir (str (file (:library-path *project*)
+                                     "ext"))
+                     :includes "*.jar"})))
 
 (defonce classloader nil)
 
@@ -178,6 +194,15 @@
                :context          (symbol (or (get *config* "project.context")
                                              (:context opts)
                                              "dev"))
+               ;; Note source-path can be present but nil. Need to check for nil
+               ;; and check for existince of src/jvm to determine the src path.
+               :source-path          (:source-path opts)
+               :java-source-path     (or (:java-source-path opts) "src/jvm")
+               :test-path            (or (:test-path opts) "test/")
+               :resources-path       (or (:resources opts) "resources/")
+               :library-path         (or (:library-path opts) "lib/")
+               :dev-resources-path   (or (:dev-resources-path opts) "dev/")
+               :extra-classpath-dirs (:extra-classpath-dirs opts)
                :jar-name         (or (:jar-name opts) artifact-version)
                :war-name         (or (:war-name opts) artifact-version)
                :uberjar-name     (or (:uberjar-name opts) (str artifact-version "-standalone"))

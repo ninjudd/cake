@@ -54,8 +54,10 @@
 
 (defn add-source-files [task & [prefix]]
   (when-not (:omit-source *project*)
-    (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
-    (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"}))
+    (add-zipfileset task {:dir (source-dir)
+                          :prefix prefix :includes "**/*.clj"})
+    (add-zipfileset task {:dir (file (:java-source-path *project*))
+                          :prefix prefix :includes "**/*.java"}))
   (when (:bake *project*)
     (add-zipfileset task (bakepath :prefix prefix :excludes "cake.clj"))))
 
@@ -82,7 +84,7 @@
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
          (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
          (add-fileset    {:dir (file "build" "jar")})
-         (add-fileset    {:dir (file "resources")})
+         (add-fileset    {:dir (file (:resources-path *project*))})
          (add-zipfileset {:dir (file "native") :prefix "native"})
          (add-file-mappings (:jar-files *project*)))))
 
@@ -101,7 +103,10 @@
   (let [opts (apply hash-map opts)
         jar  (jarfile)]
     (into [jar]
-          (fileset-seq {:dir "lib" :includes "*.jar" :excludes (join "," (:excludes opts))}))))
+          ;; Note how lib/dev is not picked up.
+          (fileset-seq {:dir (:library-path *project*)
+                        :includes "*.jar"
+                        :excludes (join "," (:excludes opts))}))))
 
 (defn plexus-components [jar]
   (let [jarfile (JarFile. jar)]
@@ -164,10 +169,13 @@
          (add-source-files "WEB-INF/classes")
          (add-zipfileset {:dir (file "src")         :prefix web     :includes "*web.xml"})
          (add-zipfileset {:dir (file "classes")     :prefix classes :includes "**/*.class"})
-         (add-zipfileset {:dir (file "resources")   :prefix classes :includes "**/*"})
+         (add-zipfileset {:dir (file (:resources-path *project*))
+                          :prefix classes :includes "**/*"})
          (add-zipfileset {:dir (file "build" "jar") :prefix classes})
          (add-fileset    {:dir (file "build" "war")})
-         (add-fileset    {:dir (file "src" "html")})
+         (add-fileset    {:dir (file (or (:source-path *project*)
+                                         "src")
+                                     "html")})
          (add-file-mappings (:war-files *project*)))))
 
 (deftask war #{compile}
@@ -177,7 +185,8 @@
 
 (defn build-uberwar []
   (ant War {:dest-file (warfile) :update true}
-       (add-zipfileset {:dir (file "lib") :prefix "WEB-INF/lib" :includes "*.jar"})))
+       (add-zipfileset {:dir (file (:library-path *project*))
+                        :prefix "WEB-INF/lib" :includes "*.jar"})))
 
 (deftask uberwar #{war}
   "Create a web archive containing all project dependencies."

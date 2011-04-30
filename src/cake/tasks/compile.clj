@@ -29,11 +29,12 @@
 
 (deftask compile-java #{deps compile-native}
   (copy-native)
-  (compile-java (file "src" "jvm")))
+  (compile-java (file (:java-source-path *project*))))
 
 (defn source-dir []
-  (let [src (file "src" "clj")]
-    (if (.exists src) src (file "src"))))
+  (or (:source-dir *project*)
+      (let [src (file "src" "clj")]
+        (if (.exists src) src (file "src")))))
 
 (defn compile-clojure [source-path compile-path aot]
   (.mkdirs compile-path)
@@ -52,7 +53,9 @@
 (deftask compile #{deps compile-native compile-java}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
   (compile-clojure (source-dir) (file "classes") (:aot *project*))
-  (compile-clojure (file "test") (file "test" "classes") (:aot-test *project*)))
+  (compile-clojure (file (:test-path *project*))
+                   (file (:test-path *project*) "classes")
+                   (:aot-test *project*)))
 
 ;; add actions to compile-native if you need to compile native libraries
 ;; see http://github.com/lancepantz/tokyocabinet for an example
@@ -60,7 +63,8 @@
 
 (deftask install-native #{compile-native}
   (copy-native)
-  (let [files (vec (map str (fileset-seq {:dir (file "lib" "native")
+  (let [files (vec (map str (fileset-seq {:dir (file (:library-path *project*)
+                                                     "native")
                                           :includes "*"})))
         default "/usr/lib/java/"
         dest (prompt-read (format "java.library.path [%s]:" default))
