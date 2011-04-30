@@ -30,10 +30,8 @@
                               (str (file (:test-path *project*) "classes"))
                               (:resources-path *project*)
                               (:dev-resources-path *project*)
-                              "classes/"]))
-               ;; extra-classpath-dirs might be nil, but concat will remove it.
-               (if (:extra-classpath-dirs *project*)
-                 [(file (:extra-classpath-dirs *project*))])
+                              "classes/"
+                              (:extra-classpath-dirs *project*)]))
                (path-files (get *config* "project.classpath"))
                (fileset-seq {:dir (file (:library-path *project*))
                              :includes "*.jar"})
