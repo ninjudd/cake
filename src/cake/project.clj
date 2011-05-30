@@ -193,7 +193,7 @@
                                              (:context opts)
                                              "dev"))
                ;; Note source-path can be present but nil. Need to check for nil
-               ;; and check for existince of src/jvm to determine the src path.
+               ;; and check for existence of src/jvm to determine the src path.
                :source-path          (:source-path opts)
                :java-source-path     (or (:java-source-path opts) "src/jvm")
                :test-path            (or (:test-path opts) "test/")
