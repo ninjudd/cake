@@ -4,7 +4,7 @@
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
-        [cake.utils.useful :only [absorb verify into-map]])
+        [cake.utils.useful :only [absorb verify into-map as-vec with-val]])
   (:require [clojure.xml :as xml])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Replace]
            [org.apache.tools.ant.types FileSet ZipFileSet]
@@ -56,8 +56,9 @@
   (when-not (:omit-source *project*)
     (add-zipfileset task {:dir (source-dir)
                           :prefix prefix :includes "**/*.clj"})
-    (add-zipfileset task {:dir (file (:java-source-path *project*))
-                          :prefix prefix :includes "**/*.java"}))
+    (doseq [jsrc-path (as-vec (:java-source-path *project*))]
+      (add-zipfileset task {:dir (file jsrc-path)
+                            :prefix prefix :includes "**/*.java"})))
   (when (:bake *project*)
     (add-zipfileset task (bakepath :prefix prefix :excludes "cake.clj"))))
 
@@ -84,7 +85,9 @@
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
          (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
          (add-fileset    {:dir (file "build" "jar")})
-         (add-fileset    {:dir (file (:resources-path *project*))})
+         (with-val task
+           (doseq [rsrc-path (as-vec (:resources-path *project*))]
+             (add-fileset task {:dir (file rsrc-path)})))
          (add-zipfileset {:dir (file "native") :prefix "native"})
          (add-file-mappings (:jar-files *project*)))))
 
@@ -169,13 +172,15 @@
          (add-source-files "WEB-INF/classes")
          (add-zipfileset {:dir (file "src")         :prefix web     :includes "*web.xml"})
          (add-zipfileset {:dir (file "classes")     :prefix classes :includes "**/*.class"})
-         (add-zipfileset {:dir (file (:resources-path *project*))
-                          :prefix classes :includes "**/*"})
+         (with-val task
+           (doseq [rsrc-path (as-vec (:resources-path *project*))]
+             (add-zipfileset task {:dir (file rsrc-path)
+                                   :prefix classes :includes "**/*"})))
          (add-zipfileset {:dir (file "build" "jar") :prefix classes})
          (add-fileset    {:dir (file "build" "war")})
-         (add-fileset    {:dir (file (or (:source-path *project*)
-                                         "src")
-                                     "html")})
+         (with-val task
+           (doseq [src-path (as-vec (or (:source-path *project*) "src"))]
+             (add-fileset task {:dir (file src-path "html")})))
          (add-file-mappings (:war-files *project*)))))
 
 (deftask war #{compile}

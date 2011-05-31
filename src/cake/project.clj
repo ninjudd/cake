@@ -5,7 +5,7 @@
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [cake.utils.useful :only [update merge-in into-map absorb]]
+        [cake.utils.useful :only [update merge-in into-map absorb as-vec]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
@@ -27,7 +27,8 @@
                                   ["src/" "src/clj/"])
                               (:java-source-path *project*)
                               (:test-path *project*)
-                              (str (file (:test-path *project*) "classes"))
+                              (map #(str (file %) "classes")
+                                   (as-vec (:test-path *project*)))
                               (:resources-path *project*)
                               (:dev-resources-path *project*)
                               "classes/"

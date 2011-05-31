@@ -6,7 +6,7 @@
         [cake.project :only [reload!]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
         [cake.utils :only [sudo prompt-read]]
-        [cake.utils.useful :only [pluralize]])
+        [cake.utils.useful :only [pluralize as-vec]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
 (declare copy-native)
@@ -29,7 +29,8 @@
 
 (deftask compile-java #{deps compile-native}
   (copy-native)
-  (compile-java (file (:java-source-path *project*))))
+  (doseq [jsrc-path (as-vec (:java-source-path *project*))]
+    (compile-java (file jsrc-path))))
 
 (defn source-dir []
   (or (:source-dir *project*)
@@ -53,9 +54,10 @@
 (deftask compile #{deps compile-native compile-java}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
   (compile-clojure (source-dir) (file "classes") (:aot *project*))
-  (compile-clojure (file (:test-path *project*))
-                   (file (:test-path *project*) "classes")
-                   (:aot-test *project*)))
+  (doseq [test-path (as-vec (:test-path *project*))]
+    (compile-clojure (file test-path)
+                     (file test-path "classes")
+                     (:aot-test *project*))))
 
 ;; add actions to compile-native if you need to compile native libraries
 ;; see http://github.com/lancepantz/tokyocabinet for an example

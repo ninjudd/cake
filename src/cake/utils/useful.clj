@@ -36,6 +36,27 @@
   [to-coll from-coll]
   (into (vec to-coll) from-coll))
 
+(defn as-vec
+  "If its arg is a vector, returns the arg unchanged. Otherwise, returns the
+   given item in a vector. Helps you process things that are 'strings or
+   vectors of strings' uniformly."
+  [arg]
+  (if arg
+    (if (vector? arg)
+      arg
+      [arg])))
+
+;; Man, really hate that this macro exists. Not sure what else to do, though.
+(defmacro with-val
+  "This macro lets you receive a value in a doto or threaded statement and use
+   it in its body. It exists because uncle.core/ant passes its args straight
+   through to doto, and that makes us need this for us to add items to Jars
+   that might need to be looped over with doseq. This way, the inserted arg
+   can be intercepted and named for use in the body."
+  [arg arg-name & forms]
+  `(let [~arg-name ~arg]
+     ~@forms))
+
 (defn include?
   "Check if val exists in coll."
   [val coll]
