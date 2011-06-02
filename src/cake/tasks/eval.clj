@@ -2,6 +2,7 @@
   (:use cake
         [cake.core :only [deftask bake]]
         [cake.file :only [with-root file]]
+        [cake.utils :only [*readline-marker*]]
         [bake.repl :only [repl]]))
 
 (defn- read-form [string]
@@ -42,5 +43,5 @@
   {cake? :cake}
   (if cake?
     (repl (read))
-    (bake (:use bake.repl) [marker (read)]
+    (bake (:use bake.repl) [marker *readline-marker*]
           (repl marker))))

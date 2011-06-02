@@ -409,13 +409,13 @@ class JVM
     end
   end
 
-  REPL_PROMPT = "REPL_PROMPT__#{rand}"
+  PROMPT = "PROMPT__#{rand}"
   def repl
     puts ";; cannot find readline; your repl won't be very awesome without it" if $no_readline
     load_history
     loop do
       with_socket do |socket|
-        socket.write %{[repl] #{$vars} "#{REPL_PROMPT}"}
+        socket.write %{[repl, "#{PROMPT}"] #{$vars}}
         while @ns = read_until_prompt(socket)
           line = readline
           return unless line
@@ -427,16 +427,15 @@ class JVM
     save_history
   end
 
-  READLINE = "READLINE__#{rand}"
   def send_command(command)
     with_socket do |socket|
-      cmd = [command, READLINE].to_clj
+      cmd = [command, PROMPT].to_clj
       log(command, "sending: " + cmd) if debug?
       socket.write("#{cmd} #{$vars}")
       socket.duplex($stdin, $stdout) do |line|
-        if line =~ /^#{READLINE}(.*)$/
+        if line =~ /^#{PROMPT}(.*)$/
           socket.write(prompt($1))
-        elsif line =~ /^@#{READLINE}(.*)$/
+        elsif line =~ /^@#{PROMPT}(.*)$/
           socket.write(prompt($1, :echo => false))
         else
           line
@@ -497,7 +496,7 @@ private
   def read_until_prompt(socket)
     prompt = nil
     socket.duplex($stdin, $stdout, 3) do |line|
-      if line =~ /^(.*)#{REPL_PROMPT}(.*)$/
+      if line =~ /^(.*)#{PROMPT}(.*)$/
         prompt = $1.empty? ? $2 : "#{$1}\n#{$2}"
         nil
       else
