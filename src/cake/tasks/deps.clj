@@ -58,7 +58,8 @@
         (add-fileset task {:file jar})))))
 
 (defn install-subprojects []
-  (doseq [type [:dependencies :dev-dependencies], [dep opts] (*project* type)]
+  (doseq [type [:dependencies :dev-dependencies]
+          [dep opts] (*project* type)]
     (when-let [path (subproject-path dep)]
       (with-root path
         (cake-exec "install")))))
@@ -114,6 +115,16 @@
            ::repositories]]
   (derive c ::list))
 
+(defmethod prxml-tags ::exclusions
+  [tag values]
+  [:exclusions
+   (map
+    (fn [dep]
+      [:exclusion (map (partial apply prxml-tags)
+                       {:group-id (group dep)
+                        :artifact-id (name dep)})])
+    values)])
+
 (defmethod prxml-tags ::dependency
   ([_ [dep opts]]
      [:dependency
@@ -121,7 +132,8 @@
            {:group-id    (group dep)
             :artifact-id (name dep)
             :version     (:version opts)
-            :classifier  (:classifier opts)})]))
+            :classifier  (:classifier opts)
+            :exclusions  (:exclusions opts)})]))
 
 (defmethod prxml-tags ::repository
   ([_ [id url]]
