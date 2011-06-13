@@ -52,10 +52,16 @@
              {:src bakepath}
              {:dir bakepath}))))
 
+(defn- jar-exclusions
+  []
+  (apply str (interpose ", " (:jar-exclusions *project*))))
+
 (defn add-source-files [task & [prefix]]
   (when-not (:omit-source *project*)
-    (add-zipfileset task {:dir (source-dir)       :prefix prefix :includes "**/*.clj"})
-    (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix :includes "**/*.java"}))
+    (add-zipfileset task {:dir (source-dir)       :prefix prefix
+                          :includes "**/*.clj"    :excludes (jar-exclusions)})
+    (add-zipfileset task {:dir (file "src" "jvm") :prefix prefix
+                          :includes "**/*.java"   :excludes (jar-exclusions)}))
   (when (:bake *project*)
     (add-zipfileset task (bakepath :prefix prefix :excludes "cake.clj"))))
 
@@ -82,7 +88,7 @@
          (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
          (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
          (add-fileset    {:dir (file "build" "jar")})
-         (add-fileset    {:dir (file "resources")})
+         (add-fileset    {:dir (file "resources") :excludes (jar-exclusions)})
          (add-zipfileset {:dir (file "native") :prefix "native"})
          (add-file-mappings (:jar-files *project*)))))
 
