@@ -646,7 +646,7 @@ if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?(project)
   $clojure = get_clojure(:dest => lib)
 
   cakepath = ["#{$cakedir}/src", "#{lib}/*", "#{lib}/dev/*"]
-  bakepath = "#{$cakedir}/bake"
+  bakepath = "#{$cakedir}/dev"
 else
   if File.exists?("#{lib}exec/cake.jar")
     # Inside a brew install.

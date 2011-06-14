@@ -105,6 +105,7 @@
     ~'cake/*env*          '~*env*
     ~'cake/*vars*         '~*vars*])
 
+;; TODO: this function is insane. make it sane.
 (defn project-eval [ns-forms bindings body]
   (reload)
   (when classloader
