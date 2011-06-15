@@ -1,7 +1,7 @@
 (ns cake.task
   (:use cake
         [clojure.set :only [difference]]
-        [bake.core :only [print-stacktrace log]]
+        [bake.core :only [print-stacktrace log verbose?]]
         [cake.file :only [file newer? touch]]
         [cake.utils.useful :only [update verify append]]
         [uncle.core :only [*task-name*]]
@@ -182,6 +182,8 @@
           (binding [*current-task* taskname
                     *task-name*    (name taskname)
                     *File* (if-not (symbol? taskname) (expand-defile-path taskname))]
+            (when (verbose?)
+              (log "Starting..."))
             (run-actions task))
           (when (symbol? taskname)
             (touch (task-run-file taskname) :verbose false)))))))
