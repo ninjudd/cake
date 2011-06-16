@@ -18,9 +18,6 @@ On OS X with homebrew, you can install cake by running this command:
 That's it. Or if you don't have [homebrew](http://mxcl.github.com/homebrew/) or you're not on OS X, 
 try one of the [other installation methods](https://github.com/ninjudd/cake/wiki/install).
 
-
-### project.clj
-
 ## Getting Started
 
 Cake is compatible with most Leiningen project.clj files, so if you already have a project.clj,
