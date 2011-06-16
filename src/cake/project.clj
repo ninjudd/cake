@@ -6,7 +6,7 @@
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [cake.utils.useful :only [update merge-in into-map absorb]]
+        [useful :only [update merge-in into-map absorb]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 

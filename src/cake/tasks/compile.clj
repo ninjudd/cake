@@ -6,7 +6,7 @@
         [cake.project :only [reset-classloader! with-classloader]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
         [cake.utils :only [sudo prompt-read]]
-        [cake.utils.useful :only [pluralize]])
+        [useful :only [pluralize]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
 (declare copy-native)

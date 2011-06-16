@@ -4,7 +4,7 @@
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
-        [cake.utils.useful :only [absorb verify into-map]])
+        [useful :only [absorb verify into-map]])
   (:require [clojure.xml :as xml])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Replace]
            [org.apache.tools.ant.types FileSet ZipFileSet]

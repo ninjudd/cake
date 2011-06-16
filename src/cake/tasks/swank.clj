@@ -1,6 +1,6 @@
 (ns cake.tasks.swank
   (:use cake cake.core
-        [cake.utils.useful :only [if-ns]]
+        [useful :only [if-ns]]
         [bake.core :only [current-context]])
   (:import [java.io StringWriter PrintWriter]))
 

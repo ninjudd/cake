@@ -3,7 +3,7 @@
         [clojure.set :only [difference]]
         [bake.core :only [print-stacktrace log verbose?]]
         [cake.file :only [file newer? touch]]
-        [cake.utils.useful :only [update verify append]]
+        [useful :only [update verify adjoin]]
         [uncle.core :only [*task-name*]]
         [clojure.java.io :only [writer]]
         [clojure.contrib.prxml :only [*prxml-indent* prxml]]))
@@ -35,7 +35,7 @@
 
 (defmacro append-task! [name task]
   `(do (defonce ~'task-defs (atom {}))
-       (swap! ~'task-defs update '~name append '~task)))
+       (swap! ~'task-defs update '~name adjoin '~task)))
 
 (defn- expand-prefix
   "Converts a vector of the form [prefix sym1 sym1] to (prefix.sym1 prefix.sym2)"
@@ -80,7 +80,7 @@
   (when-not (= {:replace true} task2)
     (let [task1 (or (when-not (:replace task2) task1)
                     {:actions [] :docs [] :deps #{}})]
-      (append (update task1 :deps difference (:remove-deps task2))
+      (adjoin (update task1 :deps difference (:remove-deps task2))
               (select-keys task2 [:actions :docs :deps])))))
 
 (defn get-tasks []

@@ -1,6 +1,6 @@
 (ns cake.file
   (:use cake
-        [cake.utils.useful :only [into-map]]
+        [useful :only [into-map]]
         [clojure.string :only [join]])
   (:import [org.apache.tools.ant.taskdefs Copy Move Touch Delete Mkdir]
            [java.io File]))

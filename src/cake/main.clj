@@ -5,7 +5,7 @@
         [cake.utils :only [*readline-marker*]]
         [cake.project :only [reset-classloader!]]
         [cake.tasks.swank :only [start-swank]]
-        [cake.utils.useful :only [on-shutdown]]
+        [useful :only [on-shutdown]]
         [bake.core :only [debug?]]
         [bake.io :only [init-multi-out]]
         [bake.reload :only [reload-project-files]]
