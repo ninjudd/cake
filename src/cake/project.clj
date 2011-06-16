@@ -54,7 +54,7 @@
                                       (.substring path 0 (- (count path) 1))
                                       path))))))
 
-(defn reload! []
+(defn reset-classloader! []
   (alter-var-root #'classloader
     (fn [cl]
       (when cl (eval-in cl '(shutdown-agents)))
