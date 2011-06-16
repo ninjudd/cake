@@ -55,7 +55,7 @@
   (alter-var-root #'*classloader*
     (fn [cl]
       (when cl (eval-in cl '(shutdown-agents)))
-      (let [classloader (make-classloader)]
+      (when-let [classloader (make-classloader)]
         (set-classpath! classloader)
         classloader))))
 
