@@ -1,5 +1,6 @@
 (ns cake.project
-  (:use cake classlojure
+  (:use cake
+        [classlojure :only [wrap-ext-classloader classlojure eval-in get-classpath]]
         [bake.core :only [debug?]]
         [cake.file :only [file global-file]]
         [uncle.core :only [fileset-seq]]
@@ -19,10 +20,11 @@
               [(file path)]))
           (absorb paths (split (re-pattern File/pathSeparator)))))
 
-(defn classpath []
+(defn classpath [& paths]
   (map make-url
-       (concat (map file [(System/getProperty "bake.path")
-                          "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"])
+       (concat (map file (into [(System/getProperty "bake.path")
+                                "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"]
+                               paths))
                (path-files (get *config* "project.classpath"))
                (fileset-seq {:dir (file "lib")            :includes "*.jar"})
                (fileset-seq {:dir (file "lib/dev")        :includes "*.jar"})
@@ -32,12 +34,12 @@
   (map make-url
        (fileset-seq {:dir "lib/ext" :includes "*.jar"})))
 
-(defonce classloader nil)
+(defonce *classloader* nil)
 
-(defn make-classloader []
+(defn make-classloader [& paths]
   (when (:ext-dependencies *project*)
     (wrap-ext-classloader (ext-classpath)))
-  (when-let [cl (classlojure (classpath))]
+  (when-let [cl (classlojure (apply classpath paths))]
     (eval-in cl '(do (require 'cake)
                      (require 'bake.io)
                      (require 'bake.reload)
@@ -47,15 +49,10 @@
 (defn set-classpath!
   "Set the JVM classpath property to the current clojure classloader."
   [classloader]
-  (System/setProperty "java.class.path"
-                      (join ":" (for [url (.getURLs classloader)]
-                                  (let [path (.getPath url)]
-                                    (if (.endsWith path "/")
-                                      (.substring path 0 (- (count path) 1))
-                                      path))))))
+  (System/setProperty "java.class.path" (join ":" (get-classpath classloader))))
 
 (defn reset-classloader! []
-  (alter-var-root #'classloader
+  (alter-var-root #'*classloader*
     (fn [cl]
       (when cl (eval-in cl '(shutdown-agents)))
       (let [classloader (make-classloader)]
@@ -63,13 +60,12 @@
         classloader))))
 
 (defn reload []
-  (alter-var-root #'classloader
-    (fn [cl]
-      (if cl
-        (do (eval-in cl '(bake.reload/reload)) cl)
-        (let [classloader (make-classloader)]
-          (set-classpath! classloader)
-          classloader)))))
+  (when *classloader*
+    (eval-in *classloader* '(bake.reload/reload))))
+
+(defmacro with-classloader [paths & forms]
+  `(binding [*classloader* (make-classloader ~@paths)]
+     ~@forms))
 
 (defn- quote-if
   "We need to quote the binding keys so they are not evaluated within the bake
@@ -108,29 +104,28 @@
 ;; TODO: this function is insane. make it sane.
 (defn project-eval [ns-forms bindings body]
   (reload)
-  (when classloader
-    (let [[let-bindings object-bindings] (separate-bindings bindings)
-          temp-ns (gensym "bake")
-          form
-          `(do (ns ~temp-ns
-                 (:use ~'cake)
-                 ~@ns-forms)
-               (fn [ins# outs# ~@(keys object-bindings)]
-                 (try
-                   (clojure.main/with-bindings
-                     (bake.io/with-streams ins# outs#
-                       (binding ~(shared-bindings)
-                         (let ~(quote-if odd? let-bindings)
-                           ~@body))))
-                   (finally
-                    (remove-ns '~temp-ns)))))]
-      (try (apply eval-in classloader
-                  `(clojure.main/with-bindings (eval '~form))
-                  *ins* *outs* (vals object-bindings))
-           (catch Throwable e
-             (println "error evaluating:")
-             (prn body)
-             (throw e))))))
+  (let [[let-bindings object-bindings] (separate-bindings bindings)
+        temp-ns (gensym "bake")
+        form
+        `(do (ns ~temp-ns
+               (:use ~'cake)
+               ~@ns-forms)
+             (fn [ins# outs# ~@(keys object-bindings)]
+               (try
+                 (clojure.main/with-bindings
+                   (bake.io/with-streams ins# outs#
+                     (binding ~(shared-bindings)
+                       (let ~(quote-if odd? let-bindings)
+                         ~@body))))
+                 (finally
+                  (remove-ns '~temp-ns)))))]
+    (try (apply eval-in *classloader*
+                `(clojure.main/with-bindings (eval '~form))
+                *ins* *outs* (vals object-bindings))
+         (catch Throwable e
+           (println "error evaluating:")
+           (prn body)
+           (throw e)))))
 
 (defmacro bake
   "Execute code in a your project classloader. Bindings allow passing state to the project

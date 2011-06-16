@@ -3,7 +3,7 @@
         [cake.core :only [deftask bake]]
         [uncle.core :only [ant add-fileset fileset-seq path classpath]]
         [cake.file :only [file newer?]]
-        [cake.project :only [reset-classloader!]]
+        [cake.project :only [reset-classloader! with-classloader]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
         [cake.utils :only [sudo prompt-read]]
         [cake.utils.useful :only [pluralize]])
@@ -35,13 +35,13 @@
   (let [src (file "src" "clj")]
     (if (.exists src) src (file "src"))))
 
-(defn compile-clojure [source-path compile-path aot]
+(defn compile-clojure [source-path compile-path namespaces]
   (.mkdirs compile-path)
-  (when (bake (:use [bake.compile :only [compile-stale]])
-              [source-path  (.getPath source-path)
-               compile-path (.getPath compile-path)]
-              (compile-stale source-path compile-path))
-    (reset-classloader!)))
+  (bake (:use [bake.compile :only [compile-stale]])
+        [source-path  (.getPath source-path)
+         compile-path (.getPath compile-path)
+         namespaces   namespaces]
+        (compile-stale source-path compile-path namespaces)))
 
 (defn copy-native []
   (let [os-name (os-name)
@@ -51,8 +51,12 @@
 
 (deftask compile #{deps compile-native compile-java}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
-  (compile-clojure (source-dir) (file "classes") (:aot *project*))
-  (compile-clojure (file "test") (file "test" "classes") (:aot-test *project*)))
+  (let [jar-classes (file "build" "jar")]
+    (.mkdirs jar-classes)
+    (with-classloader [jar-classes]
+      (compile-clojure (source-dir)  (file "classes")        (:aot *project*))
+      (compile-clojure (file "test") (file "test" "classes") (:aot-test *project*))
+      (compile-clojure (source-dir)  jar-classes             [(:main *project*)]))))
 
 ;; add actions to compile-native if you need to compile native libraries
 ;; see http://github.com/lancepantz/tokyocabinet for an example
