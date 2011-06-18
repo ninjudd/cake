@@ -24,7 +24,7 @@
   (let [jarfile (uberjarfile)
         bakejar (bakejar)]
     (ant Jar {:dest-file bakejar}
-         (add-fileset {:dir "bake"})
+         (add-fileset {:dir "dev"})
          (add-dev-jars))
     (ant Jar {:dest-file jarfile :update true}
          (add-fileset {:file bakejar})

@@ -1,6 +1,7 @@
 (ns bake.test
   (:use clojure.test
         [cake :only [*config*]]
+        [bake.core :only [verbose? log]]
         [bake.reload :only [last-reloaded last-modified reload]]
         [bake.notify :only [notify]])
   (:import [java.io StringWriter IOException]))
@@ -34,6 +35,8 @@
            (reset! last-exception (System/currentTimeMillis))))))
 
 (defn run-ns-tests [opts ns]
+  (when (verbose?)
+    (log "About to run tests in" ns))
   (require ns)
   (when-let [tests (seq (filter (run? opts ns) (ns-publics ns)))]
     (let [ns-meta (meta (find-ns ns))
@@ -46,6 +49,8 @@
         (once-fixtures
          (fn []
            (doseq [[name f] tests]
+             (when (verbose?)
+               (log "Running test" name))
              (each-fixtures #(test-var f)))))
         (report (assoc @*report-counters* :type :summary))
         (let [failed?  (< 0 (apply + (map @*report-counters* [:fail :error])))
@@ -61,8 +66,8 @@
   (when (:autotest opts)
     (wait-for-reload (* 1000 (Integer. (or (get *config* "autotest.interval") 5)))))
   (let [start    (System/currentTimeMillis)
-        results  (map (partial run-ns-tests opts) namespaces)
-        failures (count (remove not results))]
+        results  (doall (map (partial run-ns-tests opts) namespaces))
+        failures (count (filter identity results))]
     (when (= 0 failures)
       (when (and (:autotest opts)
                  (< @last-passed @last-tested))

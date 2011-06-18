@@ -1,6 +1,6 @@
 (ns cake.tasks.bake
   (:use cake.core
-        [cake.utils.compress :only [unsmash]]))
+        [useful.compress :only [unsmash]]))
 
 (deftask eat
   (while (not (.ready *in*))

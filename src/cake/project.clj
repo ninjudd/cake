@@ -1,11 +1,12 @@
 (ns cake.project
-  (:use cake classlojure
+  (:use cake
+        [classlojure :only [wrap-ext-classloader classlojure eval-in get-classpath]]
         [bake.core :only [debug?]]
         [cake.file :only [file global-file]]
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [cake.utils.useful :only [update merge-in into-map absorb as-vec]]
+        [useful :only [update merge-in into-map absorb]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
@@ -19,7 +20,17 @@
               [(file path)]))
           (absorb paths (split (re-pattern File/pathSeparator)))))
 
-(defn classpath []
+(defn as-vec
+  "If its arg is a vector, returns the arg unchanged. Otherwise, returns the
+   given item in a vector. Helps you process things that are 'strings or
+   vectors of strings' uniformly."
+  [arg]
+  (if arg
+    (if (vector? arg)
+      arg
+      [arg])))
+
+(defn classpath [& paths]
   (map make-url
        (concat (map file
                     (flatten [(System/getProperty "bake.path")
@@ -28,31 +39,39 @@
                               (:java-source-path *project*)
                               (:test-path *project*)
                               (map #(str (file %) "classes")
-                                   (as-vec (:test-path *project*)))
+                                   (:test-path *project*))
                               (:resources-path *project*)
                               (:dev-resources-path *project*)
                               "classes/"
-                              (:extra-classpath-dirs *project*)]))
+                              (:extra-classpath-dirs *project*)
+                              paths])) 
                (path-files (get *config* "project.classpath"))
-               (fileset-seq {:dir (file (:library-path *project*))
-                             :includes "*.jar"})
-               (fileset-seq {:dir (file (:library-path *project*) "dev")
-                             :includes "*.jar"})
+               (apply concat
+                      (map
+                       (fn [path]
+                         (concat
+                          (fileset-seq {:dir (file path)
+                                        :includes "*.jar"})
+                          (fileset-seq {:dir (file path "dev")
+                                        :includes "*.jar"})))
+                       (:library-path *project*)))
                ;; This is from the user's .cake dir. No setting for it.
                (fileset-seq {:dir (global-file "lib/dev") :includes "*.jar"}))))
 
 (defn ext-classpath []
   (map make-url
-       (fileset-seq {:dir (str (file (:library-path *project*)
-                                     "ext"))
-                     :includes "*.jar"})))
+       (apply concat
+              (map
+               #(fileset-seq {:dir (str (file % "ext"))
+                              :includes "*.jar"})
+               (:library-path *project*)))))
 
-(defonce classloader nil)
+(defonce *classloader* nil)
 
-(defn make-classloader []
+(defn make-classloader [& paths]
   (when (:ext-dependencies *project*)
     (wrap-ext-classloader (ext-classpath)))
-  (when-let [cl (classlojure (classpath))]
+  (when-let [cl (classlojure (apply classpath paths))]
     (eval-in cl '(do (require 'cake)
                      (require 'bake.io)
                      (require 'bake.reload)
@@ -62,29 +81,23 @@
 (defn set-classpath!
   "Set the JVM classpath property to the current clojure classloader."
   [classloader]
-  (System/setProperty "java.class.path"
-                      (join ":" (for [url (.getURLs classloader)]
-                                  (let [path (.getPath url)]
-                                    (if (.endsWith path "/")
-                                      (.substring path 0 (- (count path) 1))
-                                      path))))))
+  (System/setProperty "java.class.path" (join ":" (get-classpath classloader))))
 
-(defn reload! []
-  (alter-var-root #'classloader
+(defn reset-classloader! []
+  (alter-var-root #'*classloader*
     (fn [cl]
       (when cl (eval-in cl '(shutdown-agents)))
-      (let [classloader (make-classloader)]
+      (when-let [classloader (make-classloader)]
         (set-classpath! classloader)
         classloader))))
 
 (defn reload []
-  (alter-var-root #'classloader
-    (fn [cl]
-      (if cl
-        (do (eval-in cl '(bake.reload/reload)) cl)
-        (let [classloader (make-classloader)]
-          (set-classpath! classloader)
-          classloader)))))
+  (when *classloader*
+    (eval-in *classloader* '(bake.reload/reload))))
+
+(defmacro with-classloader [paths & forms]
+  `(binding [*classloader* (make-classloader ~@paths)]
+     ~@forms))
 
 (defn- quote-if
   "We need to quote the binding keys so they are not evaluated within the bake
@@ -120,31 +133,31 @@
     ~'cake/*env*          '~*env*
     ~'cake/*vars*         '~*vars*])
 
+;; TODO: this function is insane. make it sane.
 (defn project-eval [ns-forms bindings body]
   (reload)
-  (when classloader
-    (let [[let-bindings object-bindings] (separate-bindings bindings)
-          temp-ns (gensym "bake")
-          form
-          `(do (ns ~temp-ns
-                 (:use ~'cake)
-                 ~@ns-forms)
-               (fn [ins# outs# ~@(keys object-bindings)]
-                 (try
-                   (clojure.main/with-bindings
-                     (bake.io/with-streams ins# outs#
-                       (binding ~(shared-bindings)
-                         (let ~(quote-if odd? let-bindings)
-                           ~@body))))
-                   (finally
-                    (remove-ns '~temp-ns)))))]
-      (try (apply eval-in classloader
-                  `(clojure.main/with-bindings (eval '~form))
-                  *ins* *outs* (vals object-bindings))
-           (catch Throwable e
-             (println "error evaluating:")
-             (prn body)
-             (throw e))))))
+  (let [[let-bindings object-bindings] (separate-bindings bindings)
+        temp-ns (gensym "bake")
+        form
+        `(do (ns ~temp-ns
+               (:use ~'cake)
+               ~@ns-forms)
+             (fn [ins# outs# ~@(keys object-bindings)]
+               (try
+                 (clojure.main/with-bindings
+                   (bake.io/with-streams ins# outs#
+                     (binding ~(shared-bindings)
+                       (let ~(quote-if odd? let-bindings)
+                         ~@body))))
+                 (finally
+                  (remove-ns '~temp-ns)))))]
+    (try (apply eval-in *classloader*
+                `(clojure.main/with-bindings (eval '~form))
+                *ins* *outs* (vals object-bindings))
+         (catch Throwable e
+           (println "error evaluating:")
+           (prn body)
+           (throw e)))))
 
 (defmacro bake
   "Execute code in a your project classloader. Bindings allow passing state to the project
@@ -195,12 +208,12 @@
                                              "dev"))
                ;; Note source-path can be present but nil. Need to check for nil
                ;; and check for existence of src/jvm to determine the src path.
-               :source-path          (:source-path opts)
-               :java-source-path     (or (:java-source-path opts) "src/jvm")
-               :test-path            (or (:test-path opts) "test/")
-               :resources-path       (or (:resources opts) "resources/")
-               :library-path         (or (:library-path opts) "lib/")
-               :dev-resources-path   (or (:dev-resources-path opts) "dev/")
+               :source-path          (as-vec (:source-path opts))
+               :java-source-path     (as-vec (or (:java-source-path opts) "src/jvm"))
+               :test-path            (as-vec (or (:test-path opts) "test/"))
+               :resources-path       (as-vec (or (:resources opts) "resources/"))
+               :library-path         (as-vec (or (:library-path opts) "lib/"))
+               :dev-resources-path   (as-vec (or (:dev-resources-path opts) "dev/"))
                :extra-classpath-dirs (:extra-classpath-dirs opts)
                :jar-name         (or (:jar-name opts) artifact-version)
                :war-name         (or (:war-name opts) artifact-version)

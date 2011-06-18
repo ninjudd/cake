@@ -3,10 +3,10 @@
         [cake.core :only [deftask bake]]
         [uncle.core :only [ant add-fileset fileset-seq path classpath]]
         [cake.file :only [file newer?]]
-        [cake.project :only [reload!]]
+        [cake.project :only [reset-classloader! with-classloader]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
         [cake.utils :only [sudo prompt-read]]
-        [cake.utils.useful :only [pluralize as-vec]])
+        [useful :only [pluralize]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 
 (declare copy-native)
@@ -25,11 +25,11 @@
                          :failonerror true}
                         (:java-compile *project*))))
     (when (some #(newer? % start) (file-seq (file "classes")))
-      (reload!))))
+      (reset-classloader!))))
 
 (deftask compile-java #{deps compile-native}
   (copy-native)
-  (doseq [jsrc-path (as-vec (:java-source-path *project*))]
+  (doseq [jsrc-path (:java-source-path *project*)]
     (compile-java (file jsrc-path))))
 
 (defn source-dir []
@@ -37,13 +37,13 @@
       (let [src (file "src" "clj")]
         (if (.exists src) src (file "src")))))
 
-(defn compile-clojure [source-path compile-path aot]
+(defn compile-clojure [source-path compile-path namespaces]
   (.mkdirs compile-path)
-  (when (bake (:use [bake.compile :only [compile-stale]])
-              [source-path  (.getPath source-path)
-               compile-path (.getPath compile-path)]
-              (compile-stale source-path compile-path))
-    (reload!)))
+  (bake (:use [bake.compile :only [compile-stale]])
+        [source-path  (.getPath source-path)
+         compile-path (.getPath compile-path)
+         namespaces   namespaces]
+        (compile-stale source-path compile-path namespaces)))
 
 (defn copy-native []
   (let [os-name (os-name)
@@ -53,11 +53,15 @@
 
 (deftask compile #{deps compile-native compile-java}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
-  (compile-clojure (source-dir) (file "classes") (:aot *project*))
-  (doseq [test-path (as-vec (:test-path *project*))]
-    (compile-clojure (file test-path)
-                     (file test-path "classes")
-                     (:aot-test *project*))))
+  (let [jar-classes (file "build" "jar")]
+    (.mkdirs jar-classes)
+    (with-classloader [jar-classes]
+      (compile-clojure (source-dir) (file "classes") (:aot *project*))
+      (doseq [test-path (:test-path *project*)]
+        (compile-clojure (file test-path)
+                         (file test-path "classes")
+                         (:aot-test *project*)))
+      (compile-clojure (source-dir) jar-classes [(:main *project*)]))))
 
 ;; add actions to compile-native if you need to compile native libraries
 ;; see http://github.com/lancepantz/tokyocabinet for an example

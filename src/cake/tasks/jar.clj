@@ -4,7 +4,7 @@
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
-        [cake.utils.useful :only [absorb verify into-map as-vec with-val]])
+        [useful :only [absorb verify into-map]])
   (:require [clojure.xml :as xml])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Replace]
            [org.apache.tools.ant.types FileSet ZipFileSet]
@@ -12,6 +12,16 @@
            [org.apache.maven.artifact.ant InstallTask Pom]
            [java.io File FileOutputStream]
            [java.util.jar JarFile]))
+
+(defmacro with-val
+  "This macro lets you receive a value in a doto or threaded statement and use
+it in its body. It exists because uncle.core/ant passes its args straight
+through to doto, and that makes us need this for us to add items to Jars
+that might need to be looped over with doseq. This way, the inserted arg
+can be intercepted and named for use in the body."
+  [arg arg-name & forms]
+  `(let [~arg-name ~arg]
+     ~@forms))
 
 (defn artifact [name-key ext]
   (file (str (name-key *project*)
@@ -56,7 +66,7 @@
   (when-not (:omit-source *project*)
     (add-zipfileset task {:dir (source-dir)
                           :prefix prefix :includes "**/*.clj"})
-    (doseq [jsrc-path (as-vec (:java-source-path *project*))]
+    (doseq [jsrc-path (:java-source-path *project*)]
       (add-zipfileset task {:dir (file jsrc-path)
                             :prefix prefix :includes "**/*.java"})))
   (when (:bake *project*)
@@ -86,7 +96,7 @@
          (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
          (add-fileset    {:dir (file "build" "jar")})
          (with-val task
-           (doseq [rsrc-path (as-vec (:resources-path *project*))]
+           (doseq [rsrc-path (:resources-path *project*)]
              (add-fileset task {:dir (file rsrc-path)})))
          (add-zipfileset {:dir (file "native") :prefix "native"})
          (add-file-mappings (:jar-files *project*)))))
@@ -106,10 +116,13 @@
   (let [opts (apply hash-map opts)
         jar  (jarfile)]
     (into [jar]
-          ;; Note how lib/dev is not picked up.
-          (fileset-seq {:dir (:library-path *project*)
-                        :includes "*.jar"
-                        :excludes (join "," (:excludes opts))}))))
+          (apply concat
+                 (fileset-seq {:dir "lib/ext" :includes "*.jar"})
+                 (map
+                  #(fileset-seq {:dir %
+                                 :includes "*.jar"
+                                 :excludes (join "," (:excludes opts))})
+                  (:library-path *project*))))))
 
 (defn plexus-components [jar]
   (let [jarfile (JarFile. jar)]
@@ -173,13 +186,13 @@
          (add-zipfileset {:dir (file "src")         :prefix web     :includes "*web.xml"})
          (add-zipfileset {:dir (file "classes")     :prefix classes :includes "**/*.class"})
          (with-val task
-           (doseq [rsrc-path (as-vec (:resources-path *project*))]
+           (doseq [rsrc-path (:resources-path *project*)]
              (add-zipfileset task {:dir (file rsrc-path)
                                    :prefix classes :includes "**/*"})))
          (add-zipfileset {:dir (file "build" "jar") :prefix classes})
          (add-fileset    {:dir (file "build" "war")})
          (with-val task
-           (doseq [src-path (as-vec (or (:source-path *project*) "src"))]
+           (doseq [src-path (or (:source-path *project*) ["src"])]
              (add-fileset task {:dir (file src-path "html")})))
          (add-file-mappings (:war-files *project*)))))
 

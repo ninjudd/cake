@@ -38,7 +38,8 @@
   (boolean (or (:v *opts*) (:verbose *opts*))))
 
 (defn current-context []
-  (if-let [context (get-in *opts* [:context 0])]
+  (when-let [context (or (get-in *opts* [:context 0])
+                         (System/getProperty "cake.context"))]
     (symbol context)))
 
 (defn project-with-context [context]

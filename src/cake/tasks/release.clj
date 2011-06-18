@@ -3,7 +3,7 @@
         [bake.core :only [verbose? debug? log]]
         [cake.tasks.jar :only [jarfile uberjarfile warfile]]
         [clojure.java.io :only [reader copy]]
-        [cake.utils.useful :only [verify assoc-or]]
+        [useful :only [verify assoc-or]]
 	[cake.utils :only [prompt-read]])
   (:import [com.jcraft.jsch JSch ChannelExec Logger UserInfo JSchException UIKeyboardInteractive]
            [java.io FileInputStream]))

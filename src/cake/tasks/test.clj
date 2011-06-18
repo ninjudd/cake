@@ -1,7 +1,6 @@
 (ns cake.tasks.test
   (:use cake cake.core
-        [bake.find-namespaces :only [find-namespaces-in-dir]]
-        [cake.utils.useful :only [as-vec]])
+        [bake.find-namespaces :only [find-namespaces-in-dir]])
   (:import [java.io File]))
 
 (defn test-opts []
@@ -17,7 +16,7 @@
   (bake (:use bake.test
               [bake.core :only [with-context]])
         [namespaces
-         (flatten (doseq [test-path (as-vec (:test-path *project*))]
+         (flatten (for [test-path (:test-path *project*)]
                     (find-namespaces-in-dir (java.io.File. test-path))))
          opts       (merge (test-opts) (apply hash-map opts))]
     (with-context :test

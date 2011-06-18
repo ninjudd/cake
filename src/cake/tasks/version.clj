@@ -2,7 +2,7 @@
   (:use cake cake.core uncle.core
         [bake.core :only [log]]
         [cake.utils :only [ftime]]
-        [cake.utils.useful :only [update]]
+        [useful :only [update]]
         [clojure.string :only [join]]
 	[cake.utils :only [git]])
   (:import [org.apache.tools.ant.taskdefs Replace]))

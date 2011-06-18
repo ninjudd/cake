@@ -1,7 +1,7 @@
 (ns cake.tasks.deps
   (:use cake cake.core cake.file uncle.core
         [cake.utils :only [cake-exec]]
-        [cake.project :only [group reload reload!]]
+        [cake.project :only [group reload reset-classloader!]]
         [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]])
   (:require [clojure.string :as s])
@@ -58,7 +58,8 @@
         (add-fileset task {:file jar})))))
 
 (defn install-subprojects []
-  (doseq [type [:dependencies :dev-dependencies], [dep opts] (*project* type)]
+  (doseq [type [:dependencies :dev-dependencies]
+          [dep opts] (*project* type)]
     (when-let [path (subproject-path dep)]
       (with-root path
         (cake-exec "install")))))
@@ -114,6 +115,16 @@
            ::repositories]]
   (derive c ::list))
 
+(defmethod prxml-tags ::exclusions
+  [tag values]
+  [:exclusions
+   (map
+    (fn [dep]
+      [:exclusion (map (partial apply prxml-tags)
+                       {:group-id (group dep)
+                        :artifact-id (name dep)})])
+    values)])
+
 (defmethod prxml-tags ::dependency
   ([_ [dep opts]]
      [:dependency
@@ -121,7 +132,8 @@
            {:group-id    (group dep)
             :artifact-id (name dep)
             :version     (:version opts)
-            :classifier  (:classifier opts)})]))
+            :classifier  (:classifier opts)
+            :exclusions  (:exclusions opts)})]))
 
 (defmethod prxml-tags ::repository
   ([_ [id url]]
@@ -147,8 +159,8 @@
   (binding [*exclusions* ['clojure 'clojure-contrib]]
     (fetch (:dev-dependencies *project*) (file "build/lib/dev")))
   (when (.exists (file "build/lib"))
-    (ant Delete {:dir (:library-path *project*)})
-    (ant Move {:file "build/lib" :tofile (:library-path *project*)
+    (ant Delete {:dir (first (:library-path *project*))})
+    (ant Move {:file "build/lib" :tofile (first (:library-path *project*))
                :verbose true}))
   (invoke clean {}))
 
@@ -161,14 +173,14 @@
 (deftask deps #{"pom.xml"}
   "Fetch dependencies and dev-dependencies. Use 'cake deps force' to refetch."
   (let [deps-str  (prn-str (into (sorted-map) (select-keys *project* [:dependencies :ext-dependencies :dev-dependencies])))
-        deps-file (file (:library-path *project*) "deps.clj")]
+        deps-file (file (first (:library-path *project*)) "deps.clj")]
     (if (or (stale-deps? deps-str deps-file) (= ["force"] (:deps *opts*)))
       (do (install-subprojects)
           (fetch-deps)
           (spit deps-file deps-str)
-          (reload!))
+          (reset-classloader!))
       (do (when (= ["force"] (:compile *opts*))
             (invoke clean {}))
           (if (or (:r *opts*) (:reload *opts*))
-            (reload!)
+            (reset-classloader!)
             (reload))))))
