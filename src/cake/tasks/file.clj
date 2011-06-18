@@ -3,7 +3,7 @@
         [cake.core :only [deftask]]
         [cake.task :only [run-task]]
         [uncle.core :only [ant add-fileset]]
-        [cake.project :only [reset-classloader!]]
+        [cake.project :only [reset-classloaders!]]
         [cake.file :only [file]]
         [bake.core :only [log]])
   (:import (org.apache.tools.ant.taskdefs Delete Mkdir)))
@@ -26,7 +26,7 @@
     (clean-dir (file "lib"))
     (ant Delete {:verbose true}
          (add-fileset {:dir (file) :includes "pom.xml"})))
-  (reset-classloader!))
+  (reset-classloaders!))
 
 (deftask file
   "Invoke a file task."

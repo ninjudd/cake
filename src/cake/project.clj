@@ -34,8 +34,6 @@
   (map make-url
        (fileset-seq {:dir "lib/ext" :includes "*.jar"})))
 
-(defonce *classloader* nil)
-
 (defn make-classloader [& paths]
   (when (:ext-dependencies *project*)
     (wrap-ext-classloader (ext-classpath)))
@@ -51,6 +49,9 @@
   [classloader]
   (System/setProperty "java.class.path" (join ":" (get-classpath classloader))))
 
+(defonce *classloader* nil)
+(defonce test-classloader nil)
+
 (defn reset-classloader! []
   (alter-var-root #'*classloader*
     (fn [cl]
@@ -59,12 +60,24 @@
         (set-classpath! classloader)
         classloader))))
 
+(defn reset-test-classloader! []
+  (alter-var-root #'test-classloader
+    (fn [_] (make-classloader))))
+
+(defn reset-classloaders! []
+  (reset-classloader!)
+  (reset-test-classloader!))
+
 (defn reload []
   (when *classloader*
     (eval-in *classloader* '(bake.reload/reload))))
 
 (defmacro with-classloader [paths & forms]
   `(binding [*classloader* (make-classloader ~@paths)]
+     ~@forms))
+
+(defmacro with-test-classloader [& forms]
+  `(binding [*classloader* test-classloader]
      ~@forms))
 
 (defn- quote-if

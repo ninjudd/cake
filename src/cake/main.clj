@@ -3,7 +3,7 @@
         [cake.task :only [run-task run?]]
         [cake.file :only [file global-file]]
         [cake.utils :only [*readline-marker*]]
-        [cake.project :only [reset-classloader!]]
+        [cake.project :only [reset-classloaders!]]
         [cake.tasks.swank :only [start-swank]]
         [useful :only [on-shutdown]]
         [bake.core :only [debug?]]
@@ -32,7 +32,7 @@
   (on-shutdown #(eval (:shutdown *project*)))
   (init-multi-out ".cake/cake.log")
   (in-project {:outs *outs* :verbose (debug?) :root *root*}
-    (reset-classloader!)
+    (reset-classloaders!)
     (when-let [autostart (get *config* "swank.autostart")]
       (start-swank autostart))
     (server/create port process-command)))

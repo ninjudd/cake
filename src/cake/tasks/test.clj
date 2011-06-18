@@ -1,5 +1,6 @@
 (ns cake.tasks.test
   (:use cake cake.core
+        [cake.project :only [with-test-classloader]]
         [bake.find-namespaces :only [find-namespaces-in-dir]])
   (:import [java.io File]))
 
@@ -13,12 +14,13 @@
                 (map read-string args)))))
 
 (defn run-project-tests [& opts]
-  (bake (:use bake.test
-              [bake.core :only [with-context]])
-    [namespaces (find-namespaces-in-dir (java.io.File. "test"))
-     opts       (merge (test-opts) (apply hash-map opts))]
-    (with-context :test
-      (run-project-tests namespaces opts))))
+  (with-test-classloader
+    (bake (:use bake.test
+                [bake.core :only [with-context]])
+      [namespaces (find-namespaces-in-dir (java.io.File. "test"))
+       opts       (merge (test-opts) (apply hash-map opts))]
+      (with-context :test
+        (run-project-tests namespaces opts)))))
 
 (deftask test #{compile-java}
   "Run project tests."

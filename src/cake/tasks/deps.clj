@@ -1,7 +1,7 @@
 (ns cake.tasks.deps
   (:use cake cake.core cake.file uncle.core
         [cake.utils :only [cake-exec]]
-        [cake.project :only [group reload reset-classloader!]]
+        [cake.project :only [group reload reset-classloaders! reset-test-classloader!]]
         [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]])
   (:require [clojure.string :as s])
@@ -177,9 +177,11 @@
       (do (install-subprojects)
           (fetch-deps)
           (spit deps-file deps-str)
-          (reset-classloader!))
+          (reset-classloaders!))
       (do (when (= ["force"] (:compile *opts*))
             (invoke clean {}))
           (if (or (:r *opts*) (:reload *opts*))
-            (reset-classloader!)
+            (if (:test *opts*)
+              (reset-test-classloader!)
+              (reset-classloaders!))
             (reload))))))

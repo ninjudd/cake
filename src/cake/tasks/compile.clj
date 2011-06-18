@@ -3,7 +3,7 @@
         [cake.core :only [deftask bake]]
         [uncle.core :only [ant add-fileset fileset-seq path classpath]]
         [cake.file :only [file newer?]]
-        [cake.project :only [reset-classloader! with-classloader]]
+        [cake.project :only [reset-classloaders! with-classloader]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
         [cake.utils :only [sudo prompt-read]]
         [useful :only [pluralize]])
@@ -25,7 +25,7 @@
                          :failonerror true}
                         (:java-compile *project*))))
     (when (some #(newer? % start) (file-seq (file "classes")))
-      (reset-classloader!))))
+      (reset-classloaders!))))
 
 (deftask compile-java #{deps compile-native}
   (copy-native)
