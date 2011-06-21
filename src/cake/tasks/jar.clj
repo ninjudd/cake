@@ -13,16 +13,6 @@
            [java.io File FileOutputStream]
            [java.util.jar JarFile]))
 
-(defmacro with-val
-  "This macro lets you receive a value in a doto or threaded statement and use
-it in its body. It exists because uncle.core/ant passes its args straight
-through to doto, and that makes us need this for us to add items to Jars
-that might need to be looped over with doseq. This way, the inserted arg
-can be intercepted and named for use in the body."
-  [arg arg-name & forms]
-  `(let [~arg-name ~arg]
-     ~@forms))
-
 (defn artifact [name-key ext]
   (file (str (name-key *project*)
              (when-let [context (current-context)]
@@ -90,20 +80,20 @@ can be intercepted and named for use in the body."
         cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))]
     (when (:bake *project*)
       (build-context))
-    (ant Jar {:dest-file (jarfile)}
-         (add-manifest (manifest))
-         (add-license)
-         (add-source-files)
-         (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
-         (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
-         (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
-         (add-fileset    {:dir (file "build" "jar")})
-         (with-val task
-           (doseq [rsrc-path (:resources-path *project*)]
-             (add-fileset task {:dir (file rsrc-path)})))
-         (add-zipfileset {:dir (file "native") :prefix "native"})
-         (add-file-mappings (:jar-files *project*))
-         execute)))
+    (let [task
+          (ant Jar {:dest-file (jarfile)}
+               (add-manifest (manifest))
+               (add-license)
+               (add-source-files)
+               (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
+               (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
+               (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
+               (add-fileset    {:dir (file "build" "jar")})
+               (add-zipfileset {:dir (file "native") :prefix "native"})
+               (add-file-mappings (:jar-files *project*)))]
+      (doseq [rsrc-path (:resources-path *project*)]
+        (add-fileset task {:dir (file rsrc-path)}))
+      (execute task))))
 
 (defn clean [pattern]
   (when (:clean *opts*)
@@ -186,23 +176,22 @@ can be intercepted and named for use in the body."
   (let [web     "WEB-INF"
         classes (str web "/classes")]
     (build-context)
-    (ant War {:dest-file (warfile)}
-         (add-manifest (manifest))
-         (add-license)
-         (add-source-files "WEB-INF/classes")
-         (add-zipfileset {:dir (file "src")         :prefix web     :includes "*web.xml"})
-         (add-zipfileset {:dir (file "classes")     :prefix classes :includes "**/*.class"})
-         (with-val task
-           (doseq [rsrc-path (:resources-path *project*)]
-             (add-zipfileset task {:dir (file rsrc-path)
-                                   :prefix classes :includes "**/*"})))
-         (add-zipfileset {:dir (file "build" "jar") :prefix classes})
-         (add-fileset    {:dir (file "build" "war")})
-         (with-val task
-           (doseq [src-path (or (:source-path *project*) ["src"])]
-             (add-fileset task {:dir (file src-path "html")})))
-         (add-file-mappings (:war-files *project*))
-         execute)))
+    (let [task
+          (ant War {:dest-file (warfile)}
+               (add-manifest (manifest))
+               (add-license)
+               (add-source-files "WEB-INF/classes")
+               (add-zipfileset {:dir (file "src")         :prefix web     :includes "*web.xml"})
+               (add-zipfileset {:dir (file "classes")     :prefix classes :includes "**/*.class"})
+               (add-zipfileset {:dir (file "build" "jar") :prefix classes})
+               (add-fileset    {:dir (file "build" "war")})
+               (add-file-mappings (:war-files *project*)))]
+      (doseq [rsrc-path (:resources-path *project*)]
+        (add-zipfileset task {:dir (file rsrc-path)
+                              :prefix classes :includes "**/*"}))
+      (doseq [src-path (or (:source-path *project*) ["src"])]
+        (add-fileset task {:dir (file src-path "html")}))
+      (execute task))))
 
 (deftask war #{compile}
   "Create a web archive containing project source and class files."
