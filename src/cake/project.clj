@@ -43,7 +43,6 @@
                               (:resources-path *project*)
                               (:dev-resources-path *project*)
                               "classes/"
-                              (:extra-classpath-dirs *project*)
                               paths])) 
                (path-files (get *config* "project.classpath"))
                (apply concat
@@ -214,7 +213,6 @@
                :resources-path       (as-vec (or (:resources opts) "resources/"))
                :library-path         (as-vec (or (:library-path opts) "lib/"))
                :dev-resources-path   (as-vec (or (:dev-resources-path opts) "dev/"))
-               :extra-classpath-dirs (:extra-classpath-dirs opts)
                :jar-name         (or (:jar-name opts) artifact-version)
                :war-name         (or (:war-name opts) artifact-version)
                :uberjar-name     (or (:uberjar-name opts) (str artifact-version "-standalone"))
