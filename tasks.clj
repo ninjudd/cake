@@ -25,10 +25,12 @@
         bakejar (bakejar)]
     (ant Jar {:dest-file bakejar}
          (add-fileset {:dir "dev"})
-         (add-dev-jars))
+         add-dev-jars
+         execute)
     (ant Jar {:dest-file jarfile :update true}
          (add-fileset {:file bakejar})
-         (add-dev-jars))))
+         add-dev-jars
+         execute)))
 
 (deftask gem
   "Build standalone gem package."
@@ -36,14 +38,19 @@
     (if (snapshot? version)
       (println "refusing to make gem since this is a snapshot version:" version)
       (do (invoke uberjar)
-          (ant Copy {:file (uberjarfile) :tofile (file "gem/lib/cake.jar")})
-          (ant Copy {:file (bakejar)     :tofile (file "gem/lib/bake.jar")})
+          (ant Copy {:file (uberjarfile) :tofile (file "gem/lib/cake.jar")}
+               execute)
+          (ant Copy {:file (bakejar)     :tofile (file "gem/lib/bake.jar")}
+               execute)
           (ant Copy {:tofile (file "gem/lib/clojure.jar")}
-               (add-fileset {:dir "lib" :includes (clojure-jar)}))
-          (ant Copy {:file (file "bin/cake") :tofile (file "gem/bin/cake")})
+               (add-fileset {:dir "lib" :includes (clojure-jar)})
+               execute)
+          (ant Copy {:file (file "bin/cake") :tofile (file "gem/bin/cake")}
+               execute)
           (ant ExecTask {:executable "gem" :dir (file "gem")}
                (env {"CAKE_VERSION" version})
-               (args ["build" "cake.gemspec"]))))))
+               (args ["build" "cake.gemspec"])
+               execute)))))
 
 (undeftask release)
 (deftask release #{uberjar gem tag}
@@ -54,10 +61,12 @@
         jar       (format "jars/cake-%s.jar" version)]
     (with-root (file "releases")
       (git "pull"))
-    (ant Copy {:file (uberjarfile) :tofile (file "releases" jar)})
+    (ant Copy {:file (uberjarfile) :tofile (file "releases" jar)}
+         execute)
     (spit (file "releases/current") version)
     (when-not snapshot?
-      (ant Copy {:file (file "bin" "cake") :tofile (file "releases" "cake")})
+      (ant Copy {:file (file "bin" "cake") :tofile (file "releases" "cake")}
+           execute)
       (spit (file "releases/stable") version))
     (with-root (file "releases")
       (git "add" jar "cake" "current" "stable")
@@ -67,4 +76,5 @@
       (let [gem (str "cake-" version ".gem")]
         (log "Releasing gem:" gem)
         (ant ExecTask {:executable "gem" :dir (file "gem")}
-             (args ["push" gem]))))))
+             (args ["push" gem])
+             execute)))))
