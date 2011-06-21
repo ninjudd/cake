@@ -20,19 +20,50 @@
               [(file path)]))
           (absorb paths (split (re-pattern File/pathSeparator)))))
 
+(defn as-vec
+  "If its arg is a vector, returns the arg unchanged. Otherwise, returns the
+   given item in a vector. Helps you process things that are 'strings or
+   vectors of strings' uniformly."
+  [arg]
+  (if arg
+    (if (vector? arg)
+      arg
+      [arg])))
+
 (defn classpath [& paths]
   (map make-url
-       (concat (map file (into [(System/getProperty "bake.path")
-                                "src/" "src/clj/" "classes/" "resources/" "dev/" "test/" "test/classes/"]
-                               paths))
+       (concat (map file
+                    (flatten [(System/getProperty "bake.path")
+                              (or (:source-path *project*)
+                                  ["src/" "src/clj/"])
+                              (:java-source-path *project*)
+                              (:test-path *project*)
+                              (map #(str (file %) "classes")
+                                   (:test-path *project*))
+                              (:resources-path *project*)
+                              (:dev-resources-path *project*)
+                              "classes/"
+                              paths])) 
                (path-files (get *config* "project.classpath"))
-               (fileset-seq {:dir (file "lib")            :includes "*.jar"})
-               (fileset-seq {:dir (file "lib/dev")        :includes "*.jar"})
+               (apply concat
+                      (map
+                       (fn [path]
+                         (concat
+                          (fileset-seq {:dir (file path)
+                                        :includes "*.jar"})
+                          (fileset-seq {:dir (file path "dev")
+                                        :includes "*.jar"})))
+                       (:library-path *project*)))
+               ;; This is from the user's .cake dir. No setting for it.
                (fileset-seq {:dir (global-file "lib/dev") :includes "*.jar"}))))
 
 (defn ext-classpath []
   (map make-url
-       (fileset-seq {:dir "lib/ext" :includes "*.jar"})))
+       (apply concat
+              (map
+               #(fileset-seq {:dir (str (file % "ext"))
+                              :includes "*.jar"})
+               (:library-path *project*)))))
 
 (defn make-classloader [& paths]
   (when (:ext-dependencies *project*)
@@ -187,6 +218,14 @@
                :context          (symbol (or (get *config* "project.context")
                                              (:context opts)
                                              "dev"))
+               ;; Note source-path can be present but nil. Need to check for nil
+               ;; and check for existence of src/jvm to determine the src path.
+               :source-path          (as-vec (:source-path opts))
+               :java-source-path     (as-vec (or (:java-source-path opts) "src/jvm"))
+               :test-path            (as-vec (or (:test-path opts) "test/"))
+               :resources-path       (as-vec (or (:resources opts) "resources/"))
+               :library-path         (as-vec (or (:library-path opts) "lib/"))
+               :dev-resources-path   (as-vec (or (:dev-resources-path opts) "dev/"))
                :jar-name         (or (:jar-name opts) artifact-version)
                :war-name         (or (:war-name opts) artifact-version)
                :uberjar-name     (or (:uberjar-name opts) (str artifact-version "-standalone"))

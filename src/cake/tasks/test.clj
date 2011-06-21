@@ -17,10 +17,12 @@
   (with-test-classloader
     (bake (:use bake.test
                 [bake.core :only [with-context]])
-      [namespaces (find-namespaces-in-dir (java.io.File. "test"))
-       opts       (merge (test-opts) (apply hash-map opts))]
-      (with-context :test
-        (run-project-tests namespaces opts)))))
+          [namespaces
+           (flatten (for [test-path (:test-path *project*)]
+                      (find-namespaces-in-dir (java.io.File. test-path))))
+           opts       (merge (test-opts) (apply hash-map opts))]
+          (with-context :test
+            (run-project-tests namespaces opts)))))
 
 (deftask test #{compile-java}
   "Run project tests."

@@ -1,7 +1,7 @@
 (ns cake.utils
   (:use cake
         [cake.file :only [file]]
-        [uncle.core :only [ant args argline]]
+        [uncle.core :only [ant args argline execute]]
         [bake.core :only [os-name]])
   (:import (org.apache.tools.ant.taskdefs ExecTask)))
 
@@ -20,18 +20,21 @@
     (if (= "linux" (os-name))
       (ant ExecTask (assoc opts :executable "script")
 	   (argline (apply str "-q -c 'sudo -S "
-			   (interpose " " (conj arglist "' /dev/null")))))
+			   (interpose " " (conj arglist "' /dev/null"))))
+           execute)
       (ant ExecTask (assoc opts :executable "sudo")
 	   (args (apply vector "-S" arglist))))))
 
 (defn cake-exec [& params]
   (ant ExecTask {:executable "ruby" :dir *root* :failonerror true}
-       (args *script* params (str "--project=" *root*))))
+       (args *script* params (str "--project=" *root*))
+       execute))
 
 (defn git [& params]
   (if (.exists (file ".git"))
     (ant ExecTask {:executable "git" :dir *root* :failonerror true}
-      (args params))
+         (args params)
+         execute)
     (println "warning:" *root* "is not a git repository")))
 
 (defn ftime [string time]
