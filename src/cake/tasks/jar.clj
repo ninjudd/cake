@@ -74,13 +74,16 @@ can be intercepted and named for use in the body."
 
 (defn build-context []
   (ant Copy {:todir "build/jar" :overwrite true}
-       (add-zipfileset (bakepath :includes "cake.clj")))
+       (add-zipfileset (bakepath :includes "cake.clj"))
+       execute)
   (let [cake-clj "build/jar/cake.clj"
         context (current-context)
         project (project-with-context context)]
-    (ant Replace {:file cake-clj :token "(comment project)" :value (pr-str `(quote ~project))})
+    (ant Replace {:file cake-clj :token "(comment project)" :value (pr-str `(quote ~project))}
+         execute)
     (when (nil? context)
-      (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))}))))
+      (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))}
+           execute))))
 
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
@@ -99,11 +102,13 @@ can be intercepted and named for use in the body."
            (doseq [rsrc-path (:resources-path *project*)]
              (add-fileset task {:dir (file rsrc-path)})))
          (add-zipfileset {:dir (file "native") :prefix "native"})
-         (add-file-mappings (:jar-files *project*)))))
+         (add-file-mappings (:jar-files *project*))
+         execute)))
 
 (defn clean [pattern]
   (when (:clean *opts*)
-    (ant Delete {:dir (file) :includes pattern})))
+    (ant Delete {:dir (file) :includes pattern}
+         execute)))
 
 (deftask jar #{compile}
   "Build a jar file containing project source and class files."
@@ -149,7 +154,8 @@ can be intercepted and named for use in the body."
     (ant Jar {:dest-file (uberjarfile) :duplicate "preserve"}
          (add-manifest (manifest))
          (add-jars jars)
-         (add-fileset {:dir (file "build" "uberjar")}))))
+         (add-fileset {:dir (file "build" "uberjar")})
+         execute)))
 
 (deftask uberjar #{jar}
   "Create a standalone jar containing all project dependencies."
@@ -170,7 +176,8 @@ can be intercepted and named for use in the body."
             (.write bin (.getBytes unix))
             (.write bin (.getBytes dos)))
           (copy uberjar bin))
-        (ant Chmod {:file binfile :perm "+x"})))
+        (ant Chmod {:file binfile :perm "+x"}
+             execute)))
     (println "Cannot create bin without :main namespace in project.clj")))
 
 (defn warfile [] (artifact :war-name ".war"))
@@ -194,7 +201,8 @@ can be intercepted and named for use in the body."
          (with-val task
            (doseq [src-path (or (:source-path *project*) ["src"])]
              (add-fileset task {:dir (file src-path "html")})))
-         (add-file-mappings (:war-files *project*)))))
+         (add-file-mappings (:war-files *project*))
+         execute)))
 
 (deftask war #{compile}
   "Create a web archive containing project source and class files."
@@ -204,7 +212,8 @@ can be intercepted and named for use in the body."
 (defn build-uberwar []
   (ant War {:dest-file (warfile) :update true}
        (add-zipfileset {:dir (file (:library-path *project*))
-                        :prefix "WEB-INF/lib" :includes "*.jar"})))
+                        :prefix "WEB-INF/lib" :includes "*.jar"})
+       execute))
 
 (deftask uberwar #{war}
   "Create a web archive containing all project dependencies."
@@ -212,5 +221,7 @@ can be intercepted and named for use in the body."
 
 (deftask install #{jar}
   "Install jar to local repository."
-  (ant Pom {:file "pom.xml" :id "cake.pom"})
-  (ant InstallTask {:file (jarfile) :pom-ref-id "cake.pom"}))
+  (ant Pom {:file "pom.xml" :id "cake.pom"}
+       execute)
+  (ant InstallTask {:file (jarfile) :pom-ref-id "cake.pom"}
+       execute))

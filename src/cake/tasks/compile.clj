@@ -1,7 +1,7 @@
 (ns cake.tasks.compile
   (:use cake
         [cake.core :only [deftask bake]]
-        [uncle.core :only [ant add-fileset fileset-seq path classpath]]
+        [uncle.core :only [ant add-fileset fileset-seq path classpath execute]]
         [cake.file :only [file newer?]]
         [cake.project :only [reset-classloader! with-classloader]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
@@ -49,7 +49,8 @@
   (let [os-name (os-name)
         os-arch (os-arch)]
     (ant Copy {:todir (format "native/%s/%s" os-name os-arch)}
-         (add-fileset {:dir (format "build/native/%s/%s/lib" os-name os-arch)}))))
+         (add-fileset {:dir (format "build/native/%s/%s/lib" os-name os-arch)})
+         execute)))
 
 (deftask compile #{deps compile-native compile-java}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."

@@ -1,7 +1,8 @@
 (ns cake.file
   (:use cake
         [useful :only [into-map]]
-        [clojure.string :only [join]])
+        [clojure.string :only [join]]
+        uncle.core)
   (:import [org.apache.tools.ant.taskdefs Copy Move Touch Delete Mkdir]
            [java.io File]))
 
@@ -33,25 +34,37 @@
   `(binding [*root* ~root]
      ~@forms))
 
-(use 'uncle.core)
+#_(use 'uncle.core)
 
 (defn cp [from to & opts]
-  (ant Copy (into-map opts :file from :tofile to)))
+  (ant Copy
+       (into-map opts :file from :tofile to)
+       execute))
 
 (defn mv [from to & opts]
-  (ant Move (into-map opts :file from :tofile to)))
+  (ant Move
+       (into-map opts :file from :tofile to)
+       execute))
 
 (defn touch [file & opts]
-  (ant Touch (into-map opts :file file)))
+  (ant Touch
+       (into-map opts :file file)
+       execute))
 
 (defn rm [file & opts]
-  (ant Delete (into-map opts :file file)))
+  (ant Delete
+       (into-map opts :file file)
+       execute))
 
 (defn rmdir [file & opts]
-  (ant Delete (into-map opts :dir file)))
+  (ant Delete
+       (into-map opts :dir file)
+       execute))
 
 (defn mkdir [file & opts]
-  (ant Mkdir (into-map opts :dir file)))
+  (ant Mkdir
+       (into-map opts :dir file)
+       execute))
 
 (defn newer? [& args]
   (apply > (for [arg args]
