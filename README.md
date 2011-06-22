@@ -26,7 +26,7 @@ that's what we recommend.
 
 ### Git repository
 
-1. `git clone git://github.com/ninjudd/cake.git`
+1. `git clone git://github.com/flatland/cake.git`
 2. Symlink bin/cake into your path and make it executable
 
 Note: some users have reported problems with clojure and java 1.5, so you may want to make sure
