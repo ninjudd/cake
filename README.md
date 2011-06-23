@@ -2,8 +2,8 @@
 package manager, a script launcher, and a deployment tool mixed together and baked into a single,
 delicious command, `cake`.
 
-You can use `cake` with any editor, but it goes especially well with [emacs](http://github.com/ninjudd/cake/wiki/emacs),
-[vi](http://github.com/ninjudd/cake/wiki/vi), and [textmate](http://github.com/ninjudd/cake/wiki/textmate).
+You can use `cake` with any editor, but it goes especially well with [emacs](http://github.com/flatland/cake/wiki/emacs),
+[vi](http://github.com/flatland/cake/wiki/vi), and [textmate](http://github.com/flatland/cake/wiki/textmate).
 `cake` is cross-platform. It works on OS X, Linux and Windows. Also, unlike most other JVM-based
 command line tools, it is fast!
 
@@ -16,7 +16,7 @@ On OS X with homebrew, you can install cake by running this command:
     brew install cake
 
 That's it. Or if you don't have [homebrew](http://mxcl.github.com/homebrew/) or you're not on OS X, 
-try one of the [other installation methods](https://github.com/ninjudd/cake/wiki/install).
+try one of the [other installation methods](https://github.com/flatland/cake/wiki/install).
 
 ## Getting Started
 
@@ -58,7 +58,7 @@ If you don't yet have a project.clj file, creating one is simple. Here's an exam
 
 ## Documentation
 
-For more detailed documentation, see the [wiki](https://github.com/ninjudd/cake/wiki).
+For more detailed documentation, see the [wiki](https://github.com/flatland/cake/wiki).
 
 ## Contributors
 
