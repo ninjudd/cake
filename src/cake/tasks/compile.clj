@@ -23,7 +23,8 @@
                          :debug-level "source,lines"
                          :target      "1.5"
                          :failonerror true}
-                        (:java-compile *project*))))
+                        (:java-compile *project*))
+           execute))
     (when (some #(newer? % start) (file-seq (file "classes")))
       (reset-classloaders!))))
 
