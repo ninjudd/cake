@@ -25,7 +25,7 @@
   (when (= ["deps"] (:clean *opts*))
     (clean-dir (file "lib"))
     (ant Delete {:verbose true}
-         (add-fileset {:dir (file) :includes "pom.xml"})))
+      (add-fileset {:dir (file) :includes "pom.xml"})))
   (reset-classloaders!))
 
 (deftask file
