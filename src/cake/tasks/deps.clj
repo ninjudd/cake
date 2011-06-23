@@ -21,15 +21,15 @@
 (defn add-license [task attrs]
   (when attrs
     (.addConfiguredLicense task
-      (ant* License attrs))))
+      (ant-type License attrs))))
 
 (defn add-repositories [task repositories]
   (doseq [[id url] repositories]
     (.addConfiguredRemoteRepository task
-      (ant* RemoteRepository {:id id :url url}))))
+      (ant-type RemoteRepository {:id id :url url}))))
 
 (defn exclusion [dep]
-  (ant* Exclusion {:group-id (group dep) :artifact-id (name dep)}))
+  (ant-type Exclusion {:group-id (group dep) :artifact-id (name dep)}))
 
 (defn- add-dep [task dep]
   (if (instance? Pom task)
@@ -39,7 +39,7 @@
 (defn add-dependencies [task deps]
   (doseq [[dep opts] deps]
     (add-dep task
-      (ant* Dependency
+      (ant-type Dependency
         {:group-id    (group dep)
          :artifact-id (name dep)
          :version     (:version opts)
@@ -67,22 +67,18 @@
 (defn extract-native [jars dest]
   (doseq [jar jars]
     (ant Copy {:todir (str dest "/native") :flatten true}
-         (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))})
-         execute)
+      (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))
     (ant Copy {:todir dest :flatten true}
-         (add-zipfileset {:src jar :includes "lib/*.jar" })
-         execute)))
+      (add-zipfileset {:src jar :includes "lib/*.jar" }))))
 
 (defn fetch [deps dest]
   (when (seq deps)
     (let [ref-id (str "cake.deps.fileset." (.getName dest))]
       (ant DependenciesTask {:fileset-id ref-id :path-id (:name *project*)}
-           (add-repositories (into repositories (:repositories *project*)))
-           (add-dependencies deps)
-           execute)
+        (add-repositories (into repositories (:repositories *project*)))
+        (add-dependencies deps))
       (ant Copy {:todir dest :flatten true}
-           (.addFileset (get-reference ref-id))
-           execute)))
+        (.addFileset (get-reference ref-id)))))
   (extract-native
    (fileset-seq {:dir dest :includes "*.jar"})
    dest))
@@ -163,11 +159,8 @@
   (binding [*exclusions* ['clojure 'clojure-contrib]]
     (fetch (:dev-dependencies *project*) (file "build/lib/dev")))
   (when (.exists (file "build/lib"))
-    (ant Delete {:dir (first (:library-path *project*))}
-         execute)
-    (ant Move {:file "build/lib" :tofile (first (:library-path *project*))
-               :verbose true}
-         execute))
+    (ant Delete {:dir (first (:library-path *project*))})
+    (ant Move {:file "build/lib" :tofile (first (:library-path *project*)) :verbose true}))
   (invoke clean {}))
 
 (defn stale-deps? [deps-str deps-file]

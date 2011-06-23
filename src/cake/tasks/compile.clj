@@ -1,7 +1,7 @@
 (ns cake.tasks.compile
   (:use cake
         [cake.core :only [deftask bake]]
-        [uncle.core :only [ant add-fileset fileset-seq path classpath execute]]
+        [uncle.core :only [ant add-fileset fileset-seq path classpath]]
         [cake.file :only [file newer?]]
         [cake.project :only [reset-classloaders! with-classloader]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
@@ -23,8 +23,7 @@
                          :debug-level "source,lines"
                          :target      "1.5"
                          :failonerror true}
-                        (:java-compile *project*))
-           execute))
+                        (:java-compile *project*))))
     (when (some #(newer? % start) (file-seq (file "classes")))
       (reset-classloaders!))))
 
@@ -50,8 +49,7 @@
   (let [os-name (os-name)
         os-arch (os-arch)]
     (ant Copy {:todir (format "native/%s/%s" os-name os-arch)}
-         (add-fileset {:dir (format "build/native/%s/%s/lib" os-name os-arch)})
-         execute)))
+         (add-fileset {:dir (format "build/native/%s/%s/lib" os-name os-arch)}))))
 
 (deftask compile #{deps compile-native compile-java}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
@@ -66,7 +64,7 @@
       (compile-clojure (source-dir) jar-classes [(:main *project*)]))))
 
 ;; add actions to compile-native if you need to compile native libraries
-;; see http://github.com/lancepantz/tokyocabinet for an example
+;; see http://github.com/flatland/tokyocabinet for an example
 (deftask compile-native)
 
 (deftask install-native #{compile-native}

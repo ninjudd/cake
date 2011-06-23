@@ -64,41 +64,36 @@
 
 (defn build-context []
   (ant Copy {:todir "build/jar" :overwrite true}
-       (add-zipfileset (bakepath :includes "cake.clj"))
-       execute)
+       (add-zipfileset (bakepath :includes "cake.clj")))
   (let [cake-clj "build/jar/cake.clj"
         context (current-context)
         project (project-with-context context)]
-    (ant Replace {:file cake-clj :token "(comment project)" :value (pr-str `(quote ~project))}
-         execute)
+    (ant Replace {:file cake-clj :token "(comment project)" :value (pr-str `(quote ~project))})
     (when (nil? context)
-      (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))}
-           execute))))
+      (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))}))))
 
 (defn build-jar []
   (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
         cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))]
     (when (:bake *project*)
       (build-context))
-    (let [task
-          (ant Jar {:dest-file (jarfile)}
-               (add-manifest (manifest))
-               (add-license)
-               (add-source-files)
-               (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
-               (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
-               (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
-               (add-fileset    {:dir (file "build" "jar")})
-               (add-zipfileset {:dir (file "native") :prefix "native"})
-               (add-file-mappings (:jar-files *project*)))]
+    (let [task (ant-type Jar {:dest-file (jarfile)}
+                 (add-manifest (manifest))
+                 (add-license)
+                 (add-source-files)
+                 (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
+                 (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
+                 (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
+                 (add-fileset    {:dir (file "build" "jar")})
+                 (add-zipfileset {:dir (file "native") :prefix "native"})
+                 (add-file-mappings (:jar-files *project*)))]
       (doseq [rsrc-path (:resources-path *project*)]
         (add-fileset task {:dir (file rsrc-path)}))
       (execute task))))
 
 (defn clean [pattern]
   (when (:clean *opts*)
-    (ant Delete {:dir (file) :includes pattern}
-         execute)))
+    (ant Delete {:dir (file) :includes pattern})))
 
 (deftask jar #{compile}
   "Build a jar file containing project source and class files."
@@ -144,8 +139,7 @@
     (ant Jar {:dest-file (uberjarfile) :duplicate "preserve"}
          (add-manifest (manifest))
          (add-jars jars)
-         (add-fileset {:dir (file "build" "uberjar")})
-         execute)))
+         (add-fileset {:dir (file "build" "uberjar")}))))
 
 (deftask uberjar #{jar}
   "Create a standalone jar containing all project dependencies."
@@ -166,8 +160,7 @@
             (.write bin (.getBytes unix))
             (.write bin (.getBytes dos)))
           (copy uberjar bin))
-        (ant Chmod {:file binfile :perm "+x"}
-             execute)))
+        (ant Chmod {:file binfile :perm "+x"})))
     (println "Cannot create bin without :main namespace in project.clj")))
 
 (defn warfile [] (artifact :war-name ".war"))
@@ -176,16 +169,15 @@
   (let [web     "WEB-INF"
         classes (str web "/classes")]
     (build-context)
-    (let [task
-          (ant War {:dest-file (warfile)}
-               (add-manifest (manifest))
-               (add-license)
-               (add-source-files "WEB-INF/classes")
-               (add-zipfileset {:dir (file "src")         :prefix web     :includes "*web.xml"})
-               (add-zipfileset {:dir (file "classes")     :prefix classes :includes "**/*.class"})
-               (add-zipfileset {:dir (file "build" "jar") :prefix classes})
-               (add-fileset    {:dir (file "build" "war")})
-               (add-file-mappings (:war-files *project*)))]
+    (let [task (ant-type War {:dest-file (warfile)}
+                 (add-manifest (manifest))
+                 (add-license)
+                 (add-source-files "WEB-INF/classes")
+                 (add-zipfileset {:dir (file "src")         :prefix web     :includes "*web.xml"})
+                 (add-zipfileset {:dir (file "classes")     :prefix classes :includes "**/*.class"})
+                 (add-zipfileset {:dir (file "build" "jar") :prefix classes})
+                 (add-fileset    {:dir (file "build" "war")})
+                 (add-file-mappings (:war-files *project*)))]
       (doseq [rsrc-path (:resources-path *project*)]
         (add-zipfileset task {:dir (file rsrc-path)
                               :prefix classes :includes "**/*"}))
@@ -201,8 +193,7 @@
 (defn build-uberwar []
   (ant War {:dest-file (warfile) :update true}
        (add-zipfileset {:dir (file (:library-path *project*))
-                        :prefix "WEB-INF/lib" :includes "*.jar"})
-       execute))
+                        :prefix "WEB-INF/lib" :includes "*.jar"})))
 
 (deftask uberwar #{war}
   "Create a web archive containing all project dependencies."
@@ -210,7 +201,5 @@
 
 (deftask install #{jar}
   "Install jar to local repository."
-  (ant Pom {:file "pom.xml" :id "cake.pom"}
-       execute)
-  (ant InstallTask {:file (jarfile) :pom-ref-id "cake.pom"}
-       execute))
+  (ant Pom {:file "pom.xml" :id "cake.pom"})
+  (ant InstallTask {:file (jarfile) :pom-ref-id "cake.pom"}))

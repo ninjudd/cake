@@ -36,33 +36,27 @@
 
 (defn cp [from to & opts]
   (ant Copy
-       (into-map opts :file from :tofile to)
-       execute))
+    (into-map opts :file from :tofile to)))
 
 (defn mv [from to & opts]
   (ant Move
-       (into-map opts :file from :tofile to)
-       execute))
+    (into-map opts :file from :tofile to)))
 
 (defn touch [file & opts]
   (ant Touch
-       (into-map opts :file file)
-       execute))
+    (into-map opts :file file)))
 
 (defn rm [file & opts]
   (ant Delete
-       (into-map opts :file file)
-       execute))
+    (into-map opts :file file)))
 
 (defn rmdir [file & opts]
   (ant Delete
-       (into-map opts :dir file)
-       execute))
+    (into-map opts :dir file)))
 
 (defn mkdir [file & opts]
   (ant Mkdir
-       (into-map opts :dir file)
-       execute))
+    (into-map opts :dir file)))
 
 (defn newer? [& args]
   (apply > (for [arg args]

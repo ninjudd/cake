@@ -41,8 +41,7 @@
   (let [new-version (if (= "bump" action) (version-str (bump)) action)]
     (ant Replace {:file "project.clj"
                   :token (defline (:version *project*))
-                  :value (defline new-version)}
-         execute)
+                  :value (defline new-version)})
     new-version))
 
 (deftask version
