@@ -6,11 +6,11 @@
   (:import [org.apache.tools.ant.taskdefs Copy Move Touch Delete Mkdir]
            [java.io File]))
 
-(defn- expand-path [path]
-  (let [root (or (first path) "")]
-    (cond (instance? File root)  (cons (.getPath root) (rest path))
-          (.startsWith root "/") path
-          (.startsWith root "~") (cons (.replace root "~" (System/getProperty "user.home")) (rest path))
+(defn- expand-path [root path]
+  (let [root (or root "")]
+    (cond (instance? File root)  (cons (.getPath root) path)
+          (.startsWith root "/") (cons root path)
+          (.startsWith root "~") (cons (.replace root "~" (System/getProperty "user.home")) path)
           :else                  (cons *root* path))))
 
 (defn- substitute-context [path]
@@ -18,14 +18,18 @@
     (.replace (str path) "+context+" (name context))
     path))
 
-(defn file-name [& path]
+(defn file-name [root & path]
   (join (File/separator)
-        (map substitute-context (expand-path path))))
+        (map substitute-context (expand-path root path))))
 
 (defn file
   "Create a File object from a string or seq"
-  [& path]
-  (File. (apply file-name path)))
+  ([root]
+     (if (instance? File root)
+       root
+       (File. (file-name root))))
+  ([root & path]
+     (File. (apply file-name root path))))
 
 (defn global-file [& path]
   (apply file *global-root* path))
