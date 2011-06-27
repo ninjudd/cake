@@ -1,9 +1,9 @@
 (ns cake.tasks.compile
   (:use cake
-        [cake.core :only [deftask bake]]
-        [uncle.core :only [ant add-fileset fileset-seq path classpath]]
+        [cake.core :only [deftask bake invoke]]
+        [uncle.core :only [ant add-fileset fileset-seq]]
         [cake.file :only [file newer?]]
-        [cake.project :only [reset-classloaders! with-classloader]]
+        [cake.project :only [reset-classloaders! with-classloader classpath]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
         [cake.utils :only [sudo prompt-read]]
         [useful :only [pluralize]])
@@ -16,7 +16,7 @@
     (when (.exists src)
       (ant Javac (merge {:destdir     (file "classes")
                          :classpath   (classpath)
-                         :srcdir      (path src)
+                         :srcdir      src
                          :fork        true
                          :verbose     (verbose?)
                          :debug       true
@@ -27,7 +27,7 @@
     (when (some #(newer? % start) (file-seq (file "classes")))
       (reset-classloaders!))))
 
-(deftask compile-java #{deps compile-native}
+(deftask compile-java #{compile-native}
   (copy-native)
   (doseq [jsrc-path (:java-source-path *project*)]
     (compile-java (file jsrc-path))))
@@ -51,8 +51,10 @@
     (ant Copy {:todir (format "native/%s/%s" os-name os-arch)}
          (add-fileset {:dir (format "build/native/%s/%s/lib" os-name os-arch)}))))
 
-(deftask compile #{deps compile-native compile-java}
+(deftask compile #{compile-native compile-java}
   "Compile all clojure and java source files. Use 'cake compile force' to recompile."
+  (when (= "force" (first (:compile *opts*)))
+    (invoke clean {}))
   (let [jar-classes (file "build" "jar")]
     (.mkdirs jar-classes)
     (with-classloader [jar-classes]

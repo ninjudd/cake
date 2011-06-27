@@ -1,5 +1,6 @@
 (ns cake.tasks.jar
   (:use cake cake.core cake.file uncle.core
+        [depot.deps :only [publish]]
         [bake.core :only [current-context log project-with-context]]
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
@@ -81,8 +82,8 @@
                  (add-manifest (manifest))
                  (add-license)
                  (add-source-files)
-                 (add-zipfileset {:dir (file) :prefix maven :includes "pom.xml"})
-                 (add-zipfileset {:dir (file) :prefix cake  :includes "*.clj"})
+                 (add-zipfileset {:dir (file ".") :prefix maven :includes "pom.xml"})
+                 (add-zipfileset {:dir (file ".") :prefix cake  :includes "*.clj"})
                  (add-fileset    {:dir (file "classes")     :includes "**/*.class"})
                  (add-fileset    {:dir (file "build" "jar")})
                  (add-zipfileset {:dir (file "native") :prefix "native"})
@@ -201,5 +202,4 @@
 
 (deftask install #{jar}
   "Install jar to local repository."
-  (ant Pom {:file "pom.xml" :id "cake.pom"})
-  (ant InstallTask {:file (jarfile) :pom-ref-id "cake.pom"}))
+  (publish *project* (jarfile) (file "pom.xml")))

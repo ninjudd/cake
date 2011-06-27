@@ -11,7 +11,7 @@
     (cond (instance? File root)  (cons (.getPath root) path)
           (.startsWith root "/") (cons root path)
           (.startsWith root "~") (cons (.replace root "~" (System/getProperty "user.home")) path)
-          :else                  (cons *root* path))))
+          :else                  (list* *root* root path))))
 
 (defn- substitute-context [path]
   (if-let [context (:context *project*)]
@@ -30,6 +30,9 @@
        (File. (file-name root))))
   ([root & path]
      (File. (apply file-name root path))))
+
+(defn file-exists? [& path]
+  (.exists (apply file path)))
 
 (defn global-file [& path]
   (apply file *global-root* path))

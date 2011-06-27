@@ -1,11 +1,10 @@
 (ns bake.reload
   "Try to reload files that have changed since the last reload. Adapted from Stuart Sierra's lazytest."
   (:use cake
-        [clojure.set :only [difference]]
         [bake.core :only [in-project-classloader?]]
         [bake.dependency :only [graph]]
         [bake.nsdeps :only [newer-namespace-decls newer-than update-dependency-graph affected-namespaces]]
-        [clojure.set :only [union]])
+        [clojure.set :only [union difference]])
   (:import (java.io File)))
 
 (defn classfile [ns]
@@ -18,6 +17,7 @@
 (defn reload-namespaces
   "Remove all specified namespaces then reload them."
   [& symbols]
+  (prn :reloading symbols)
   (doseq [sym symbols]
     (remove-ns sym))
   (dosync (alter @#'clojure.core/*loaded-libs* difference (set symbols)))

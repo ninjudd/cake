@@ -1,6 +1,7 @@
 (ns cake.project
   (:use cake
-        [classlojure :only [wrap-ext-classloader classlojure eval-in get-classpath]]
+        [cake.deps :only [deps]]
+        [classlojure :only [wrap-ext-classloader classlojure eval-in get-classpath base-classloader append-classpath!]]
         [bake.core :only [debug?]]
         [cake.file :only [file global-file]]
         [uncle.core :only [fileset-seq]]
@@ -17,8 +18,8 @@
 
 (defn- path-files [path]
   (when path
-    (cond (string?     path) (map path-file (split path (re-pattern File/pathSeparator)))
-          (sequential? path) (map path-file path)
+    (cond (string?     path) (mapcat path-file (split path (re-pattern File/pathSeparator)))
+          (sequential? path) (mapcat path-file path)
           :else              (path-file path))))
 
 (defn- to-urls [path]
@@ -29,16 +30,17 @@
 
 (defn classpath [& paths]
   (mapcat to-urls [(System/getProperty "bake.path")
-                   (map *project* [:source-path :java-source-path :test-path
-                                   :resources-path :dev-resources-path
-                                   :library-path :dev-library-path
-                                   :compile-path :test-compile-path])
+                   (mapcat *project* [:source-path :java-source-path :test-path
+                                      :resources-path :dev-resources-path
+                                      :compile-path :test-compile-path])
+                   (deps :dependencies)
+                   (deps :dev-dependencies)
                    (get *config* "project.classpath")
                    (global-file "lib/dev")
                    paths]))
 
 (defn ext-classpath []
-  (mapcat to-urls (:ext-library-path *project*)))
+  (mapcat to-urls (deps :ext-dependencies)))
 
 (defn make-classloader [& paths]
   (when (:ext-dependencies *project*)
@@ -57,6 +59,10 @@
 
 (defonce *classloader* nil)
 (defonce test-classloader nil)
+
+(defn append-dev-dependencies! []
+  (apply append-classpath! base-classloader
+         (mapcat to-urls (deps :dev-dependencies))))
 
 (defn reset-classloader! []
   (alter-var-root #'*classloader*
@@ -122,7 +128,6 @@
 
 ;; TODO: this function is insane. make it sane.
 (defn project-eval [ns-forms bindings body]
-  (reload)
   (let [[let-bindings object-bindings] (separate-bindings bindings)
         temp-ns (gensym "bake")
         form
@@ -163,7 +168,8 @@
   (let [[deps default-opts] (split-with (complement keyword?) deps)]
     (into {}
           (for [[dep version & opts] deps]
-            [dep (into-map :version version default-opts opts)]))))
+            (let [dep (symbol (group dep) (name dep))]
+              [dep (into-map :version version default-opts opts)])))))
 
 (defmulti get-version identity)
 

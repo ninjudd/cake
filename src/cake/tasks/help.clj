@@ -48,7 +48,7 @@
         (print-task name [] doc)))
     (list-tasks (re-pattern name) false)))
 
-(deftask help #{deps}
+(deftask help
   "Print tasks with documentation. Use 'cake help TASK' for more details."
   "Use -s to list system tasks and -a to list all tasks, including those without documentation."
   (if-let [tasks (:help *opts*)]
