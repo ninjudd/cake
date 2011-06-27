@@ -1,5 +1,5 @@
 (ns cake.tasks.ng
-  (:use cake cake.core [useful :only [if-ns]]))
+  (:use cake cake.core [useful.utils :only [if-ns]]))
 
 (if-ns (:import vimclojure.nailgun.NGServer)
   (do

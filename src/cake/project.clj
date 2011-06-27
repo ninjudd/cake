@@ -6,7 +6,7 @@
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [useful :only [update merge-in into-map absorb]]
+        [useful.map :only [update merge-in into-map]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
@@ -18,7 +18,8 @@
             (if-let [[_ path] (re-matches #"(.*)/\*" path)]
               (fileset-seq {:dir path :includes "*.jar"})
               [(file path)]))
-          (absorb paths (split (re-pattern File/pathSeparator)))))
+          (when paths
+            (split paths (re-pattern File/pathSeparator)))))
 
 (defn as-vec
   "If its arg is a vector, returns the arg unchanged. Otherwise, returns the
@@ -43,7 +44,7 @@
                               (:resources-path *project*)
                               (:dev-resources-path *project*)
                               "classes/"
-                              paths])) 
+                              paths]))
                (path-files (get *config* "project.classpath"))
                (apply concat
                       (map

@@ -1,7 +1,8 @@
 (ns cake.core
   (:use cake cake.task
         [cake.file :only [mkdir]]
-        [useful :only [update into-map verify merge-in syntax-quote]]
+        [useful.map :only [update into-map merge-in]]
+        [useful.utils :only [verify syntax-quote]]
         [clojure.contrib.condition :only [raise]]
         [clojure.string :only [join]]
         [bake.core :only [force?]])

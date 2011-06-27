@@ -4,7 +4,8 @@
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
         [cake.tasks.compile :only [source-dir]]
-        [useful :only [absorb verify into-map]])
+        [useful.utils :only [verify]]
+        [useful.map :only [into-map]])
   (:require [clojure.xml :as xml])
   (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Replace]
            [org.apache.tools.ant.types FileSet ZipFileSet]
@@ -27,7 +28,8 @@
           "Built-By"   (System/getProperty "user.name")
           "Build-Jdk"  (System/getProperty "java.version")
           "Class-Path" (:jar-classpath *project*)
-          "Main-Class" (absorb (:main *project*) (-> str (.replaceAll "-" "_")))}))
+          "Main-Class" (when-let [main (:main *project*)]
+                         (-> main str (.replaceAll "-" "_")))}))
 
 (defn add-license [task]
   (add-fileset task {:file (file "LICENSE")}))
