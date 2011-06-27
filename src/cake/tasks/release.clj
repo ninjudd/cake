@@ -16,8 +16,9 @@
     (list (if (.startsWith identity "/")
             (file identity)
             (file "~/.ssh" identity)))
-    (for [id (list "id_rsa" "id_dsa" "identity") :let [keyfile (file "~/.ssh" id)] :when (.exists keyfile)]
-      keyfile)))
+    (filter #(.exists %)
+            (for [id ["id_rsa" "id_dsa" "identity"]]
+              (file "~/.ssh" id)))))
 
 (defn- log-auth [username host keyfile message]
   (when (verbose?)
