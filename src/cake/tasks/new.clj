@@ -10,7 +10,8 @@
 (def default-template
 "(defproject +project+ \"0.0.1-SNAPSHOT\"
   :description \"TODO: add summary of your project\"
-  :dependencies [[clojure \"1.2.0\"]])
+  :dependencies [[clojure \"1.2.0\"]]
+  :copy-deps true)
 ")
 
 (def template-dir (file "~" ".cake" "templates"))
