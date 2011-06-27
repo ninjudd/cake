@@ -86,7 +86,7 @@
 (defmacro ssh-session [opts & forms]
   `(ssh-session* ~opts ~@(map (partial list 'fn []) forms)))
 
-(defn log-host [& message]  
+(defn log-host [& message]
   (apply log (format "[%s]" (.getHost *session*)) message))
 
 (defn copy-to-log [out]
