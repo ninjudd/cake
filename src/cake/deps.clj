@@ -5,7 +5,7 @@
         [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]]
         [clojure.string :only [split]]
-        [useful :only [map-to]])
+        [useful.map :only [map-to]])
   (:require depot.maven
             [depot.deps :as depot])
   (:import [org.apache.tools.ant.taskdefs Copy Delete]))
