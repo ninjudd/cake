@@ -5,7 +5,6 @@
                  [uncle "0.2.3"]
                  [depot "0.1.0"]
                  [classlojure "0.5.1"]
-                 [clojure-useful "0.3.8"]
+                 [useful "0.4.0"]
                  [com.jcraft/jsch "0.1.42"]]
   :copy-deps true)
-

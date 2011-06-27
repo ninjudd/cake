@@ -7,7 +7,7 @@
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [useful :only [update merge-in into-map absorb]]
+        [useful.map :only [update merge-in into-map]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
@@ -224,4 +224,3 @@
         (assoc-path :dev-library-path   :library-path "dev")
         (assoc-path :ext-library-path   :library-path "ext")
         (assoc-path :test-compile-path  :test-path    "classes"))))
-

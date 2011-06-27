@@ -5,7 +5,7 @@
         [clojure.main :only [skip-whitespace]]
         [bake.io :only [with-streams]]
         [bake.reload :only [reload]]
-        [useful :only [if-ns]])
+        [useful.utils :only [if-ns]])
   (:require [cake.utils.server-socket :as server-socket]
             [bake.complete :as complete])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream

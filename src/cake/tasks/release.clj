@@ -3,8 +3,9 @@
         [bake.core :only [verbose? debug? log]]
         [cake.tasks.jar :only [jarfile uberjarfile warfile]]
         [clojure.java.io :only [reader copy]]
-        [useful :only [verify assoc-or]]
-	[cake.utils :only [prompt-read]])
+        [useful.utils :only [verify]]
+        [useful.map :only [assoc-or]]
+        [cake.utils :only [prompt-read]])
   (:import [com.jcraft.jsch JSch ChannelExec Logger UserInfo JSchException UIKeyboardInteractive]
            [java.io FileInputStream]))
 
@@ -16,8 +17,9 @@
     (list (if (.startsWith identity "/")
             (file identity)
             (file "~/.ssh" identity)))
-    (for [id (list "id_rsa" "id_dsa" "identity") :let [keyfile (file "~/.ssh" id)] :when (.exists keyfile)]
-      keyfile)))
+    (filter #(.exists %)
+            (for [id ["id_rsa" "id_dsa" "identity"]]
+              (file "~/.ssh" id)))))
 
 (defn- log-auth [username host keyfile message]
   (when (verbose?)
@@ -85,7 +87,7 @@
 (defmacro ssh-session [opts & forms]
   `(ssh-session* ~opts ~@(map (partial list 'fn []) forms)))
 
-(defn log-host [& message]  
+(defn log-host [& message]
   (apply log (format "[%s]" (.getHost *session*)) message))
 
 (defn copy-to-log [out]
