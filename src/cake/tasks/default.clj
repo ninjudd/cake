@@ -2,6 +2,6 @@
   (:use cake.core))
 
 (require-tasks [cake.tasks help jar test ng compile deps release swank file
-		version eval bake check clojars])
+		version eval bake check clojars docs])
 
 (deftask default #{help})

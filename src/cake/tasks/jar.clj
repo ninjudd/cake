@@ -192,9 +192,11 @@
   (build-war))
 
 (defn build-uberwar []
-  (ant War {:dest-file (warfile) :update true}
-       (add-zipfileset {:dir (file (:library-path *project*))
-                        :prefix "WEB-INF/lib" :includes "*.jar"})))
+  (let [task (ant-type War {:dest-file (warfile) :update true})]
+    (doseq [path (:library-path *project*)]
+      (add-zipfileset task {:dir (file path)
+                            :prefix "WEB-INF/lib" :includes "*.jar"}))
+    (execute task)))
 
 (deftask uberwar #{war}
   "Create a web archive containing all project dependencies."
