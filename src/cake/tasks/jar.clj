@@ -136,17 +136,17 @@
     (add-zipfileset task {:src jar :excludes "META-INF/**/*"})
     (add-zipfileset task {:src jar :includes "META-INF/**/*" :prefix (str "META-INF/" name)})))
 
-(defn build-uberjar [jars]
+(defn build-uberjar [jarfile jars]
   (let [plexus-components (file "build/uberjar/META-INF/plexus/components.xml")]
     (merge-plexus-components jars plexus-components)
-    (ant Jar {:dest-file (uberjarfile) :duplicate "preserve"}
+    (ant Jar {:dest-file jarfile :duplicate "preserve"}
          (add-manifest (manifest))
          (add-jars jars)
          (add-fileset {:dir (file "build" "uberjar")}))))
 
 (deftask uberjar #{jar}
   "Create a standalone jar containing all project dependencies."
-  (build-uberjar (jars)))
+  (build-uberjar (uberjarfile) (jars)))
 
 (deftask bin #{uberjar}
   "Create a standalone console executable for your project."
@@ -193,8 +193,8 @@
   (clean "*.war")
   (build-war))
 
-(defn build-uberwar []
-  (let [task (ant-type War {:dest-file (warfile) :update true})]
+(defn build-uberwar [warfile]
+  (let [task (ant-type War {:dest-file warfile :update true})]
     (doseq [path (:library-path *project*)]
       (add-zipfileset task {:dir (file path)
                             :prefix "WEB-INF/lib" :includes "*.jar"}))
@@ -202,7 +202,7 @@
 
 (deftask uberwar #{war}
   "Create a web archive containing all project dependencies."
-  (build-uberwar))
+  (build-uberwar (warfile)))
 
 (deftask install #{jar}
   "Install jar to local repository."
