@@ -8,6 +8,7 @@ require 'io/wait'
 require 'pp'
 
 CLOJURE = "1.2.0"
+STABLE  = "0.6.3"
 
 if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   begin
@@ -265,15 +266,6 @@ end
 
 def get(repo, source_jar, dest_jar = source_jar)
   download("#{repo}/#{source_jar}", "#{$m2}/#{dest_jar}")
-end
-
-def stable_version
-  if File.exists?($version_file)
-    IO.read($version_file)
-  else
-    version = open("#{$releases}/stable").gets.chomp
-    File.open(version_file, "w") {|f| f.write(version)}
-  end
 end
 
 def newer?(file1, file2)
@@ -564,17 +556,16 @@ end
 #==================================
 
 parse_opts!
-$script       = File.expand_path($opts[:run].first) if $opts[:run]
-$pwd          = Dir.getwd
-$project      = project_dir($pwd)
-$file         = File.expand_path(__FILE__)
-$cakedir      = File.dirname(File.dirname(File.expand_path(readlink($file), File.dirname($file))))
-$releases     = "http://releases.clojure-cake.org"
-$m2           = "#{$home}/.m2/repository"
-$version_file = "#{$home}/.cake/stable_version"
-$config       = Configuration.new("#{$home}/.cake/config", "cake.config", ".cake/config")
-$vars         = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
-$timeout      = ($config['connect.timeout'] || 20).to_i
+$script   = File.expand_path($opts[:run].first) if $opts[:run]
+$pwd      = Dir.getwd
+$project  = project_dir($pwd)
+$file     = File.expand_path(__FILE__)
+$cakedir  = File.dirname(File.dirname(File.expand_path(readlink($file), File.dirname($file))))
+$releases = "http://releases.clojure-cake.org"
+$m2       = "#{$home}/.m2/repository"
+$config   = Configuration.new("#{$home}/.cake/config", "cake.config", ".cake/config")
+$vars     = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
+$timeout  = ($config['connect.timeout'] || 20).to_i
 
 initialize_cake_dirs
 Dir.chdir($project)
@@ -602,7 +593,7 @@ else
   log(:cake, "running from ~/.m2") if verbose?
   download("#{$releases}/cake", __FILE__) if $command == :upgrade
 
-  $version = stable_version
+  $version = STABLE
   clojure  = get("http://build.clojure.org/releases", "org/clojure/clojure/#{CLOJURE}/clojure-#{CLOJURE}.jar")
   cakejar  = get($releases, "jars/cake-#{$version}.jar", "cake/cake/#{$version}/cake-#{$version}.jar")
   bakejar  = get($releases, "jars/bake-#{$version}.jar", "bake/bake/#{$version}/bake-#{$version}.jar")
