@@ -82,7 +82,9 @@
 
 (defn reload []
   (when *classloader*
-    (eval-in *classloader* '(bake.reload/reload))))
+    (eval-in *classloader* '(bake.reload/reload)))
+  (when test-classloader
+    (eval-in test-classloader '(bake.reload/reload))))
 
 (defmacro with-classloader [paths & forms]
   `(binding [*classloader* (make-classloader ~@paths)]

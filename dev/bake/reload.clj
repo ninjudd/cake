@@ -17,7 +17,6 @@
 (defn reload-namespaces
   "Remove all specified namespaces then reload them."
   [& symbols]
-  (prn :reloading symbols)
   (doseq [sym symbols]
     (remove-ns sym))
   (dosync (alter @#'clojure.core/*loaded-libs* difference (set symbols)))
