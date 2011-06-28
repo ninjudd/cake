@@ -148,7 +148,7 @@
     :war     (warfile)
     file))
 
-(deftask release #{jar}
+(deftask release #{jar pom}
   "Release project jar (to clojars by default)."
   (let [release  (:release *project*)
         files    (or (:files    release) [:jar "pom.xml"])

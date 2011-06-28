@@ -204,6 +204,6 @@
   "Create a web archive containing all project dependencies."
   (build-uberwar (warfile)))
 
-(deftask install #{jar}
+(deftask install #{jar pom}
   "Install jar to local repository."
   (publish *project* (jarfile) (file "pom.xml")))
