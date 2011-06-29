@@ -2,7 +2,7 @@
   (:use cake
         [cake.core :only [deftask bake invoke]]
         [uncle.core :only [ant add-fileset fileset-seq]]
-        [cake.file :only [file newer?]]
+        [cake.file :only [file newer? mkdir]]
         [cake.project :only [reset-classloaders! with-classloader classpath]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
         [cake.utils :only [sudo prompt-read]]
@@ -11,39 +11,33 @@
 
 (declare copy-native)
 
-(defn compile-java [src]
-  (let [start (System/currentTimeMillis)]
-    (when (.exists src)
-      (ant Javac (merge {:destdir     (file "classes")
-                         :classpath   (classpath)
-                         :srcdir      src
-                         :fork        true
-                         :verbose     (verbose?)
-                         :debug       true
-                         :debug-level "source,lines"
-                         :target      "1.5"
-                         :failonerror true}
-                        (:java-compile *project*))))
-    (when (some #(newer? % start) (file-seq (file "classes")))
+(defn compile-java [src & [dest]]
+  (let [start (System/currentTimeMillis)
+        dest  (file (or dest (first (:compile-path *project*))))]
+    (ant Javac (merge {:destdir     dest
+                       :classpath   (classpath)
+                       :srcdir      src
+                       :fork        true
+                       :verbose     (verbose?)
+                       :debug       true
+                       :debug-level "source,lines"
+                       :target      "1.5"
+                       :failonerror true}
+                      (:java-compile *project*)))
+    (when (some #(newer? % start) (file-seq dest))
       (reset-classloaders!))))
 
 (deftask compile-java #{compile-native}
   (copy-native)
-  (doseq [jsrc-path (:java-source-path *project*)]
-    (compile-java (file jsrc-path))))
-
-(defn source-dir []
-  (or (:source-dir *project*)
-      (let [src (file "src" "clj")]
-        (if (.exists src) src (file "src")))))
+  (compile-java (:source-path *project*)))
 
 (defn compile-clojure [source-path compile-path namespaces]
-  (.mkdirs compile-path)
+  (mkdir compile-path)
   (bake (:use [bake.compile :only [compile-stale]])
-        [source-path  (.getPath source-path)
-         compile-path (.getPath compile-path)
-         namespaces   namespaces]
-        (compile-stale source-path compile-path namespaces)))
+    [source-path  source-path
+     compile-path compile-path
+     namespaces   namespaces]
+    (compile-stale source-path compile-path namespaces)))
 
 (defn copy-native []
   (let [os-name (os-name)
@@ -56,14 +50,11 @@
   (when (= "force" (first (:compile *opts*)))
     (invoke clean {}))
   (let [jar-classes (file "build" "jar")]
-    (.mkdirs jar-classes)
+    (mkdir jar-classes)
     (with-classloader [jar-classes]
-      (compile-clojure (source-dir) (file "classes") (:aot *project*))
-      (doseq [test-path (:test-path *project*)]
-        (compile-clojure (file test-path)
-                         (file test-path "classes")
-                         (:aot-test *project*)))
-      (compile-clojure (source-dir) jar-classes [(:main *project*)]))))
+      (compile-clojure (:source-path *project*) (first (:compile-path      *project*)) (:aot      *project*))
+      (compile-clojure (:test-path   *project*) (first (:test-compile-path *project*)) (:aot-test *project*))
+      (compile-clojure (:source-path *project*) (.getPath jar-classes)                 [(:main *project*)]))))
 
 ;; add actions to compile-native if you need to compile native libraries
 ;; see http://github.com/flatland/tokyocabinet for an example

@@ -30,7 +30,7 @@
 
 (defn classpath [& paths]
   (mapcat to-urls [(System/getProperty "bake.path")
-                   (mapcat *project* [:source-path :java-source-path :test-path
+                   (mapcat *project* [:source-path :test-path
                                       :resources-path :dev-resources-path
                                       :compile-path :test-compile-path])
                    (deps :dependencies)
@@ -216,13 +216,10 @@
                :ext-dependencies (dep-map (concat (:ext-dependencies    opts) (:ext-deps    opts)))
                :dependencies     (dep-map (concat (:dependencies        opts) (:deps        opts)
                                                   (:native-dependencies opts) (:native-deps opts))))
-        (assoc-path :source-path        ["src" "src/clj"])
-        (assoc-path :java-source-path   "src/jvm")
-        (assoc-path :compile-path       "classes")
+        (assoc-path :source-path        "src")
         (assoc-path :test-path          "test")
         (assoc-path :resources-path     "resources")
         (assoc-path :library-path       "lib")
         (assoc-path :dev-resources-path "dev")
-        (assoc-path :dev-library-path   :library-path "dev")
-        (assoc-path :ext-library-path   :library-path "ext")
-        (assoc-path :test-compile-path  :test-path    "classes"))))
+        (assoc-path :compile-path       "classes")
+        (assoc-path :test-compile-path  :test-path "classes"))))

@@ -17,12 +17,6 @@
    ["maven"             "http://repo1.maven.org/maven2"]])
 
 (def dep-types [:dependencies :dev-dependencies :ext-dependencies])
-
-(def dep-dest
-  {:dependencies     "lib"
-   :dev-dependencies "lib/dev"
-   :ext-dependencies "lib/ext"})
-
 (def dep-jars (atom nil))
 (def ^{:dynamic true} *overwrite* nil)
 
@@ -38,13 +32,30 @@
       (with-root path
         (cake-exec "install")))))
 
-(defn extract-native! [deps]
-  (doseq [jars (vals deps)
-          jar  jars]
-    (ant Copy {:todir (file "lib" "native") :flatten true}
+(defn extract-native! [deps dest]
+  (doseq [jars (vals deps), jar jars]
+    (ant Copy {:todir dest :flatten true}
       (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))
-    (ant Copy {:todir (file "lib" "native") :flatten true}
+    (ant Copy {:todir dest :flatten true}
       (add-zipfileset {:src jar :includes "lib/*.jar" }))))
+
+(let [dest {:dependencies     ""
+            :dev-dependencies "dev"
+            :ext-dependencies "ext"}]
+
+  (defn copy-deps [deps]
+    (let [build (file "build" "lib")
+          lib   (file (first (:library-path *project*)))]
+      (when (or *overwrite*
+                (not (file-exists? lib)))
+        (doseq [[type jars] deps :when (seq jars)]
+          (ant Copy {:todir (file build (dest type)) :flatten true}
+            (.addFileset (:fileset (meta jars)))))
+        (rmdir lib)
+        (mv build lib)
+        (extract-native! deps (file lib "native")))
+      (into {} (for [[type jars] deps]
+                 [type (map #(file lib (dest type) (.getName %)) jars)])))))
 
 (defn fetch-deps [type]
   (binding [depot/*repositories* default-repos
@@ -55,21 +66,24 @@
 (defn deps [type]
   (get @dep-jars type))
 
-(defn copy-deps! [deps]
-  (when (and (:copy-deps *project*)
-             (or *overwrite* (not (file-exists? "lib"))))
-    (doseq [[type jars] deps :when jars]
-      (ant Copy {:todir (file "build" (dep-dest type)) :flatten true}
-        (.addFileset (:fileset (meta jars)))))
-    (rmdir "lib")
-    (mv (file "build" "lib") "lib")))
+(defn print-deps []
+  (println)
+  (doseq [type dep-types]
+    (when-let [jars (seq (deps type))]
+      (println (str (name type) ":"))
+      (doseq [jar (sort jars)]
+        (println " " (if (:long *opts*)
+                       (.getPath jar)
+                       (.getName jar))))
+      (println))))
 
 (defn fetch-deps! []
   (install-subprojects!)
   (let [deps (map-to fetch-deps dep-types)]
-    (copy-deps! deps)
-    (extract-native! deps)
-    (reset! dep-jars deps)))
+    (reset! dep-jars
+            (if (:copy-deps *project*)
+              (copy-deps deps)
+              deps))))
 
 (defn clear-deps! []
   (doseq [type dep-types]

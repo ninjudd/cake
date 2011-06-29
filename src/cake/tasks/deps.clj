@@ -1,6 +1,6 @@
 (ns cake.tasks.deps
   (:use [cake :only [*opts* *project*]]
-        [cake.deps :only [clear-deps! fetch-deps! *overwrite*]]
+        [cake.deps :only [clear-deps! fetch-deps! *overwrite* print-deps]]
         [cake.core :only [deftask defile]]
         [depot.pom :only [prxml-tags]]))
 
@@ -14,7 +14,8 @@
   (when (= "force" (first (:deps *opts*)))
     (clear-deps!))
   (binding [*overwrite* true]
-    (fetch-deps!)))
+    (fetch-deps!))
+  (print-deps))
 
 (deftask update #{deps}
   "Update cake plugins and restart the persistent JVM."
