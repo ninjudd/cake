@@ -1,7 +1,6 @@
 (ns cake.tasks.jar
   (:use cake cake.core cake.file uncle.core
         [cake.deps :only [deps]]
-        [depot.deps :only [publish]]
         [bake.core :only [current-context log project-with-context]]
         [clojure.java.io :only [copy writer]]
         [clojure.string :only [join]]
@@ -61,7 +60,7 @@
 
 (defn add-source-files [task & [opts]]
   (when-not (:omit-source *project*)
-    (add-path :source-path {:includes ["**/*.clj" "**/*.java"]})))
+    (add-path task :source-path {:includes "**/*.clj, **/*.java"})))
 
 (defn build-context []
   (ant Copy {:todir "build/jar" :overwrite true}
@@ -186,7 +185,3 @@
     (doseq [jar (jars)]
       (add-zipfileset task {:file jar :prefix "WEB-INF/lib"}))
     (execute task)))
-
-(deftask install #{jar pom}
-  "Install jar to local repository."
-  (publish *project* (jarfile) (file "pom.xml")))

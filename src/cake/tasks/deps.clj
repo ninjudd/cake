@@ -1,15 +1,16 @@
 (ns cake.tasks.deps
   (:use [cake :only [*opts* *project*]]
-        [cake.deps :only [clear-deps! fetch-deps! *overwrite* print-deps]]
+        [bake.core :only [log]]
         [cake.core :only [deftask defile]]
+        [cake.tasks.jar :only [jarfile]]
+        [cake.deps :only [clear-deps! fetch-deps! *overwrite* print-deps]]
+        [depot.deps :only [publish]]
         [depot.pom :only [prxml-tags]]))
 
 (defile "pom.xml" #{"project.clj"}
   (prxml-tags :project *project*))
 
-(deftask pom #{"pom.xml"})
-
-(deftask deps #{"pom.xml"}
+(deftask deps
   "Fetch dependencies specified in project.clj."
   (when (= "force" (first (:deps *opts*)))
     (clear-deps!))
@@ -20,3 +21,11 @@
 (deftask update #{deps}
   "Update cake plugins and restart the persistent JVM."
   (System/exit 0))
+
+(deftask pom #{"pom.xml"})
+
+(deftask install #{jar pom}
+  "Install jar to local repository."
+  (let [jar (jarfile)]
+    (log "Copying" jar "to local repository")
+    (publish *project* jar "pom.xml")))
