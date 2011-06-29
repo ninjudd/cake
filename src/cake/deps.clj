@@ -4,7 +4,7 @@
         [cake.utils :only [cake-exec]]
         [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]]
-        [clojure.string :only [split]]
+        [clojure.string :only [split join]]
         [useful.map :only [map-to]])
   (:require depot.maven
             [depot.deps :as depot])
@@ -43,7 +43,12 @@
   (binding [depot/*repositories* default-repos
             depot/*exclusions*   (when (= :dev-dependencies type)
                                    '[org.clojure/clojure org.clojure/clojure-contrib])]
-    (depot/fetch-deps *project* type)))
+    (try (depot/fetch-deps *project* type)
+         (catch org.apache.tools.ant.BuildException e
+           (println "\nUnable to resolve the following dependencies:\n")
+           (doall (map println (filter (partial re-matches #"\d+\) .*")
+                                       (split (.getMessage e) #"\n"))))
+           (println)))))
 
 (defn deps [type]
   (get @dep-jars type))
