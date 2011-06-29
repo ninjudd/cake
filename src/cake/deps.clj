@@ -32,30 +32,12 @@
       (with-root path
         (cake-exec "install")))))
 
-(defn extract-native! [deps dest]
-  (doseq [jars (vals deps), jar jars]
+(defn extract-native! [dest]
+  (doseq [jars (vals @dep-jars), jar jars]
     (ant Copy {:todir dest :flatten true}
       (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))
     (ant Copy {:todir dest :flatten true}
       (add-zipfileset {:src jar :includes "lib/*.jar" }))))
-
-(let [dest {:dependencies     ""
-            :dev-dependencies "dev"
-            :ext-dependencies "ext"}]
-
-  (defn copy-deps [deps]
-    (let [build (file "build" "lib")
-          lib   (file (first (:library-path *project*)))]
-      (when (or *overwrite*
-                (not (file-exists? lib)))
-        (doseq [[type jars] deps :when (seq jars)]
-          (ant Copy {:todir (file build (dest type)) :flatten true}
-            (.addFileset (:fileset (meta jars)))))
-        (rmdir lib)
-        (mv build lib)
-        (extract-native! deps (file lib "native")))
-      (into {} (for [[type jars] deps]
-                 [type (map #(file lib (dest type) (.getName %)) jars)])))))
 
 (defn fetch-deps [type]
   (binding [depot/*repositories* default-repos
@@ -77,13 +59,31 @@
                        (.getName jar))))
       (println))))
 
+(let [subdir {:dependencies     ""
+              :dev-dependencies "dev"
+              :ext-dependencies "ext"}]
+
+  (defn copy-deps [dest]
+    (let [build (file "build" "deps")]
+      (when (or *overwrite*
+                (not (file-exists? dest)))
+        (doseq [type dep-types]
+          (when-let [jars (fetch-deps type)]
+            (ant Copy {:todir (file build (subdir type)) :flatten true}
+              (.addFileset (:fileset (meta jars))))))
+        (rmdir dest)
+        (mv build dest))
+      (map-to #(fileset-seq {:dir (file dest (subdir %)) :includes "*.jar"})
+              dep-types))))
+
 (defn fetch-deps! []
-  (install-subprojects!)
-  (let [deps (map-to fetch-deps dep-types)]
+  (let [lib (file (first (:library-path *project*)))]
+    (install-subprojects!)
     (reset! dep-jars
             (if (:copy-deps *project*)
-              (copy-deps deps)
-              deps))))
+              (copy-deps lib)
+              (map-to fetch-deps dep-types)))
+    (extract-native! (file lib "native"))))
 
 (defn clear-deps! []
   (doseq [type dep-types]
