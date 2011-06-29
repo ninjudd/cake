@@ -1,8 +1,7 @@
 (ns bake.io
   (:use cake
         [clojure.java.io :only [copy]])
-  (:import (java.io File FileInputStream FileOutputStream BufferedOutputStream PrintStream PrintWriter
-                    InputStreamReader OutputStreamWriter)
+  (:import (java.io File FileInputStream FileOutputStream PrintStream PrintWriter InputStreamReader OutputStreamWriter)
            (java.net JarURLConnection)
            (clojure.lang Atom LineNumberingPushbackReader)))
 
@@ -22,29 +21,6 @@
       dest)
     (throw (Exception. (format "unable to find %s on classpath" name)))))
 
-(defmacro with-outstreams [[sym var] & forms]
-  `(let [root# (alter-var-root #'~var identity)]
-     (when (not= root# ~var)
-       (let [~sym root#]
-         ~@forms))
-     (let [~sym ~var]
-       ~@forms)))
-
-(defmacro multi-outstream [var]
-  `(PrintStream.
-    (proxy [BufferedOutputStream] [nil]
-      (write
-        ([b#]
-           (with-outstreams [outs# ~var]
-             (.write outs# b#)))
-        ([b# off# len#]
-           (with-outstreams [outs# ~var]
-             (.write outs# b# off# len#))))
-
-      (flush []
-        (with-outstreams [outs# ~var]
-          (.flush outs#))))))
-
 (defmacro with-streams [ins outs & forms]
   `(binding [*in*   (if ~ins  (LineNumberingPushbackReader. (InputStreamReader. ~ins)) *in*)
              *out*  (if ~outs (OutputStreamWriter. ~outs) *out*)
@@ -54,16 +30,10 @@
              *ins*  ~ins]
      ~@forms))
 
-(defn init-multi-out [log-file]
-  (let [outs (multi-outstream *outs*)
-        errs (multi-outstream *errs*)
-        log  (FileOutputStream. log-file true)]
-    (alter-var-root #'*outs* (fn [_] log))
-    (alter-var-root #'*errs* (fn [_] log))
-    (alter-var-root #'*out*  (fn [_] (PrintWriter. outs)))
-    (alter-var-root #'*err*  (fn [_] (PrintWriter. errs)))
-    (System/setOut outs)
-    (System/setErr errs)))
+(defmacro init-log [log-file]
+  (let [log (FileOutputStream. log-file true)]
+    (System/setOut (PrintStream. log))
+    (System/setErr (PrintStream. log))))
 
 (defn disconnect [& [wait]]
   (let [outs *outs*]
