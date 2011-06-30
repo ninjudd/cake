@@ -87,6 +87,7 @@
 (defn fetch-deps! []
   (let [lib (file (first (:library-path *project*)))]
     (install-subprojects!)
+    (println "Fetching dependencies...")
     (reset! dep-jars
             (if (:copy-deps *project*)
               (copy-deps lib)

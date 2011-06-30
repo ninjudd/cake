@@ -4,6 +4,7 @@
         [cake.core :only [deftask defile]]
         [cake.tasks.jar :only [jarfile]]
         [cake.deps :only [clear-deps! fetch-deps! *overwrite* print-deps]]
+        [cake.project :only [reset-classloaders!]]
         [depot.deps :only [publish]]
         [depot.pom :only [prxml-tags]]))
 
@@ -16,7 +17,8 @@
     (clear-deps!))
   (binding [*overwrite* true]
     (fetch-deps!))
-  (print-deps))
+  (print-deps)
+  (reset-classloaders!))
 
 (deftask update #{deps}
   "Update cake plugins and restart the persistent JVM."
