@@ -17,7 +17,7 @@
 
 (defn process-command [[task readline-marker]]
   (binding [*readline-marker* readline-marker]
-    (in-project {:outs System/out :verbose (debug?) :root *root*}
+    (in-project {:outs *outs* :verbose (debug?) :root *root*}
       (doseq [dir ["lib" "classes" "build"]]
         (.mkdirs (file dir)))
       (handler-case :type
