@@ -3,7 +3,7 @@
         [cake.deps :only [deps]]
         [classlojure :only [wrap-ext-classloader classlojure eval-in get-classpath base-classloader append-classpath!]]
         [bake.core :only [debug?]]
-        [cake.file :only [file global-file]]
+        [cake.file :only [file global-file path-string]]
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
@@ -36,7 +36,7 @@
                    (deps :dependencies)
                    (deps :dev-dependencies)
                    (get *config* "project.classpath")
-                   (global-file "lib/dev")
+                   (path-string (global-file "lib/dev/*"))
                    paths]))
 
 (defn ext-classpath []

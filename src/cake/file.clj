@@ -31,6 +31,9 @@
   ([root & path]
      (File. (apply file-name root path))))
 
+(defn path-string [file-or-path]
+  (.getPath (file file-or-path)))
+
 (defn file-exists? [& path]
   (.exists (apply file path)))
 

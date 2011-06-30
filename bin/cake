@@ -587,7 +587,7 @@ if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?("#{$cakedir}/p
   end
 
   $version = `cd #{$cakedir} && git describe`.chomp
-  cakepath = ["#{$cakedir}/src", "#{$cakedir}/lib/*", "#{$cakedir}/lib/dev/*"]
+  cakepath = ["#{$cakedir}/src", "#{$cakedir}/lib/*"]
   bakepath = "#{$cakedir}/dev"
 else
   log(:cake, "running from ~/.m2") if verbose?
