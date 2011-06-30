@@ -53,15 +53,18 @@
 (defn deps [type]
   (get @dep-jars type))
 
+(defn- jar-name [jar]
+  (if (:long *opts*)
+    (.getPath jar)
+    (.getName jar)))
+
 (defn print-deps []
   (println)
   (doseq [type dep-types]
     (when-let [jars (seq (deps type))]
       (println (str (name type) ":"))
-      (doseq [jar (sort jars)]
-        (println " " (if (:long *opts*)
-                       (.getPath jar)
-                       (.getName jar))))
+      (doseq [jar (sort (map jar-name jars))]
+        (println " " jar))
       (println))))
 
 (let [subdir {:dependencies     ""
