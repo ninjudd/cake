@@ -16,7 +16,7 @@
    ["clojars"           "http://clojars.org/repo"]
    ["maven"             "http://repo1.maven.org/maven2"]])
 
-(def dep-types [:dependencies :dev-dependencies :ext-dependencies])
+(def dep-types [:dependencies :dev-dependencies :ext-dependencies :test-dependencies])
 (def dep-jars (atom nil))
 (def ^{:dynamic true} *overwrite* nil)
 
@@ -39,10 +39,13 @@
     (ant Copy {:todir dest :flatten true}
       (add-zipfileset {:src jar :includes "lib/*.jar" }))))
 
+(defn auto-exclusions [type]
+  (cond (= :dev-dependencies  type) '[org.clojure/clojure org.clojure/clojure-contrib]
+        (= :test-dependencies type) '[org.clojure/clojure]))
+
 (defn fetch-deps [type]
   (binding [depot/*repositories* default-repos
-            depot/*exclusions*   (when (= :dev-dependencies type)
-                                   '[org.clojure/clojure org.clojure/clojure-contrib])]
+            depot/*exclusions*   (auto-exclusions type)]
     (try (depot/fetch-deps *project* type)
          (catch org.apache.tools.ant.BuildException e
            (println "\nUnable to resolve the following dependencies:\n")
@@ -67,9 +70,10 @@
         (println " " jar))
       (println))))
 
-(let [subdir {:dependencies     ""
-              :dev-dependencies "dev"
-              :ext-dependencies "ext"}]
+(let [subdir {:dependencies      ""
+              :dev-dependencies  "dev"
+              :ext-dependencies  "ext"
+              :test-dependencies "test"}]
 
   (defn copy-deps [dest]
     (let [build (file "build" "deps")]

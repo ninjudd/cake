@@ -29,15 +29,15 @@
        (path-files path)))
 
 (defn classpath [& paths]
-  (mapcat to-urls [(System/getProperty "bake.path")
-                   (mapcat *project* [:source-path :test-path
-                                      :resources-path :dev-resources-path
-                                      :compile-path :test-compile-path])
-                   (deps :dependencies)
-                   (deps :dev-dependencies)
-                   (get *config* "project.classpath")
-                   (path-string (global-file "lib/dev/*"))
-                   paths]))
+  (mapcat to-urls (into [(System/getProperty "bake.path")
+                         (mapcat *project* [:source-path :test-path
+                                            :resources-path :dev-resources-path
+                                            :compile-path :test-compile-path])
+                         (deps :dependencies)
+                         (deps :dev-dependencies)
+                         (get *config* "project.classpath")
+                         (path-string (global-file "lib/dev/*"))]
+                        paths)))
 
 (defn ext-classpath []
   (mapcat to-urls (deps :ext-dependencies)))
@@ -74,7 +74,7 @@
 
 (defn reset-test-classloader! []
   (alter-var-root #'test-classloader
-    (fn [_] (make-classloader))))
+    (fn [_] (make-classloader (deps :test-dependencies)))))
 
 (defn reset-classloaders! []
   (reset-classloader!)
@@ -203,19 +203,20 @@
         artifact (name project-name)
         artifact-version (str artifact "-" version)]
     (-> opts
-        (assoc :artifact-id      artifact
-               :group-id         (group project-name)
-               :version          version
-               :name             (or (:name opts) artifact)
-               :aot              (or (:aot opts) (:namespaces opts))
-               :context          (symbol (or (get *config* "project.context") (:context opts) "dev"))
-               :jar-name         (or (:jar-name opts) artifact-version)
-               :war-name         (or (:war-name opts) artifact-version)
-               :uberjar-name     (or (:uberjar-name opts) (str artifact-version "-standalone"))
-               :dev-dependencies (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts)))
-               :ext-dependencies (dep-map (concat (:ext-dependencies    opts) (:ext-deps    opts)))
-               :dependencies     (dep-map (concat (:dependencies        opts) (:deps        opts)
-                                                  (:native-dependencies opts) (:native-deps opts))))
+        (assoc :artifact-id       artifact
+               :group-id          (group project-name)
+               :version           version
+               :name              (or (:name opts) artifact)
+               :aot               (or (:aot opts) (:namespaces opts))
+               :context           (symbol (or (get *config* "project.context") (:context opts) "dev"))
+               :jar-name          (or (:jar-name opts) artifact-version)
+               :war-name          (or (:war-name opts) artifact-version)
+               :uberjar-name      (or (:uberjar-name opts) (str artifact-version "-standalone"))
+               :dev-dependencies  (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts)))
+               :ext-dependencies  (dep-map (concat (:ext-dependencies    opts) (:ext-deps    opts)))
+               :test-dependencies (dep-map (concat (:test-dependencies   opts) (:test-deps   opts)))
+               :dependencies      (dep-map (concat (:dependencies        opts) (:deps        opts)
+                                                   (:native-dependencies opts) (:native-deps opts))))
         (assoc-path :source-path        "src")
         (assoc-path :test-path          "test")
         (assoc-path :resources-path     "resources")
