@@ -14,7 +14,7 @@
                 (union stale (conj (dependents @dep-graph namespace)
                                    namespace))
                 stale)))
-          #{} (find-clojure-sources-in-dir (File. source-path))))
+          #{} (mapcat #(find-clojure-sources-in-dir (File. %)) source-path)))
 
 (defn compile-stale [source-path compile-path namespaces]
   (binding [*compile-path* compile-path]

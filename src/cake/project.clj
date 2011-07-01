@@ -1,69 +1,46 @@
 (ns cake.project
   (:use cake
-        [classlojure :only [wrap-ext-classloader classlojure eval-in get-classpath]]
+        [cake.deps :only [deps]]
+        [classlojure :only [wrap-ext-classloader classlojure eval-in get-classpath base-classloader append-classpath!]]
         [bake.core :only [debug?]]
-        [cake.file :only [file global-file]]
+        [cake.file :only [file global-file path-string]]
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [useful :only [update merge-in into-map absorb]]
+        [useful.map :only [update merge-in into-map]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
-(defn- make-url [file]
-  (str "file:" (.getPath file) (if (.isDirectory file) "/" "")))
+(defn- path-file [path]
+  (if-let [[_ dir] (and (string? path) (re-matches #"(.*)/\*" path))]
+    (fileset-seq {:dir dir :includes "*.jar"})
+    [(file path)]))
 
-(defn- path-files [paths]
-  (mapcat (fn [path]
-            (if-let [[_ path] (re-matches #"(.*)/\*" path)]
-              (fileset-seq {:dir path :includes "*.jar"})
-              [(file path)]))
-          (absorb paths (split (re-pattern File/pathSeparator)))))
+(defn- path-files [path]
+  (when path
+    (cond (string?     path) (mapcat path-file (split path (re-pattern File/pathSeparator)))
+          (sequential? path) (mapcat path-file path)
+          :else              (path-file path))))
 
-(defn as-vec
-  "If its arg is a vector, returns the arg unchanged. Otherwise, returns the
-   given item in a vector. Helps you process things that are 'strings or
-   vectors of strings' uniformly."
-  [arg]
-  (if arg
-    (if (vector? arg)
-      arg
-      [arg])))
+(defn- to-urls [path]
+  (map (fn [file]
+         (str "file:" (.getPath file)
+              (if (.isDirectory file) "/" "")))
+       (path-files path)))
 
 (defn classpath [& paths]
-  (map make-url
-       (concat (map file
-                    (flatten [(System/getProperty "bake.path")
-                              (or (:source-path *project*)
-                                  ["src/" "src/clj/"])
-                              (:java-source-path *project*)
-                              (:test-path *project*)
-                              (map #(str (file %) "classes")
-                                   (:test-path *project*))
-                              (:resources-path *project*)
-                              (:dev-resources-path *project*)
-                              "classes/"
-                              paths])) 
-               (path-files (get *config* "project.classpath"))
-               (apply concat
-                      (map
-                       (fn [path]
-                         (concat
-                          (fileset-seq {:dir (file path)
-                                        :includes "*.jar"})
-                          (fileset-seq {:dir (file path "dev")
-                                        :includes "*.jar"})))
-                       (:library-path *project*)))
-               ;; This is from the user's .cake dir. No setting for it.
-               (fileset-seq {:dir (global-file "lib/dev") :includes "*.jar"}))))
+  (mapcat to-urls [(System/getProperty "bake.path")
+                   (mapcat *project* [:source-path :test-path
+                                      :resources-path :dev-resources-path
+                                      :compile-path :test-compile-path])
+                   (deps :dependencies)
+                   (deps :dev-dependencies)
+                   (get *config* "project.classpath")
+                   (path-string (global-file "lib/dev/*"))
+                   paths]))
 
 (defn ext-classpath []
-  (map make-url
-       (apply concat
-              (map
-               #(fileset-seq {:dir (str (file % "ext"))
-                              :includes "*.jar"})
-               (:library-path *project*)))))
+  (mapcat to-urls (deps :ext-dependencies)))
 
 (defn make-classloader [& paths]
   (when (:ext-dependencies *project*)
@@ -83,6 +60,10 @@
 (defonce *classloader* nil)
 (defonce test-classloader nil)
 
+(defn append-dev-dependencies! []
+  (apply append-classpath! base-classloader
+         (mapcat to-urls (deps :dev-dependencies))))
+
 (defn reset-classloader! []
   (alter-var-root #'*classloader*
     (fn [cl]
@@ -101,7 +82,9 @@
 
 (defn reload []
   (when *classloader*
-    (eval-in *classloader* '(bake.reload/reload))))
+    (eval-in *classloader* '(bake.reload/reload)))
+  (when test-classloader
+    (eval-in test-classloader '(bake.reload/reload))))
 
 (defmacro with-classloader [paths & forms]
   `(binding [*classloader* (make-classloader ~@paths)]
@@ -147,7 +130,6 @@
 
 ;; TODO: this function is insane. make it sane.
 (defn project-eval [ns-forms bindings body]
-  (reload)
   (let [[let-bindings object-bindings] (separate-bindings bindings)
         temp-ns (gensym "bake")
         form
@@ -188,7 +170,8 @@
   (let [[deps default-opts] (split-with (complement keyword?) deps)]
     (into {}
           (for [[dep version & opts] deps]
-            [dep (into-map :version version default-opts opts)]))))
+            (let [dep (symbol (group dep) (name dep))]
+              [dep (into-map :version version default-opts opts)])))))
 
 (defmulti get-version identity)
 
@@ -200,6 +183,16 @@
 
 (defmethod get-version :default [r]
   (println "No pre-defined get-version method for that key."))
+
+(defn- assoc-path
+  ([opts key default]
+     (let [path (or (get opts key) default)]
+       (assoc opts key (if (string? path)
+                         [path]
+                         (vec path)))))
+  ([opts key base-key suffix]
+     (assoc-path opts key (vec (map #(str (file % suffix))
+                                    (get opts base-key))))))
 
 (defn create [project-name opts]
   (let [base-version (:version opts)
@@ -215,21 +208,18 @@
                :version          version
                :name             (or (:name opts) artifact)
                :aot              (or (:aot opts) (:namespaces opts))
-               :context          (symbol (or (get *config* "project.context")
-                                             (:context opts)
-                                             "dev"))
-               ;; Note source-path can be present but nil. Need to check for nil
-               ;; and check for existence of src/jvm to determine the src path.
-               :source-path          (as-vec (:source-path opts))
-               :java-source-path     (as-vec (or (:java-source-path opts) "src/jvm"))
-               :test-path            (as-vec (or (:test-path opts) "test/"))
-               :resources-path       (as-vec (or (:resources opts) "resources/"))
-               :library-path         (as-vec (or (:library-path opts) "lib/"))
-               :dev-resources-path   (as-vec (or (:dev-resources-path opts) "dev/"))
+               :context          (symbol (or (get *config* "project.context") (:context opts) "dev"))
                :jar-name         (or (:jar-name opts) artifact-version)
                :war-name         (or (:war-name opts) artifact-version)
                :uberjar-name     (or (:uberjar-name opts) (str artifact-version "-standalone"))
-               :dependencies     (dep-map (concat (:dependencies        opts) (:deps        opts)
-                                                  (:native-dependencies opts) (:native-deps opts)))
                :dev-dependencies (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts)))
-               :ext-dependencies (dep-map (concat (:ext-dependencies    opts) (:ext-deps    opts)))))))
+               :ext-dependencies (dep-map (concat (:ext-dependencies    opts) (:ext-deps    opts)))
+               :dependencies     (dep-map (concat (:dependencies        opts) (:deps        opts)
+                                                  (:native-dependencies opts) (:native-deps opts))))
+        (assoc-path :source-path        "src")
+        (assoc-path :test-path          "test")
+        (assoc-path :resources-path     "resources")
+        (assoc-path :library-path       "lib")
+        (assoc-path :dev-resources-path "dev")
+        (assoc-path :compile-path       "classes")
+        (assoc-path :test-compile-path  :test-path "classes"))))

@@ -21,10 +21,9 @@
 (def ^{:dynamic true} *errs* nil)
 
 (defn read-config [file]
-  (if (.exists file)
-    (with-open [f (FileInputStream. file)]
-      (into {} (doto (Properties.) (.load f))))
-    {}))
+  (into {} (when (.exists file)
+             (with-open [f (FileInputStream. file)]
+               (doto (Properties.) (.load f))))))
 
 (def ^{:dynamic true} *config*
   (apply merge (map read-config [(File. (System/getProperty "user.home") ".cake/config")

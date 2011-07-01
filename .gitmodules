@@ -1,0 +1,3 @@
+[submodule "portal"]
+	path = portal
+	url = git://github.com/flatland/portal.git

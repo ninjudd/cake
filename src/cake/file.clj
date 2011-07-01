@@ -1,31 +1,41 @@
 (ns cake.file
   (:use cake
-        [useful :only [into-map]]
+        [useful.map :only [into-map]]
         [clojure.string :only [join]]
         uncle.core)
   (:import [org.apache.tools.ant.taskdefs Copy Move Touch Delete Mkdir]
            [java.io File]))
 
-(defn- expand-path [path]
-  (let [root (or (first path) "")]
-    (cond (instance? File root)  (cons (.getPath root) (rest path))
-          (.startsWith root "/") path
-          (.startsWith root "~") (cons (.replace root "~" (System/getProperty "user.home")) (rest path))
-          :else                  (cons *root* path))))
+(defn- expand-path [root path]
+  (let [root (or root "")]
+    (cond (instance? File root)  (cons (.getPath root) path)
+          (.startsWith root "/") (cons root path)
+          (.startsWith root "~") (cons (.replace root "~" (System/getProperty "user.home")) path)
+          :else                  (list* *root* root path))))
 
 (defn- substitute-context [path]
   (if-let [context (:context *project*)]
     (.replace (str path) "+context+" (name context))
     path))
 
-(defn file-name [& path]
+(defn file-name [root & path]
   (join (File/separator)
-        (map substitute-context (expand-path path))))
+        (map substitute-context (expand-path root path))))
 
 (defn file
   "Create a File object from a string or seq"
-  [& path]
-  (File. (apply file-name path)))
+  ([root]
+     (if (instance? File root)
+       root
+       (File. (file-name root))))
+  ([root & path]
+     (File. (apply file-name root path))))
+
+(defn path-string [file-or-path]
+  (.getPath (file file-or-path)))
+
+(defn file-exists? [& path]
+  (.exists (apply file path)))
 
 (defn global-file [& path]
   (apply file *global-root* path))

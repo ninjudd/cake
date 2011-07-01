@@ -3,7 +3,8 @@
         [clojure.set :only [difference]]
         [bake.core :only [print-stacktrace log verbose?]]
         [cake.file :only [file newer? touch]]
-        [useful :only [update verify adjoin]]
+        [useful.utils :only [verify adjoin]]
+        [useful.map :only [update]]
         [uncle.core :only [*task-name*]]
         [clojure.java.io :only [writer]]
         [clojure.contrib.prxml :only [*prxml-indent* prxml]]))

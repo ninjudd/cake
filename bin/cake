@@ -7,6 +7,9 @@ require 'fileutils'
 require 'io/wait'
 require 'pp'
 
+CLOJURE = "1.2.0"
+STABLE  = "0.6.3"
+
 if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   begin
     require 'rubygems' rescue nil
@@ -190,6 +193,10 @@ def restart?
   $opts[:R] or $opts[:restart]
 end
 
+def stable?
+  $opts[:S] or $opts[:stable]
+end
+
 def log(command, *messages)
   messages.each do |message|
     message.split("\n").each do |line|
@@ -245,71 +252,20 @@ rescue NotImplementedError, Errno::EINVAL
   file
 end
 
-def mkdir_force(dir)
-  FileUtils.makedirs(dir)
-rescue Errno::EEXIST
-  File.unlink(dir)
-  FileUtils.makedirs(dir)
-end
-
 GET = system('which wget > /dev/null') ? "wget -O" : "curl -fo" # prefer wget because it retries on incomplete transfers
-def download(url, path, opts = {})
-  file = File.basename(url)
-
-  if opts[:force] or not File.exists?(path)
-    mkdir_force(File.dirname(path))
-    open(url) {} # check to see if the remote file exists
-    puts "Downloading #{url}..."
-    system("#{GET} #{path} #{url}") || begin
-      FileUtils.rm_f(path)
-      raise "unable to fetch #{url} with curl or wget"
-    end
+def download(url, path)
+  return path if File.exists?(path)
+  FileUtils.makedirs(File.dirname(path))
+  puts "Downloading #{url}..."
+  system("#{GET} #{path} #{url}") || begin
+    FileUtils.rm_f(path)
+    raise "unable to fetch #{url} with curl or wget"
   end
-  return path unless opts[:dest]
-
-  dir  = File.expand_path(opts[:dest])
-  dest = "#{dir}/#{file}"
-  if opts[:force] or not File.exists?(dest)
-    mkdir_force(dir)
-    FileUtils.copy(path, dest)
-  end
-  dest
-rescue OpenURI::HTTPError
-  raise "resource not found: #{url}"
+  path
 end
 
-def get_cake(opts = {})
-  version = cake_version(opts[:version] || :current)
-  download("#{$releases}/jars/cake-#{version}.jar", "#{$m2}/cake/cake/#{snapshot(version)}/cake-#{version}.jar", opts)
-end
-
-def get_clojure(opts = {})
-  version = opts[:version] || "1.2.0"
-  repo    = opts[:repo]    || "http://build.clojure.org/releases"
-  path    = "org/clojure/clojure/#{version}"
-  download("#{repo}/#{path}/clojure-#{version}.jar", "#{$m2}/#{path}/clojure-#{version}.jar", opts)
-end
-
-def cake_version(version_type)
-  return version_type unless version_type.kind_of?(Symbol)
-  version = open("#{$releases}/#{version_type}").gets.chomp
-  log(:deps, "most recent #{version_type} version is #{version}") if debug?
-  version
-end
-
-def snapshot(version)
-  version.gsub(/\d{8}\.\d{6}$/, "SNAPSHOT")
-end
-
-def extract(jar, file, dest = File.dirname(jar))
-  if not File.exists?("#{dest}/#{file}")
-    log(:deps, "extracting #{file} from #{jar}") if verbose?
-    ret = system("jar xf #{jar} #{file}")
-    raise "error extracting with jar command" unless ret
-    FileUtils.makedirs(dest)
-    FileUtils.move(file, dest)
-  end
-  "#{dest}/#{file}"
+def get(repo, source_jar, dest_jar = source_jar)
+  download("#{repo}/#{source_jar}", "#{$m2}/#{dest_jar}")
 end
 
 def newer?(file1, file2)
@@ -576,8 +532,9 @@ def initialize_cake_dirs
     file.write <<END
 (defproject global "0.0.0"
   :description "Don't rename this project, but you can change the version if you want."
-  :dependencies [[clojure "1.2.0"]
-                 [clojure-contrib "1.2.0"]])
+  :dependencies [[clojure "#{CLOJURE}"]
+                 [clojure-contrib "#{CLOJURE}"]]
+  :copy-deps true)
 ;;--------------------
 ;; This is the global cake project. What does that mean?
 ;;  1. This project is used whenever you run cake outside a project directory.
@@ -619,86 +576,35 @@ if debug?
 end
 
 # Bootstrap cake dependencies.
-lib     = "#{$cakedir}/lib"
-project = "#{$cakedir}/project.clj"
-
-if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?(project)
+if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?("#{$cakedir}/project.clj") and not stable?
   log(:cake, "running from git checkout") if verbose?
   if $command == :upgrade
     log(:upgrade, "pulling latest code from git")
-    Dir.chdir($cakedir) { system('git pull') }
+    Dir.chdir($cakedir) do
+      system('git pull')
+      system('cake deps -S')
+    end
   end
 
   $version = `cd #{$cakedir} && git describe`.chomp
-  log(:deps, "project.clj version is #{$version}") if debug?
-
-  # Force new cake libs if cake's project.clj has changed.
-  if newer?(project, lib)
-    killall
-    FileUtils.remove_dir(lib, true)
-  end
-
-  if Dir["#{lib}/*.jar"].empty?
-    # In a new git checkout, need to fetch dependencies.
-    cakejar = get_cake(:version => $version, :dest => lib) rescue get_cake(:version => :current, :dest => lib)
-    extract(cakejar, "bake.jar", "#{lib}/dev")
-  end
-  $clojure = get_clojure(:dest => lib)
-
-  cakepath = ["#{$cakedir}/src", "#{lib}/*", "#{lib}/dev/*"]
+  cakepath = ["#{$cakedir}/src", "#{$cakedir}/lib/*"]
   bakepath = "#{$cakedir}/dev"
 else
-  if File.exists?("#{lib}exec/cake.jar")
-    # Inside a brew install.
-    log(:cake, "running from brew") if verbose?
+  log(:cake, "running from ~/.m2") if verbose?
+  download("#{$releases}/cake", __FILE__) if $command == :upgrade
 
-    if $command == :upgrade
-      log(:upgrade, "checking for updates to cake brew")
-      system('brew install --force https://github.com/mxcl/homebrew/raw/master/Library/Formula/cake.rb')
-    end
+  $version = STABLE
+  clojure  = get("http://build.clojure.org/releases", "org/clojure/clojure/#{CLOJURE}/clojure-#{CLOJURE}.jar")
+  cakejar  = get($releases, "jars/cake-#{$version}.jar", "cake/cake/#{$version}/cake-#{$version}.jar")
+  bakejar  = get($releases, "jars/bake-#{$version}.jar", "bake/bake/#{$version}/bake-#{$version}.jar")
 
-    $version = File.basename($cakedir)
-    $clojure = get_clojure
-
-    cakepath = ["#{lib}exec/cake.jar", $clojure]
-    bakepath = extract("#{lib}exec/cake.jar", "bake.jar")
-  elsif File.exists?("#{lib}/cake.jar") and File.exists?("#{lib}/bake.jar")
-    # Inside a gem install.
-    log(:cake, "running from gem") if verbose?
-
-    if $command == :upgrade
-      log(:upgrade, "checking for updates to cake gem")
-      system('gem update cake --no-ri --no-rdoc')
-    end
-
-    $version = File.basename($cakedir).split('-')[1]
-    $clojure = "#{lib}/clojure.jar"
-
-    cakepath = ["#{lib}/cake.jar", $clojure]
-    bakepath = "#{lib}/bake.jar"
-  else
-    # Standalone script.
-    log(:cake, "running from standalone script") if verbose?
-    download("#{$releases}/cake", __FILE__, :force => true) if $command == :upgrade
-
-    version_file = "#{$home}/.cake/stable_version"
-    if File.exists?(version_file) and $command != :upgrade
-      $version = IO.read(version_file)
-    else
-      $version = cake_version(:stable)
-      File.open(version_file, "w") {|f| f.write($version)}
-    end
-
-    cakejar  = get_cake(:version => $version)
-    $clojure = get_clojure
-
-    cakepath = [cakejar, $clojure]
-    bakepath = extract(cakejar, "bake.jar")
-  end
+  cakepath = [cakejar, clojure, bakejar]
+  bakepath = bakejar
 end
+log(:deps, "cake version is #{$version}") if debug?
 
 cake = JVM.new(
-  [bakepath, cakepath, "src", "src/clj", "lib/dev/*", "#{$home}/.cake/lib/dev/*"],
+  [bakepath, cakepath, "src", "src/clj", "#{$home}/.cake/lib/dev/*"],
   [$config['jvm.library.path'], "lib/ext/native", "lib/native", "lib/dev/native"],
   ["-Dcake.project=#{$project}", "-Dbake.path=#{bakepath}"]
 )
