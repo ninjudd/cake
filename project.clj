@@ -3,7 +3,7 @@
   :dependencies [[clojure "1.2.0"]
                  [clojure-contrib "1.2.0"]
                  [uncle "0.2.3"]
-                 [depot "0.1.2"]
+                 [depot "0.1.3"]
                  [classlojure "0.5.2"]
                  [useful "0.4.0"]
                  [com.jcraft/jsch "0.1.42"]]
