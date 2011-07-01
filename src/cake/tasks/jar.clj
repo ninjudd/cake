@@ -121,7 +121,7 @@
 
 (defn add-jar-contents [task jars]
   (doseq [jar jars :let [name (.replace (.getName jar) ".jar" "")]]
-    (add-zipfileset task {:src jar :excludes "META-INF/**/*"})
+    (add-zipfileset task {:src jar :excludes "META-INF/**/*, project.clj, LICENSE"})
     (add-zipfileset task {:src jar :includes "META-INF/**/*" :prefix (str "META-INF/" name)})))
 
 (defn build-uberjar [jarfile jars]
