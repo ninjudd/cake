@@ -55,7 +55,6 @@
         (try
           (let [form (read), vars (read)]
             (clojure.main/with-bindings
-              (reload)
               (set! *warn-on-reflection* (:warn-on-reflection *project*))
               (binding [*vars*    vars
                         *pwd*     (:pwd vars)
