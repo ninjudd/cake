@@ -3,7 +3,8 @@
         [cake :only [*config*]]
         [bake.core :only [verbose? log]]
         [bake.reload :only [last-reloaded last-modified reload]]
-        [bake.notify :only [notify]])
+        [bake.notify :only [notify]]
+        [useful.string :only [pluralize]])
   (:import [java.io StringWriter IOException]))
 
 (def last-passed    (atom (System/currentTimeMillis)))
@@ -68,12 +69,12 @@
   (let [start    (System/currentTimeMillis)
         results  (doall (map (partial run-ns-tests opts) namespaces))
         failures (count (filter identity results))]
-    (when (= 0 failures)
-      (when (and (:autotest opts)
+    (if (:autotest opts)
+      (when (and (zero? failures)
                  (< @last-passed @last-tested))
         (notify "All tests passed"))
-      (reset! last-passed start))
-    (reset! last-tested start)
-    (when-not (:autotest opts)
-      (println "----")
-      (println "Finished in" (/ (- (System/currentTimeMillis) start) 1000.0) "seconds.\n"))))
+      (do (println "----")
+          (println (if (zero? failures)
+                     "All tests passed"
+                     (str (pluralize failures "test") " FAILED")))
+          (println "Finished in" (/ (- (System/currentTimeMillis) start) 1000.0) "seconds.\n")))))
