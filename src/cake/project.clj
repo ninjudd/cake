@@ -7,7 +7,8 @@
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
-        [useful.map :only [update merge-in into-map]]
+        [useful.utils :only [adjoin]]
+        [useful.map :only [update into-map]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
@@ -161,17 +162,21 @@
   (let [[ns-forms [bindings & body]] (split-with (complement vector?) forms)]
     `(project-eval '~ns-forms ~(quote-if even? bindings) '~body)))
 
-(defn group [project]
-  (if ('#{clojure clojure-contrib} project)
+(defn group [dep]
+  (if ('#{clojure clojure-contrib} dep)
     "org.clojure"
-    (some #(% project) [namespace name])))
+    (some #(% dep) [namespace name])))
+
+(defn add-group [dep]
+  (symbol (group dep) (name dep)))
 
 (defn dep-map [deps]
   (let [[deps default-opts] (split-with (complement keyword?) deps)]
     (into {}
           (for [[dep version & opts] deps]
-            (let [dep (symbol (group dep) (name dep))]
-              [dep (into-map :version version default-opts opts)])))))
+            [(add-group dep) (-> (adjoin (into-map default-opts) (into-map opts))
+                                 (assoc :version version)
+                                 (update :exclusions (partial map add-group)))]))))
 
 (defmulti get-version identity)
 
