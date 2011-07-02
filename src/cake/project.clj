@@ -58,9 +58,6 @@
   [classloader]
   (System/setProperty "java.class.path" (join ":" (get-classpath classloader))))
 
-(defonce *classloader* nil)
-(defonce test-classloader nil)
-
 (defn append-dev-dependencies! []
   (apply append-classpath! base-classloader
          (mapcat to-urls (deps :dev-dependencies))))

@@ -15,6 +15,9 @@
 (def ^{:dynamic true} *File*         nil)
 (def ^{:dynamic true} *root*        (System/getProperty "cake.project"))
 (def ^{:dynamic true} *global-root* (.getPath (File. (System/getProperty "user.home") ".cake")))
+(def ^{:dynamic true} *classloader* nil)
+
+(def test-classloader nil)
 
 (def ^{:dynamic true} *ins*  nil)
 (def ^{:dynamic true} *outs* nil)
