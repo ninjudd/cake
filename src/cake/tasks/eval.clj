@@ -42,6 +42,6 @@
   "Start an interactive shell with history and tab completion."
   {cake? :cake}
   (if cake?
-    (repl (read))
+    (repl *readline-marker*)
     (bake (:use bake.repl) [marker *readline-marker*]
           (repl marker))))
