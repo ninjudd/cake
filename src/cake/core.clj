@@ -20,10 +20,10 @@
     `(alter-var-root #'*context* merge-in {'~name ~opts})))
 
 (defmacro undeftask [taskname]
-  `(append-task! ~taskname {:replace true}))
+  `(append-task! '~taskname {:replace true}))
 
 (defmacro remove-deps [taskname deps]
-  `(append-task! ~taskname {:remove-deps ~deps}))
+  `(append-task! '~taskname {:remove-deps ~deps}))
 
 (defmacro require-tasks [& namespaces]
   `(require-tasks! ~namespaces))
@@ -38,14 +38,11 @@
      (do-something-else))"
   [name & forms]
   (verify (not (implicit-tasks name)) (str "Cannot redefine implicit task: " name))
-  (let [taskname (to-taskname name)
-        {:keys [deps docs actions destruct pred]} (parse-task-opts forms)]
-    (if (empty? forms)
-      `(append-task! ~name {:deps ~deps :docs ~docs})
-      `(do
-         (defn ~taskname ~(join " " docs) [~destruct]
-           (when ~pred ~@actions))
-         (append-task! ~name {:actions [~taskname] :deps ~deps :docs ~docs})))))
+  (let [{:keys [deps docs actions destruct pred]} (parse-task-opts forms)]
+    `(append-task! '~name ~(conj {:deps deps :docs docs}
+                                 (when (seq actions)
+                                   `{:actions [(fn [~destruct]
+                                                 (when ~pred ~@actions))]})))))
 
 (defn- in-ts [ts task-decl]
   (conj (drop 2 task-decl)
@@ -72,18 +69,15 @@
    (defile \"main.o\" #{\"main.c\"}
      (sh \"cc\" \"-c\" \"-o\" \"main.o\" \"main.c\"))"
   [filename & forms]
-  (let [taskname (to-taskname filename)
-        {:keys [deps docs actions destruct pred]} (parse-task-opts forms)]
-    (if (empty? forms)
-      `(append-task! ~filename {:deps ~deps :docs ~docs})
-      `(do
-         (defn ~taskname ~(join " " docs) [~destruct]
-           (when (or (force?)
-                     (and ~pred
-                          (run-file-task? *File* '~deps)))
-             (mkdir (.getParentFile *File*))
-             ~@actions))
-         (append-task! ~filename {:actions [~taskname] :deps ~deps :docs ~docs})))))
+  (let [{:keys [deps docs actions destruct pred]} (parse-task-opts forms)]
+    `(append-task! ~filename ~(conj {:deps deps :docs docs}
+                                    (when-not (empty? forms)
+                                      `{:actions [(fn [~destruct]
+                                                    (when (or (force?)
+                                                              (and ~pred
+                                                                   (run-file-task? *File* ~deps)))
+                                                      (mkdir (.getParentFile *File*))
+                                                      ~@actions))]})))))
 
 (defmacro invoke [name & [opts]]
   `(binding [*opts* (or ~opts *opts*)]

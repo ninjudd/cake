@@ -32,11 +32,12 @@
         [pred forms] (if (= :when (first forms))
                        `[~(second forms) ~(drop 2 forms)]
                        [true forms])]
-    {:deps deps :docs docs :actions forms :destruct destruct :pred pred}))
+    {:deps (list `quote deps) :docs (vec docs) :actions forms :destruct destruct :pred pred}))
 
-(defmacro append-task! [name task]
-  `(do (defonce ~'task-defs (atom {}))
-       (swap! ~'task-defs update '~name adjoin '~task)))
+(defn append-task! [name task]
+  (let [tasks-var (or (resolve 'task-defs)
+                      (intern *ns* 'task-defs (atom {})))]
+    (swap! @tasks-var update name adjoin task)))
 
 (defn- expand-prefix
   "Converts a vector of the form [prefix sym1 sym1] to (prefix.sym1 prefix.sym2)"
@@ -94,14 +95,6 @@
    (mapcat task-namespaces
            (into (default-tasks) (:tasks *project*)))))
 
-(defn to-taskname [taskname]
-  (gensym
-   (str (name (ns-name *ns*))
-        "/"
-        (if (string? taskname)
-          (str "file-" (.replaceAll taskname "/" "-"))
-          (str "task-" (name taskname))))))
-
 (defn task-run-file [taskname]
   (file ".cake" "run" taskname))
 
@@ -151,7 +144,7 @@
 (defn- run-actions
   "Execute task actions in order. Construct file output if task is a defile"
   [task]
-  (let [results (doall (for [action (map resolve (:actions task)) :when action]
+  (let [results (doall (for [action (:actions task) :when action]
                          (action *opts*)))]
     (when *File*
       (when-let [output (seq (remove nil? results))]
