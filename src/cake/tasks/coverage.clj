@@ -48,14 +48,17 @@
 (deftask coverage
   (let [testables (testable-symbols (testable-namespaces))
         needed-additions (not-empty (un-tested-symbols testables))
-        untested-count (apply + (map (comp count val) needed-additions))
+        untested-count (count (mapcat val needed-additions))
         tested-ratio (- 1 (/ untested-count (count testables)))
-        [fmt ratio] (cond
-                     (= 1 tested-ratio)    ["Great!"         1]
-                     (<= 1/2 tested-ratio) ["Almost done..." tested-ratio]
-                     (zero? tested-ratio)  ["Get to work!"   0]
-                     :else                 ["Keep it up!"    (- 1 tested-ratio)])
-        fmt (str "%n%n%2.0f%% of public functions are tested! " fmt)]
+        [encouragement invert?] (cond
+                       (= 1 tested-ratio)    ["Great!"]
+                       (<= 1/2 tested-ratio) ["Almost done..." true]
+                       (zero? tested-ratio)  ["Get to work!"]
+                       :else                 ["Keep it up!"])
+        [fmt ratio] (if invert?
+                      ["still need tests." (- 1 tested-ratio)]
+                      ["are tested!" tested-ratio])
+        fmt (str "%n%n%2.0f%% of public functions " fmt " " encouragement)]
     (when needed-additions
       (print "The following functions appear to be untested:")
       (let [width (apply max (map #(.length (key %)) needed-additions))
