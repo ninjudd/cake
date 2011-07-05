@@ -22,7 +22,7 @@
     [namespaces namespaces]
     (for [n namespaces
           [sym var] (ns-publics (find-ns (doto n require)))
-          :when (and (bound? var) (fn? @var) (-> var meta (get :needs-test true)))]
+          :when (and (bound? var) (fn? @var) (not (-> var meta :dont-test)))]
       (apply symbol (map str [n sym])))))
 
 (defn clj-test-files []
@@ -37,7 +37,10 @@
          (catch Throwable _))))
 
 (defn used-symbols [file]
-  (filter symbol? (flatten (read-all (java.io.PushbackReader. (reader file))))))
+  (->> (read-all (java.io.PushbackReader. (reader file)))
+       flatten
+       (filter symbol?)
+       (map (comp symbol name)))) ;; strip namespace - too hard to do right
 
 (defn un-tested-symbols [testables]
   (let [tested (set (mapcat used-symbols (clj-test-files)))
