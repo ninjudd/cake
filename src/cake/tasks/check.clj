@@ -13,7 +13,9 @@
                                            read-file-ns-decl]]
               [bake.nsdeps :only [deps-from-ns-decl]]) []
               (binding [*warn-on-reflection* true]
-                (doseq [src-file (find-clojure-sources-in-dir (:source-path *project*))]
+                (doseq [src-file (mapcat #(find-clojure-sources-in-dir
+                                           (java.io.File. %))
+                                         (:source-path *project*))]
                   (let [depends-on-cake-core?
                         (fn [ns-decl]
                           (contains? (deps-from-ns-decl ns-decl) 'cake.core))
