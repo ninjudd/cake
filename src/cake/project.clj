@@ -148,7 +148,7 @@
                 *ins* *outs* (vals object-bindings))
          (catch Throwable e
            (println "error evaluating:")
-           (prn body)
+           (prn (if (next body) (cons `do body) (first body)))
            (throw e)))))
 
 (defmacro bake
