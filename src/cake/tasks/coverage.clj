@@ -18,12 +18,14 @@
           (:source-path *project*)))
 
 (defn testable-symbols [namespaces]
-  (bake (:use [useful.debug :only [?]])
-    [namespaces namespaces]
-    (for [n namespaces
-          [sym var] (ns-publics (find-ns (doto n require)))
-          :when (and (bound? var) (fn? @var) (not (-> var meta :dont-test)))]
-      (apply symbol (map str [n sym])))))
+  (bake [namespaces namespaces]
+    (letfn [(test? [var] (not (-> var meta :dont-test)))]
+      (for [n namespaces
+            :let [n (find-ns (doto n require))]
+            :when (test? n)
+            [sym var] (ns-publics n)
+            :when (and (bound? var) (fn? @var) (test? var))]
+        (apply symbol (map str [n sym]))))))
 
 (defn clj-test-files []
   (apply concat (map (comp find-clojure-sources-in-dir file)
