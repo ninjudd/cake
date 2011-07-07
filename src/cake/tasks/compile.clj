@@ -2,7 +2,7 @@
   (:use cake
         [cake.core :only [deftask bake invoke]]
         [uncle.core :only [ant add-fileset fileset-seq]]
-        [cake.file :only [file newer? mkdir]]
+        [cake.file :only [file newer? mkdir file-exists?]]
         [cake.project :only [reset-classloaders! with-classloader classpath]]
         [bake.core :only [verbose? debug? log os-name os-arch]]
         [cake.utils :only [sudo prompt-read]]
@@ -14,18 +14,19 @@
 (defn compile-java [src & [dest]]
   (let [start (System/currentTimeMillis)
         dest  (file (or dest (first (:compile-path *project*))))]
-    (ant Javac (merge {:destdir     dest
-                       :classpath   (classpath)
-                       :srcdir      src
-                       :fork        true
-                       :verbose     (verbose?)
-                       :debug       true
-                       :debug-level "source,lines"
-                       :target      "1.5"
-                       :failonerror true}
-                      (:java-compile *project*)))
-    (when (some #(newer? % start) (file-seq dest))
-      (reset-classloaders!))))
+    (when-let [src (seq (filter file-exists? src))]
+      (ant Javac (merge {:destdir     dest
+                         :classpath   (classpath)
+                         :srcdir      (filter file-exists? src)
+                         :fork        true
+                         :verbose     (verbose?)
+                         :debug       true
+                         :debug-level "source,lines"
+                         :target      "1.5"
+                         :failonerror true}
+                        (:java-compile *project*)))
+      (when (some #(newer? % start) (file-seq dest))
+        (reset-classloaders!)))))
 
 (deftask compile-java #{compile-native}
   (copy-native)
