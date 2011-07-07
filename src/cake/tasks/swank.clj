@@ -14,7 +14,9 @@
           [socket socket, context context]
           (let [socket-serve     (ns-resolve 'swank.core.server 'socket-serve)
                 connection-serve (ns-resolve 'swank.swank 'connection-serve)
-                opts {:encoding (or (System/getProperty "swank.encoding") "iso-latin-1-unix")}]
+                opts {:encoding (or (some #(System/getProperty %)
+                                          ["swank.encoding" "file.encoding"])
+                                    "UTF-8")}]
             (eval (:swank-init *project*))
             (set-context! context)
             (socket-serve connection-serve socket opts)))))
