@@ -12,7 +12,8 @@
 (declare copy-native)
 
 (defn compile-java [src & [dest]]
-  (let [start (System/currentTimeMillis)
+  (let [src   (if (coll? src) src [src])
+        start (System/currentTimeMillis)
         dest  (file (or dest (first (:compile-path *project*))))]
     (when-let [src (seq (filter file-exists? src))]
       (ant Javac (merge {:destdir     dest
