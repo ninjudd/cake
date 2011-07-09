@@ -60,7 +60,7 @@
 
 (defn add-source-files [task & [opts]]
   (when-not (:omit-source *project*)
-    (add-path task :source-path {:includes "**/*.clj, **/*.java"}))
+    (add-path task :source-path (assoc opts :includes "**/*.clj, **/*.java")))
   (when (:bake *project*)
     (add-zipfileset task (bakepath opts :excludes "cake.clj"))))
 
