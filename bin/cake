@@ -10,221 +10,44 @@ require 'pp'
 CLOJURE = "1.2.0"
 STABLE  = "0.6.3"
 
-if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
-  begin
-    require 'rubygems' rescue nil
-    require 'win32/process'
-  rescue LoadError
-    puts 'cake requires win32/process. use "gem install win32-process" to install'
-    exit
-  end
+def parse_opts(args)
+  args.unshift('run')     if args.any? and args.first.index('/')
+  args.unshift('default') if args.empty? or ['-', '@'].include?(args.first[0,1])
 
-  TERM = 1
-  KILL = 'KILL'
-  PATH_SEP = ';'
-  $home = File.expand_path(ENV['HOMEDRIVE'] + ENV['HOMEPATH'])
-  $win  = true
-
-  def daemon(cmd)
-    Process.create(:app_name => cmd.join(' ')).process_id
-  end
-else
-  TERM = 'TERM'
-  KILL = 'KILL'
-  PATH_SEP = ':'
-  $home = File.expand_path("~")
-
-  class Process::Error; end
-  def daemon(cmd)
-    puts cmd.join(' ') if debug?
-    pid = fork do
-      if $config['jvm.detach-output'] or not $stdin.tty?
-        $stdout.close
-        $stderr.close
-      end
-      Process.setsid
-      exec(*cmd)
-    end
-    Process.detach(pid)
-    pid
-  end
-end
-
-class IO
-  def gets_nonblock(delim = "\n")
-    line = ""
-    while c = read_nonblock(1)
-      line << c
-      break if c == delim
-    end
-    line
-  rescue Errno::EAGAIN, Errno::EWOULDBLOCK, EOFError => e
-    @eof_reached = true if e.is_a?(EOFError)
-    line
-  end
-
-  def eof_reached?
-    @eof_reached
-  end
-
-  def eof_nonblock?
-    return true if eof_reached?
-    ungetc(read_nonblock(1)[0])
-    false
-  rescue Errno::EAGAIN, Errno::EWOULDBLOCK, EOFError => e
-    e.kind_of?(EOFError)
-  end
-
-  def print_flush(str)
-    print(str)
-    flush
-  end
-
-  def duplex(input, output, input_wait = 0, interval = 0.01)
-    until eof_nonblock?
-      while self.wait(interval)
-        if line = block_given? ? yield(gets_nonblock) : gets_nonblock
-          output.print_flush(line) if line.kind_of?(String)
-        else
-          finished = true
-        end
-      end
-      input_wait -= interval
-      return if finished
-
-      while input.ready?
-        write(input.gets_nonblock(nil))
-        close_write if input.eof_reached?
-      end unless $win or input_wait > 0
-    end
-  end
-end
-
-class Object
-  # Support converting simple Ruby data structures to Clojure expressions.
-  def to_clj(unquote = false)
-    if unquote
-      case self
-      when Array  then return collect {|i| i.to_clj(true)}.join(' ')
-      when String then return self
-      when nil    then return ''
-      end
-    end
-    case self
-    when Hash   then '{' + collect {|k,v| k.to_clj + ' ' + v.to_clj}.join(' ') + '}'
-    when Array  then '[' + collect {|i| i.to_clj}.join(' ') + ']'
-    when Symbol then ":#{to_s}"
-    else             inspect.gsub(/(\\a|\\e|\\v|\\x|\\#)/) {|c| CLJ_SUB[c]}
-    end
-  end
-
-  CLJ_SUB = {
-    '\a' => '\007',
-    '\e' => '\033',
-    '\v' => '\013',
-    '\#' => '#',
-    '\x' => 'x', # This will mangle some strings in ruby 1.9.1, but it is better than breaking altogether.
-  }
-
-  define_method(:~) { Unquoted.new(self) }
-end
-
-class Unquoted
-  attr_reader :object
-  def initialize(object)
-    @object = object
-  end
-
-  def to_clj(quote = false)
-    object.to_clj(!quote)
-  end
-  alias to_s to_clj
-
-  define_method(:~) { @object }
-end
-
-begin
-  require 'readline'
-  $libedit = true unless Readline.respond_to?(:emacs_editing_mode)
-rescue LoadError
-  $no_readline = true
-  module Readline
-    HISTORY = []
-    attr_accessor :basic_word_break_characters, :completion_proc
-    def readline(prompt)
-      $stdout.print_flush(prompt)
-      $stdin.gets
-    end
-    extend Readline
-  end
-end
-
-def add_opt!(key, *vals)
-  ($opts[key.to_sym] ||= []).concat vals
-end
-
-def parse_opts!
-  ARGV.unshift('run')     if ARGV.any? and ARGV.first.index('/')
-  ARGV.unshift('default') if ARGV.empty? or ['-', '@'].include?(ARGV.first[0,1])
-  $command = ARGV.first.to_sym
-  $opts = {}
-  ARGV[1..-1].each do |opt|
+  task = args.first.to_sym
+  opts = Hash.new {|h,k| h[k] = []}
+  args.each do |opt|
     case opt
     when "--"                 then break # stop parsing options
-    when /^@([-\w]+)$/        then add_opt!(:context, $1)
-    when /^-(\w+)$/           then $1.split('').each {|c| add_opt!(c, '')}
-    when /^--?([-\w]+)=(.+)$/ then add_opt!($1, *$2.split(','))
-    when /^--?([-\w]+)$/      then add_opt!($1, "")
-    else                           add_opt!($command, opt)
+    when /^@([-\w]+)$/        then opts[:context] << $1
+    when /^-(\w+)$/           then $1.split('').each {|c| opts[c.to_sym] << ''}
+    when /^--?([-\w]+)=(.+)$/ then opts[$1.to_sym].concat($2.split(','))
+    when /^--?([-\w]+)$/      then opts[$1.to_sym] << ""
+    else                           opts[task] << opt
     end
   end
-  $opts.freeze
+  task, opts.freeze
 end
 
-def debug?
-  ENV['CAKE_DEBUG'] or $opts[:d] or $opts[:debug]
-end
-
-def verbose?
-  debug? or $opts[:v] or $opts[:verbose]
-end
-
-def restart?
-  $opts[:R] or $opts[:restart]
-end
-
-def stable?
-  $opts[:S] or $opts[:stable]
+def parse_config(*paths)
+  config = {}
+  paths.each do |path|
+    File.open(path, 'r') do |file|
+      file.each do |line|
+        next if ['#', '!'].include?(line[0,1])
+        key, value = line.split('=', 2)
+        next unless key and value
+        config[key.strip] = value.strip
+      end
+    end if File.exists?(path)
+  end
+  config.freeze
 end
 
 def log(command, *messages)
   messages.each do |message|
     message.split("\n").each do |line|
       printf("%11s %s\n", "[#{command}]", line) unless line.empty?
-    end
-  end
-end
-
-class Configuration < Hash
-  def initialize(*paths)
-    paths.each do |path|
-      File.open(path, 'r') do |file|
-        file.each do |line|
-          next if ['#', '!'].include?(line[0,1])
-          key, value = line.split('=', 2)
-          next unless key and value
-          self[key.strip] = value.strip
-        end
-      end if File.exists?(path)
-    end
-  end
-
-  def [](*keys)
-    if keys.first.kind_of?(Symbol)
-      key = keys.join('.') + '.'
-      clone.delete_if {|k,v| not k.index(key) == 0}
-    else
-      super
     end
   end
 end
@@ -268,11 +91,6 @@ def get(repo, source_jar, dest_jar = source_jar)
   download("#{repo}/#{source_jar}", "#{$m2}/#{dest_jar}")
 end
 
-def newer?(file1, file2)
-  return false unless File.exists?(file1)
-  not File.exists?(file2) or test(?>, file1, file2)
-end
-
 def ps
   `jps -v`.split("\n").select {|l| l =~ /cake\.project/}
 rescue Errno::ENOENT => e
@@ -294,78 +112,7 @@ def tail_log(num_lines)
   exec("tail -n#{num_lines || 10} -f #{$project}/.cake/cake.log")
 end
 
-class JVM
-  attr_reader :classpath, :libpath, :port, :pid, :pidfile, :load_time
-
-  def initialize(classpath, libpath, java_opts = "")
-    @classpath = make_path(classpath)
-    @libpath   = make_path(libpath)
-    @java_opts = java_opts
-    @pidfile   = ".cake/#{[ENV['USER'], Socket.gethostname, $config['jvm.separate-contexts'] && $opts[:context]].compact.join('-')}"
-    @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
-    refresh
-  end
-
-  def running?
-    not pid.nil?
-  end
-
-  def refresh
-    @pid, @port, @version = IO.read(pidfile).split("\n"); @pid = @pid.to_i; @port = @port.to_i
-
-    Process.kill(0, @pid) # make sure pid is valid
-    TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
-
-    kill if @version != $version or newer?("#{$project}/lib/dev", pidfile)
-  rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Errno::EPERM, Process::Error => e
-    if e.kind_of?(Errno::ECONNREFUSED) and cake_pids.include?(@pid)
-      log(:cake, "defunct jvm") if debug?
-      kill(true)
-    end
-    reset! # no pidfile or invalid pid or connection refused
-  end
-
-  def java_opts
-    enable_server = $config['jvm.server'] == 'true' || `java -d32 -version 2>&1` =~ /Cannot run Java in 32 bit mode/ || $? != 0
-    vm_opts       = enable_server ? ['-server', '-d64', '-Xmx512M', '-XX:MaxPermSize=256M'] : ['-client', '-d32', '-Xms128M', '-Xmx256M', '-XX:MaxPermSize=128M']
-    user_opts     = "#{ENV['JAVA_OPTS']} #{$config['jvm.opts']}".split.compact
-    [vm_opts, user_opts, @java_opts,'-cp', classpath, %{-Djava.library.path=#{libpath}}]
-  end
-
-  MIN_PORT = 2**14
-  MAX_PORT = 2**16
-
-  def start
-    return if running?
-
-    log(:cake, "starting jvm") if verbose?
-    @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    @pid = daemon ["java", java_opts, "clojure.main", "-e", "(require 'cake.main) (cake.main/start-server #{port})"].flatten.compact
-    log(:cake, "cake started with pid #{@pid} on port #{@port}") if debug?
-    File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
-  rescue Errno::EADDRNOTAVAIL => e # port already in use
-    retry
-  end
-
-  def kill(force = $opts[:"9"])
-    if pid
-      signal = force ? KILL : TERM
-      log(:kill, "sending #{signal} signal to jvm (#{pid})") if debug?
-      Process.kill(signal, pid)
-      reset!
-    else
-      log(:kill, "jvm not running") if $command == :kill
-    end
-  end
-
-  def ping
-    with_socket do |socket|
-      socket.write ":ping {}\n"
-      log($command, "jvm not running") unless socket.gets == "pong\n"
-    end
-  end
-
-  PROMPT = "PROMPT__#{rand}"
+class Cake
   def repl
     puts ";; cannot find readline; your repl won't be very awesome without it" if $no_readline
     load_history
@@ -401,38 +148,6 @@ class JVM
   end
 
 private
-
-  def make_path(paths)
-    paths.flatten.compact.join(PATH_SEP)
-  end
-
-  def reset!
-    File.unlink(pidfile) if File.exists?(pidfile)
-    @pid, @port = []
-    @load_time = Time.now
-  end
-
-  def stale?(file)
-    File.exists?(file) and File.mtime(file) > load_time
-  end
-
-  def with_socket(retries = $timeout)
-    return unless port
-    socket = TCPSocket.new("localhost", port)
-    result = yield(socket)
-    result
-  rescue Errno::ECONNREFUSED, Errno::EBADF => e
-    sleep 1
-    if retries
-      if (retries -= 1) == 0
-        log :cake, "connection to jvm is taking a long time...",
-                   "you can use ^C to abort and use 'cake kill' or 'cake kill -9' to force the jvm to restart"
-      end
-      retry unless retries < -$timeout
-    end
-  ensure
-    socket.close if socket
-  end
 
   HISTORY_NUM  = 500
   HISTORY_FILE = ".cake/history"
@@ -555,25 +270,20 @@ end
 
 #==================================
 
-parse_opts!
-$script   = File.expand_path($opts[:run].first) if $opts[:run]
-$pwd      = Dir.getwd
-$project  = project_dir($pwd)
-$file     = File.expand_path(__FILE__)
-$cakedir  = File.dirname(File.dirname(File.expand_path(readlink($file), File.dirname($file))))
-$releases = "http://releases.clojure-cake.org"
-$m2       = "#{$home}/.m2/repository"
-$config   = Configuration.new("#{$home}/.cake/config", "cake.config", ".cake/config")
-$vars     = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
-$timeout  = ($config['connect.timeout'] || 60).to_i
+$task, $opts = parse_opts(ARGV)
+$script      = File.expand_path($opts[:run].first) if $opts[:run]
+$pwd         = Dir.getwd
+$project     = project_dir($pwd)
+$file        = File.expand_path(__FILE__)
+$cakedir     = File.dirname(File.dirname(File.expand_path(readlink($file), File.dirname($file))))
+$releases    = "http://releases.clojure-cake.org"
+$m2          = "#{HOME}/.m2/repository"
+$config      = Config.new("#{HOME}/.cake/config", "cake.config", ".cake/config")
+$vars        = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
+$timeout     = ($config['connect.timeout'] || 60).to_i
 
 initialize_cake_dirs
 Dir.chdir($project)
-
-if debug?
-  puts "config: #{$config.inspect}"
-  puts "vars:   #{$vars}"
-end
 
 # Bootstrap cake dependencies.
 if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?("#{$cakedir}/project.clj") and not stable?
