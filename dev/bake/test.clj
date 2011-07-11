@@ -3,8 +3,7 @@
         [cake :only [*config*]]
         [bake.core :only [verbose? log]]
         [bake.reload :only [last-reloaded last-modified reload]]
-        [bake.notify :only [notify]]
-        [useful.string :only [pluralize]])
+        [bake.notify :only [notify]])
   (:import [java.io StringWriter IOException]))
 
 (def last-passed    (atom (System/currentTimeMillis)))
@@ -76,5 +75,8 @@
       (do (println "----")
           (println (if (zero? failures)
                      "All tests passed"
-                     (str (pluralize failures "test") " FAILED")))
+                     (str failures " test"
+                          (when-not (= 1 failures)
+                            "s")
+                          " FAILED")))
           (println "Finished in" (/ (- (System/currentTimeMillis) start) 1000.0) "seconds.\n")))))
