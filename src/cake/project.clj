@@ -89,8 +89,10 @@
      ~@forms))
 
 (defmacro with-test-classloader [& forms]
-  `(binding [*classloader* test-classloader]
-     ~@forms))
+  (if (= "true" (get *config* "disable-test-classloader"))
+    `(do ~@forms)
+    `(binding [*classloader* test-classloader]
+       ~@forms)))
 
 (defn- quote-if
   "We need to quote the binding keys so they are not evaluated within the bake
