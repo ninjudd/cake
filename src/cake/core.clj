@@ -16,7 +16,7 @@
        (alter-var-root #'*project-root* (fn [_#] project#)))))
 
 (defmacro defcontext [name & opts]
-  (let [opts (syntax-quote (into-map opts))]
+  (let [opts (syntax-quote (into-map merge-in opts))]
     `(alter-var-root #'*context* merge-in {'~name ~opts})))
 
 (defmacro undeftask [taskname]
