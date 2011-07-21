@@ -10,3 +10,4 @@ build/
 releases/
 .*
 examples/test/test-example
+docs
