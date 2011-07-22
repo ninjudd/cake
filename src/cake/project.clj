@@ -46,12 +46,13 @@
 (defn make-classloader [& paths]
   (when (:ext-dependencies *project*)
     (wrap-ext-classloader (ext-classpath)))
-  (when-let [cl (classlojure (apply classpath paths))]
-    (eval-in cl '(do (require 'cake)
-                     (require 'bake.io)
-                     (require 'bake.reload)
-                     (require 'clojure.main)))
-    cl))
+  (if-let [cl (classlojure (apply classpath paths))]
+    (doto cl
+      (eval-in '(do (require 'cake)
+                    (require 'bake.io)
+                    (require 'bake.reload)
+                    (require 'clojure.main))))
+    (prn paths)))
 
 (defn set-classpath!
   "Set the JVM classpath property to the current clojure classloader."
