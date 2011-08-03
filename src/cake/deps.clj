@@ -17,7 +17,6 @@
    ["maven"             "http://repo1.maven.org/maven2"]])
 
 (def dep-types [:dependencies :dev-dependencies :ext-dependencies :test-dependencies])
-(def dep-jars (atom nil))
 (def ^{:dynamic true} *overwrite* nil)
 
 (defn subproject-path [dep]
