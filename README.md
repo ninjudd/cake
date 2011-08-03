@@ -16,7 +16,7 @@ On OS X with homebrew, you can install cake by running this command:
     brew install cake
 
 That's it. Or if you don't have [homebrew](http://mxcl.github.com/homebrew/) or you're not on OS X, 
-try one of the [other installation methods](https://github.com/flatland/cake/wiki/install).
+try one of the [other installation methods](https://github.com/flatland/cake/wiki/Installation).
 
 ## Getting Started
 
