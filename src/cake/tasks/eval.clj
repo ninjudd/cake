@@ -32,11 +32,16 @@
 
 (deftask run #{compile-java}
   "Execute a script in the project jvm."
-  {[script] :run}
-  (bake [script (with-root *pwd* (str (file script)))
-         args   (rest (drop-while (partial not= script) *args*))]
-        (binding [*command-line-args* args]
-          (load-file script))))
+  {[script] :run m :m}
+  (if m
+    (bake [main (:main *project*)
+           args (remove #{"run" "-m"} *args*)]
+          (require main)
+          (-> (str main "/-main") symbol resolve (apply args)))
+    (bake [script (with-root *pwd* (str (file script)))
+           args   (rest (drop-while (partial not= script) *args*))]
+          (binding [*command-line-args* args]
+            (load-file *fi)))))
 
 (deftask repl #{compile-java}
   "Start an interactive shell with history and tab completion."
