@@ -9,6 +9,7 @@
         [clojure.java.shell :only [sh]]
         [useful.utils :only [adjoin]]
         [useful.map :only [update into-map]]
+        [useful.fn :only [given]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
@@ -232,4 +233,5 @@
         (assoc-path :library-path       "lib")
         (assoc-path :dev-resources-path "dev")
         (assoc-path :compile-path       "classes")
-        (assoc-path :test-compile-path  :test-path "classes"))))
+        (assoc-path :test-compile-path  :test-path "classes")
+        (given (:java-source-path opts) update :source-path conj (:java-source-path opts)))))
