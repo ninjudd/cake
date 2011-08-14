@@ -168,7 +168,8 @@ def parse_opts!
   ARGV.unshift('default') if ARGV.empty? or ['-', '@'].include?(ARGV.first[0,1])
   $command = ARGV.first.to_sym
   $opts = {}
-  ARGV[0..-1].each do |opt|
+  add_opt!(:console,'') if ARGV.first.index "console"
+  ARGV[1..-1].each do |opt|
     case opt
     when "--"                 then break # stop parsing options
     when /^@([-\w]+)$/        then add_opt!(:context, $1)
