@@ -21,7 +21,7 @@
                 :dev-dependencies     (all (! :ext) (! :test) :dev)
                 :ext-dependencies     (all (! :dev) (! :test) :ext)
                 :ext-dev-dependencies (all (! :test) :dev :ext)
-                :test-dependencies    (all :text)})
+                :test-dependencies    (all :test)})
 (def ^{:dynamic true} *overwrite* nil)
 
 (defn subproject-path [dep]
