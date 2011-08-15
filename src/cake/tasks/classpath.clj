@@ -1,7 +1,7 @@
 (ns cake.tasks.classpath
   (:use [cake :only [*classloader*]]
         [cake.core :only [deftask]]
-        [classlojure :only [get-classpath base-classloader]]))
+        [classlojure :only [get-classpath base-classloader ext-classloader]]))
 
 (deftask classpath
   "Print the classpath for the cake and project classloaders."
@@ -10,5 +10,8 @@
     (println " " path))
   (println "\nproject classpath:")
   (doseq [path (get-classpath *classloader*)]
+    (println " " path))
+  (println "\next classpath:")
+  (doseq [path (get-classpath ext-classloader)]
     (println " " path))
   (println))

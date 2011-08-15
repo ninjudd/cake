@@ -40,12 +40,11 @@
                          (path-string (global-file "lib/dev/*"))]
                         paths)))
 
-(defn ext-classpath []
-  (mapcat to-urls (deps :ext-dependencies)))
-
 (defn make-classloader [& paths]
-  (when (:ext-dependencies *project*)
-    (wrap-ext-classloader (ext-classpath)))
+  (let [ext-deps (deps :ext-dependencies)
+        ext-dev-deps (deps :ext-dev-dependencies)]
+    (when (or ext-deps ext-dev-deps)
+      (wrap-ext-classloader (mapcat to-urls (concat ext-deps ext-dev-deps)))))
   (if-let [cl (classlojure (apply classpath paths))]
     (doto cl
       (eval-in '(do (require 'cake)
