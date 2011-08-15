@@ -8,7 +8,7 @@
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
         [useful.utils :only [adjoin]]
-        [useful.map :only [update into-map]]
+        [useful.map :only [update into-map map-vals]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
 
@@ -203,6 +203,9 @@
      (assoc-path opts key (vec (map #(str (file % suffix))
                                     (get opts base-key))))))
 
+(defn qualify [type deps]
+  (map-vals #(assoc % type true) deps))
+
 (defn create [project-name opts]
   (let [base-version (:version opts)
         version (trim-newline
@@ -221,11 +224,11 @@
                :jar-name          (or (:jar-name opts) artifact-version)
                :war-name          (or (:war-name opts) artifact-version)
                :uberjar-name      (or (:uberjar-name opts) (str artifact-version "-standalone"))
-               :dev-dependencies  (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts)))
-               :ext-dependencies  (dep-map (concat (:ext-dependencies    opts) (:ext-deps    opts)))
-               :test-dependencies (dep-map (concat (:test-dependencies   opts) (:test-deps   opts)))
-               :dependencies      (dep-map (concat (:dependencies        opts) (:deps        opts)
-                                                   (:native-dependencies opts) (:native-deps opts))))
+               :dependencies
+               (merge (dep-map (concat (:dependencies        opts)  (:deps        opts)
+                                       (:native-dependencies opts)  (:native-deps opts)))
+                      (qualify :dev (dep-map (concat  (:dev-dependencies  opts) (:dev-deps   opts))))
+                      (qualify :test (dep-map (concat (:test-dependencies opts)  (:test-deps opts))))))
         (assoc-path :source-path        "src")
         (assoc-path :test-path          "test")
         (assoc-path :resources-path     "resources")
