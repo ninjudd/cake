@@ -9,6 +9,6 @@
                  [org.clojure/tools.namespace "0.1.1" :exclusions [org.clojure/java.classpath]]
                  [org.clojars.ninjudd/java.classpath "0.1.2-SNAPSHOT"]
                  [com.jcraft/jsch "0.1.42"]]
-  :dev-dependencies [[org.clojars.flatland/cake-marginalia "0.6.1"]]
+  :dev-dependencies [[org.clojars.flatland/cake-marginalia "0.6.2"]]
   :tasks [cake-marginalia.tasks]
   :copy-deps true)
