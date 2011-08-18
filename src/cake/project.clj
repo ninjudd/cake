@@ -9,6 +9,7 @@
         [clojure.java.shell :only [sh]]
         [useful.utils :only [adjoin]]
         [useful.map :only [update into-map]]
+        [useful.map :only [update into-map map-vals]]
         [useful.fn :only [given]]
         [clojure.java.io :only [reader]])
   (:import [java.io File]))
@@ -41,12 +42,11 @@
                          (path-string (global-file "lib/dev/*"))]
                         paths)))
 
-(defn ext-classpath []
-  (mapcat to-urls (deps :ext-dependencies)))
-
 (defn make-classloader [& paths]
-  (when (:ext-dependencies *project*)
-    (wrap-ext-classloader (ext-classpath)))
+  (let [ext-deps (deps :ext-dependencies)
+        ext-dev-deps (deps :ext-dev-dependencies)]
+    (when (or ext-deps ext-dev-deps)
+      (wrap-ext-classloader (mapcat to-urls (concat ext-deps ext-dev-deps)))))
   (if-let [cl (classlojure (apply classpath paths))]
     (doto cl
       (eval-in '(do (require 'cake)
@@ -204,6 +204,9 @@
      (assoc-path opts key (vec (map #(str (file % suffix))
                                     (get opts base-key))))))
 
+(defn qualify [type deps]
+  (map-vals #(assoc % type true) deps))
+
 (defn create [project-name opts]
   (let [base-version (:version opts)
         version (trim-newline
@@ -222,11 +225,11 @@
                :jar-name          (or (:jar-name opts) artifact-version)
                :war-name          (or (:war-name opts) artifact-version)
                :uberjar-name      (or (:uberjar-name opts) (str artifact-version "-standalone"))
-               :dev-dependencies  (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts)))
-               :ext-dependencies  (dep-map (concat (:ext-dependencies    opts) (:ext-deps    opts)))
-               :test-dependencies (dep-map (concat (:test-dependencies   opts) (:test-deps   opts)))
-               :dependencies      (dep-map (concat (:dependencies        opts) (:deps        opts)
-                                                   (:native-dependencies opts) (:native-deps opts))))
+               :dependencies
+               (merge (dep-map (concat (:dependencies        opts)  (:deps        opts)
+                                       (:native-dependencies opts)  (:native-deps opts)))
+                      (qualify :dev  (dep-map (concat (:dev-dependencies  opts) (:dev-deps  opts))))
+                      (qualify :test (dep-map (concat (:test-dependencies opts) (:test-deps opts))))))
         (assoc-path :source-path        "src")
         (assoc-path :test-path          "test")
         (assoc-path :resources-path     "resources")

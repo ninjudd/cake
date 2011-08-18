@@ -5,7 +5,8 @@
         [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]]
         [clojure.string :only [split join]]
-        [useful.map :only [map-to]])
+        [useful.map :only [map-to]]
+        [useful.fn :only [all !]])
   (:require depot.maven
             [depot.deps :as depot])
   (:import [org.apache.tools.ant.taskdefs Copy Delete]))
@@ -16,7 +17,11 @@
    ["clojars"           "http://clojars.org/repo"]
    ["maven"             "http://repo1.maven.org/maven2"]])
 
-(def dep-types [:dependencies :dev-dependencies :ext-dependencies :test-dependencies])
+(def dep-types {:dependencies         (all (! :ext) (! :test))
+                :dev-dependencies     (all (! :ext) (! :test) :dev)
+                :ext-dependencies     (all (! :dev) (! :test) :ext)
+                :ext-dev-dependencies (all (! :test) :dev :ext)
+                :test-dependencies    (all :test)})
 (def ^{:dynamic true} *overwrite* nil)
 
 (defn subproject-path [dep]
@@ -45,7 +50,7 @@
 (defn fetch-deps [type]
   (binding [depot/*repositories* default-repos
             depot/*exclusions*   (auto-exclusions type)]
-    (try (depot/fetch-deps *project* type)
+    (try (depot/fetch-deps *project* (dep-types type))
          (catch org.apache.tools.ant.BuildException e
            (println "\nUnable to resolve the following dependencies:\n")
            (doall (map println (filter (partial re-matches #"\d+\) .*")
@@ -62,20 +67,22 @@
 
 (defn print-deps []
   (println)
-  (doseq [type dep-types]
+  (doseq [type (keys dep-types)]
     (when-let [jars (seq (deps type))]
       (println (str (name type) ":"))
       (doseq [jar (sort (map jar-name jars))]
         (println " " jar))
       (println))))
 
-(let [subdir {:dependencies      ""
-              :dev-dependencies  "dev"
-              :ext-dependencies  "ext"
-              :test-dependencies "test"}]
+(let [subdir {:dependencies         ""
+              :dev-dependencies     "dev"
+              :ext-dependencies     "ext"
+              :ext-dev-dependencies "ext/dev"
+              :test-dependencies    "test"}]
 
   (defn copy-deps [dest]
-    (let [build (file "build" "deps")]
+    (let [build (file "build" "deps")
+          dep-types (keys dep-types)]
       (when (or *overwrite*
                 (not (file-exists? dest)))
         (doseq [type dep-types]
@@ -94,7 +101,7 @@
     (reset! dep-jars
             (if (:copy-deps *project*)
               (copy-deps lib)
-              (map-to fetch-deps dep-types)))
+              (map-to fetch-deps (keys dep-types))))
     (extract-native! (file lib "native"))))
 
 (defn clear-deps! []
