@@ -17,7 +17,7 @@
    ["clojars"           "http://clojars.org/repo"]
    ["maven"             "http://repo1.maven.org/maven2"]])
 
-(def dep-types {:dependencies         (all (! :ext) (! :test))
+(def dep-types {:dependencies         (all (! :ext) (! :test) :main)
                 :dev-dependencies     (all (! :ext) (! :test) :dev)
                 :ext-dependencies     (all (! :dev) (! :test) :ext)
                 :ext-dev-dependencies (all (! :test) :dev :ext)

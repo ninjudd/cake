@@ -226,10 +226,11 @@
                :war-name          (or (:war-name opts) artifact-version)
                :uberjar-name      (or (:uberjar-name opts) (str artifact-version "-standalone"))
                :dependencies
-               (merge (dep-map (concat (:dependencies        opts)  (:deps        opts)
-                                       (:native-dependencies opts)  (:native-deps opts)))
-                      (qualify :dev  (dep-map (concat (:dev-dependencies  opts) (:dev-deps  opts))))
-                      (qualify :test (dep-map (concat (:test-dependencies opts) (:test-deps opts))))))
+               (merge
+                (qualify :main (dep-map (concat (:dependencies        opts) (:deps        opts)
+                                                (:native-dependencies opts) (:native-deps opts))))
+                (qualify :dev  (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts))))
+                (qualify :test (dep-map (concat (:test-dependencies   opts) (:test-deps   opts))))))
         (assoc-path :source-path        "src")
         (assoc-path :test-path          "test")
         (assoc-path :resources-path     "resources")
