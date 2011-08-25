@@ -8,7 +8,6 @@
         [clojure.string :only [split join trim-newline]]
         [clojure.java.shell :only [sh]]
         [useful.utils :only [adjoin]]
-        [useful.map :only [update into-map]]
         [useful.map :only [update into-map map-vals]]
         [useful.fn :only [given]]
         [clojure.java.io :only [reader]])
@@ -205,7 +204,7 @@
                                     (get opts base-key))))))
 
 (defn qualify [type deps]
-  (map-vals #(assoc % type true) deps))
+  (map-vals deps #(assoc % type true)))
 
 (defn create [project-name opts]
   (let [base-version (:version opts)
@@ -226,11 +225,12 @@
                :war-name          (or (:war-name opts) artifact-version)
                :uberjar-name      (or (:uberjar-name opts) (str artifact-version "-standalone"))
                :dependencies
-               (merge
-                (qualify :main (dep-map (concat (:dependencies        opts) (:deps        opts)
-                                                (:native-dependencies opts) (:native-deps opts))))
-                (qualify :dev  (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts))))
-                (qualify :test (dep-map (concat (:test-dependencies   opts) (:test-deps   opts))))))
+               (merge-with adjoin
+                           (qualify :main (dep-map (concat (:dependencies        opts) (:deps        opts)
+                                                           (:native-dependencies opts) (:native-deps opts))))
+                           (qualify :dev  (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts))))
+                           (qualify :test (dep-map (concat (:test-dependencies   opts) (:test-deps   opts))))))
+        
         (assoc-path :source-path        "src")
         (assoc-path :test-path          "test")
         (assoc-path :resources-path     "resources")
