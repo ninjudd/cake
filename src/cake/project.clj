@@ -215,22 +215,19 @@
         artifact (name project-name)
         artifact-version (str artifact "-" version)]
     (-> opts
-        (assoc :artifact-id       artifact
-               :group-id          (group project-name)
-               :version           version
-               :name              (or (:name opts) artifact)
-               :aot               (or (:aot opts) (:namespaces opts))
-               :context           (symbol (or (get *config* "project.context") (:context opts) "dev"))
-               :jar-name          (or (:jar-name opts) artifact-version)
-               :war-name          (or (:war-name opts) artifact-version)
-               :uberjar-name      (or (:uberjar-name opts) (str artifact-version "-standalone"))
-               :dependencies
-               (merge-with adjoin
-                           (qualify :main (dep-map (concat (:dependencies        opts) (:deps        opts)
-                                                           (:native-dependencies opts) (:native-deps opts))))
-                           (qualify :dev  (dep-map (concat (:dev-dependencies    opts) (:dev-deps    opts))))
-                           (qualify :test (dep-map (concat (:test-dependencies   opts) (:test-deps   opts))))))
-        
+        (assoc :artifact-id  artifact
+               :group-id     (group project-name)
+               :version      version
+               :name         (or (:name opts) artifact)
+               :aot          (or (:aot opts) (:namespaces opts))
+               :context      (symbol (or (get *config* "project.context") (:context opts) "dev"))
+               :jar-name     (or (:jar-name opts) artifact-version)
+               :war-name     (or (:war-name opts) artifact-version)
+               :uberjar-name (or (:uberjar-name opts) (str artifact-version "-standalone"))
+               :dependencies (merge-with adjoin
+                               (qualify :main (dep-map (mapcat opts [:dependencies :native-dependencies])))
+                               (qualify :dev  (dep-map (:dev-dependencies  opts)))
+                               (qualify :test (dep-map (:test-dependencies opts)))))
         (assoc-path :source-path        "src")
         (assoc-path :test-path          "test")
         (assoc-path :resources-path     "resources")
