@@ -115,7 +115,7 @@
 
 (def *bake-ns* 'user)
 
-(defn bake-ns* [ns-forms f]
+(defn in-bake-ns [ns-forms f]
   (if (empty? ns-forms)
     (f)
     (binding [*bake-ns* (gensym "bake")]
@@ -130,17 +130,24 @@
 
 (defn split-ns-forms [forms]
   (split-with
-   (comp #{:use :require :refer-clojure :import} first)
+   (comp #{:use :require :refer-clojure :import :refer} first)
    forms))
 
-(defmacro bake-ns [& forms]
+(defmacro bake-ns
+  "Create a temporary namespace in the project classloader using the provided ns forms. This namespace will be
+  used for all nested bake and bake-invoke calls."
+  {:arglists '([ns-forms* body*])}
+  [& forms]
   (let [[ns-forms forms] (split-ns-forms forms)]
-    `(bake-ns* '~ns-forms (fn [] ~@forms))))
+    `(in-bake-ns '~ns-forms (fn [] ~@forms))))
 
 (defn core-java-class? [object]
   (not (and (class object) (.getClassLoader (class object)))))
 
-(defn bake-invoke* [form args]
+(defn bake-eval
+  "Evaluate the given form in the project classloader. The form is expected to return a function
+  which is then invoked on the provided arguments."
+  [form & args]
   (let [named-args (for [arg args]
                      (if (core-java-class? arg)
                        [(gensym "arg") arg]
@@ -155,21 +162,24 @@
                     (~form ~@(map first named-args))))))
            *ins* *outs* (map second core))))
 
-(defmacro bake-invoke [form & args]
-  `(bake-invoke* '~form '~args))
+(defmacro bake-invoke
+  "Invoke the given function in the project classloader, passing the provided arguments to it.
+  The function can be anonymous, but Note that it is not an actual closure. The only data accessible
+  to the function when it is executed in the project classloader are the arguments passed."
+  [form & args]
+  `(bake-eval '~form ~@args))
 
 (defmacro bake
-  "Execute code in a your project classloader. Bindings allow passing state to the project
-   classloader. Namespace forms like use and require must be specified before bindings."
-  {:arglists '([ns-forms* bindings body*])}
+  "Execute code in the project classloader. Bindings allow passing state to the project classloader."
+  {:arglists '([ns-forms* bindings? body*])}
   [& forms]
   (let [[ns-forms forms] (split-ns-forms forms)
         [bindings forms] (if (vector? (first forms))
                            [(apply hash-map (first forms)) (rest forms)]
                            [{} forms])
         form `(fn [~@(keys bindings)] ~@forms)]
-    `(bake-ns* '~ns-forms (fn []
-                            (bake-invoke* '~form '~(vals bindings))))))
+    `(in-bake-ns '~ns-forms (fn []
+                            (bake-eval '~form ~@(vals bindings))))))
 
 (defn group [dep]
   (if ('#{clojure clojure-contrib} dep)
