@@ -1,12 +1,13 @@
 (ns cake.project
   (:use cake
-        clojure.pprint
         [classlojure :exclude [with-classloader]]
+        [classlojure :only [core-java-class?]]
         [cake.deps :only [deps]]
         [bake.core :only [debug?]]
         [cake.file :only [file global-file path-string]]
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join trim-newline]]
+        [clojure.pprint :only [pprint]]
         [clojure.java.shell :only [sh]]
         [useful.utils :only [adjoin]]
         [useful.map :only [update into-map map-vals]]
@@ -70,7 +71,6 @@
     (fn [cl]
       (when cl (eval-in cl '(shutdown-agents)))
       (when-let [classloader (make-classloader)]
-        (prn :classloader classloader)
         (set-classpath! classloader)
         classloader))))
 
@@ -126,7 +126,7 @@
       (try (f)
            (finally
             (eval-in *classloader*
-                     `(remove-ns ~*bake-ns*)))))))
+                     `(remove-ns '~*bake-ns*)))))))
 
 (defn split-ns-forms [forms]
   (split-with
@@ -141,9 +141,6 @@
   (let [[ns-forms forms] (split-ns-forms forms)]
     `(in-bake-ns '~ns-forms (fn [] ~@forms))))
 
-(defn core-java-class? [object]
-  (not (and (class object) (.getClassLoader (class object)))))
-
 (defn bake-eval
   "Evaluate the given form in the project classloader. The form is expected to return a function
   which is then invoked on the provided arguments."
@@ -152,15 +149,16 @@
                      (if (core-java-class? arg)
                        [(gensym "arg") arg]
                        [arg]))
-        core (filter #(= 2 (count %)) named-args)]
+        core-args (filter #(= 2 (count %)) named-args)
+        form `(do (in-ns '~*bake-ns*)
+                  (fn [ins# outs# ~@(map first core-args)]
+                    (clojure.main/with-bindings
+                      (bake.io/with-streams ins# outs#
+                        (binding [~@(shared-bindings)]
+                          (apply ~form '~(map first named-args)))))))]
     (apply eval-in *classloader*
-           `(fn [ins# outs# ~@(map first core)]
-              (clojure.main/with-bindings
-                (set! *ns* (the-ns '~*bake-ns*))
-                (bake.io/with-streams ins# outs#
-                  (binding ~(shared-bindings)
-                    (~form ~@(map first named-args))))))
-           *ins* *outs* (map second core))))
+           `(clojure.main/with-bindings (eval '~form))
+           *ins* *outs* (map second core-args))))
 
 (defmacro bake-invoke
   "Invoke the given function in the project classloader, passing the provided arguments to it.

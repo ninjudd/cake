@@ -6,6 +6,8 @@
         [cake.project :only [with-test-classloader]]
         [bake.find-namespaces :only [find-namespaces-in-dir]]
         [clojure.pprint :only [pprint]])
+  (:require [com.georgejahad.difform :as difform]
+            [clansi.core :as ansi])
   (:import [java.io File]))
 
 (defn test-opts []
@@ -19,35 +21,77 @@
                                    :else         :namespaces))
                   (map-vals set))))))
 
-(defn report [ns results]
-  (prn :ns ns)
-  (prn results))
+;; this method by brenton ashworth
+(defn difform-str
+  "Create a string that is the diff of the forms x and y."
+  [x y]
+  (subs
+   (with-out-str
+     (difform/clean-difform x y)) 1))
 
-(defn old-run-project-tests [& opts]
-  (with-test-classloader
-    (let [opts (merge (test-opts) (apply hash-map opts))
-          tests-to-run (bake (:use bake.test clojure.test
-                                   [bake.core :only [with-context]])
-                             [namespaces (flatten (for [test-path (:test-path *project*)]
-                                                    (find-namespaces-in-dir (java.io.File. test-path))))
-                              opts opts]
-                             (get-test-vars namespaces opts))]
-      (doseq [[ns tests] tests-to-run]
-        (report ns (bake (:use bake.test clojure.test
-                                  [bake.core :only [with-context]])
-                            [ns ns, tests tests]
-                            (run-ns-tests ns tests)))))))
+;; this one too
+(defmulti diff? (fn [form] (when (coll? form) (first form))))
+
+(defmethod diff? :default [form]
+           false)
+
+(defmethod diff? 'not [form]
+           (diff? (last form)))
+
+(defmethod diff? '= [form]
+  (let [a (second form)
+        b (last form)]
+    (or (and (coll? a) (coll? b))
+        (and (string? a) (string? b)))))
+
+;; this one too
+(defn actual-diff
+  "Transform the actual form that comes from clojure.test into a diff
+   string. This will diff forms like (not (= ...)) and will return the string
+   representation of anything else."
+  [form]
+  (if (diff? form)
+    (let [[_ [_ actual expected]] form]
+          (difform-str expected
+                       actual))
+    form))
+
+(defn report-fail [name m]
+  (println (format "FAIL in (%s) (%s:%d)" name (:file m) (:line m)))
+  (when-let [message (:message m)]
+    (println message))
+  (println "expected:" (:expected m))
+  (println "actual:\n" (actual-diff (:actual m))))
+
+(defn report-test [ns [name {:keys [out assertions]}]]
+  (let [{:keys [pass fail]} (group-by :type assertions)]
+    (when (or out fail)
+      (println)
+      (println (str ns "/" name))
+      (when out (print out))
+      (when fail (doall (map (partial report-fail name) fail))))))
+
+(defn report-ns [ns results]
+  (println "\ncake test" ns)
+  (doseq [test-result (:tests results)]
+    (report-test ns test-result)))
 
 (defn run-project-tests [& opts]
-  (bake-ns (:use bake.test clojure.test
-                 [bake.core :only [with-context in-project-classloader?]])
-           (prn :out (in-project-classloader?))
-           (comment prn :in (bake-invoke in-project-classloader?))))
+  (with-test-classloader
+    (bake-ns (:use bake.test clojure.test
+                   [clojure.string :only [join]]
+                   [bake.core :only [with-context in-project-classloader?]])
+             (doseq [[ns tests] (bake-invoke get-test-vars
+                                             (flatten (for [test-path (:test-path *project*)]
+                                                        (find-namespaces-in-dir (java.io.File. test-path))))
+                                             (merge (test-opts) (apply hash-map opts)))]
+               (report-ns ns (bake-invoke run-ns-tests ns tests))))))
 
 (deftask test #{compile-java}
   "Run project tests."
   "Specify which tests to run as arguments like: namespace, namespace/function, or :tag"
-  (prn :cc cake/*classloader*)
+  (prn :style-test)
+  (println (ansi/style-test-page))
   (run-project-tests))
 
 (deftask autotest #{compile-java}

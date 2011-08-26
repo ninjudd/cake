@@ -64,7 +64,7 @@
   (set! *err* *out*))
 
 (defmethod my-report :end-test-var [m]
-  (swap! *ns-results* assoc-in [:tests *current-test* :out] (.toString *out*))
+  (swap! *ns-results* assoc-in [:tests *current-test* :out] (not-empty (.toString *out*)))
   (set! *current-test* nil))
 
 (defn run-ns-tests [ns tests]
