@@ -38,8 +38,8 @@
 
 (defn extract-native! [dest]
   (doseq [jars (vals @dep-jars), jar jars]
-    (ant Copy {:todir dest :flatten true}
-      (add-zipfileset {:src jar :includes (format "native/%s/%s/*" (os-name) (os-arch))}))
+    (ant Copy {:todir dest}
+      (add-zipfileset {:src jar :includes "native/**"}))
     (ant Copy {:todir dest :flatten true}
       (add-zipfileset {:src jar :includes "lib/*.jar" }))))
 
@@ -102,7 +102,7 @@
             (if (:copy-deps *project*)
               (copy-deps lib)
               (map-to fetch-deps (keys dep-types))))
-    (extract-native! (file lib "native"))))
+    (extract-native! lib)))
 
 (defn clear-deps! []
   (doseq [type dep-types]
