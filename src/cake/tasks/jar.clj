@@ -75,8 +75,8 @@
       (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))}))))
 
 (defn build-jar []
-  (let [maven (format "META-INF/maven/%s/%s" (:group-id *project*) (:artifact-id *project*))
-        cake  (format "META-INF/cake/%s/%s"  (:group-id *project*) (:artifact-id *project*))]
+  (let [[maven cake] (for [tool '[maven cake]]
+                       (format "META-INF/%s/%s/%s" tool (:group-id *project*) (:artifact-id *project*)))]
     (when (:bake *project*)
       (build-context))
     (ant Jar {:dest-file (jarfile)}
