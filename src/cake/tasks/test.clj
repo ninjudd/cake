@@ -57,7 +57,7 @@
     form))
 
 (defn report-fail [name m]
-  (println (format "FAIL in (%s) (%s:%d)" name (:file m) (:line m)))
+  (println (ansi/style (format "FAIL in (%s) (%s:%d)" name (:file m) (:line m)) :red))
   (when-let [message (:message m)]
     (println message))
   (println "expected:" (:expected m))
@@ -67,14 +67,18 @@
   (let [{:keys [pass fail]} (group-by :type assertions)]
     (when (or out fail)
       (println)
-      (println (str ns "/" name))
+      (println (ansi/style (str "cake test " ns "/" name) :yellow))
       (when out (print out))
       (when fail (doall (map (partial report-fail name) fail))))))
 
+(defn summarize-ns [results])
+
 (defn report-ns [ns results]
-  (println "\ncake test" ns)
+  (println (ansi/style (str"\ncake test " ns) :underline :cyan))
   (doseq [test-result (:tests results)]
-    (report-test ns test-result)))
+    (report-test ns test-result))
+
+  )
 
 (defn run-project-tests [& opts]
   (with-test-classloader
