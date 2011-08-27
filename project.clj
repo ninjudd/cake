@@ -3,7 +3,7 @@
   :dependencies [[clojure "1.2.0"]
                  [clojure-contrib "1.2.0"]
                  [uncle "0.2.3"]
-                 [depot "0.1.4"]
+                 [depot "0.1.5"]
                  [classlojure "0.5.2"]
                  [useful "0.7.0-alpha2"]
                  [org.clojure/tools.namespace "0.1.1" :exclusions [org.clojure/java.classpath]]
