@@ -16,9 +16,11 @@
 (deftask eval #{compile-java}
   "Eval the given forms in the project JVM."
   "Read a form from stdin for each - provided."
-  {forms :eval}
-  (bake [forms (map read-form forms)]
-        (eval `(do ~@forms))))
+  {forms :eval cake? :cake}
+  (if cake?
+    (eval `(do ~@(map read-form forms)))
+    (bake [forms (map read-form forms)]
+      (eval `(do ~@forms)))))
 
 (deftask filter #{compile-java}
   "Thread each line in stdin through the given forms, printing the results."
