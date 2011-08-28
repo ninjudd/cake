@@ -262,10 +262,9 @@ def download(url, path)
   return path if File.exists?(path)
   FileUtils.makedirs(File.dirname(path))
   puts "Downloading #{url}..."
-  system("#{GET} #{path} #{url}") || begin
-    FileUtils.rm_f(path)
-    raise "unable to fetch #{url} with curl or wget"
-  end
+  temp = "#{path}.download"
+  system("#{GET} #{temp} #{url}") || raise("unable to fetch #{url} with curl or wget")
+  FileUtils.mv(temp, path)
   path
 end
 
