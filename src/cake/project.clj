@@ -37,6 +37,7 @@
                                             :compile-path :test-compile-path])
                          (deps :dependencies)
                          (deps :dev-dependencies)
+                         (map #(str % "/*") (:library-path *project*))
                          (get *config* "project.classpath")
                          (path-string (global-file "lib/dev/*"))]
                         paths)))
@@ -179,7 +180,7 @@
     (into {}
           (for [[dep version & opts] deps]
             [(add-group dep) (-> (adjoin (into-map default-opts) (into-map opts))
-                                 (assoc :version version)
+                                 (given version assoc :version version)
                                  (update :exclusions (partial map add-group)))]))))
 
 (defmulti get-version identity)

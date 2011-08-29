@@ -10,7 +10,13 @@ require 'pp'
 CLOJURE = "1.2.0"
 STABLE  = "0.6.3"
 
-if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
+OS_NAME = case RUBY_PLATFORM
+when /darwin/        then :macosx
+when /linux/         then :linux
+when /(mingw|mswin)/ then :windows
+end
+
+if OS_NAME == :windows
   begin
     require 'rubygems' rescue nil
     require 'win32/process'
@@ -23,7 +29,6 @@ if RUBY_PLATFORM =~ /(mingw|mswin)(32|64)$/
   KILL = 'KILL'
   PATH_SEP = ';'
   $home = File.expand_path(ENV['HOMEDRIVE'] + ENV['HOMEPATH'])
-  $win  = true
 
   def daemon(cmd)
     Process.create(:app_name => cmd.join(' ')).process_id
@@ -95,7 +100,7 @@ class IO
       while input.ready?
         write(input.gets_nonblock(nil))
         close_write if input.eof_reached?
-      end unless $win or input_wait > 0
+      end unless OS_NAME == :windows or input_wait > 0
     end
   end
 end
@@ -253,14 +258,13 @@ rescue NotImplementedError, Errno::EINVAL
 end
 
 GET = system('which wget > /dev/null') ? "wget -O" : "curl -fo" # prefer wget because it retries on incomplete transfers
-def download(url, path)
-  return path if File.exists?(path)
+def download(url, path, opts = {})
+  return path if File.exists?(path) and not opts[:force]
   FileUtils.makedirs(File.dirname(path))
   puts "Downloading #{url}..."
-  system("#{GET} #{path} #{url}") || begin
-    FileUtils.rm_f(path)
-    raise "unable to fetch #{url} with curl or wget"
-  end
+  temp = "#{path}.download"
+  system("#{GET} #{temp} #{url}") || raise("unable to fetch #{url} with curl or wget")
+  FileUtils.mv(temp, path)
   path
 end
 
@@ -295,11 +299,10 @@ def tail_log(num_lines)
 end
 
 class JVM
-  attr_reader :classpath, :libpath, :port, :pid, :pidfile, :load_time
+  attr_reader :classpath, :port, :pid, :pidfile, :load_time
 
-  def initialize(classpath, libpath, java_opts = "")
+  def initialize(classpath, java_opts = "")
     @classpath = make_path(classpath)
-    @libpath   = make_path(libpath)
     @java_opts = java_opts
     @pidfile   = ".cake/#{[ENV['USER'], Socket.gethostname, $config['jvm.separate-contexts'] && $opts[:context]].compact.join('-')}"
     @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
@@ -326,9 +329,12 @@ class JVM
   end
 
   def java_opts
-    enable_server = $config['jvm.server'] == 'true' || `java -d32 -version 2>&1` =~ /Cannot run Java in 32 bit mode/ || $? != 0
-    vm_opts       = enable_server ? ['-server', '-d64', '-Xmx512M', '-XX:MaxPermSize=256M'] : ['-client', '-d32', '-Xms128M', '-Xmx256M', '-XX:MaxPermSize=128M']
-    user_opts     = "#{ENV['JAVA_OPTS']} #{$config['jvm.opts']}".split.compact
+    server    = $config['jvm.server'] == 'true' || `java -d32 -version 2>&1` =~ /Cannot run Java in 32 bit mode/ || $? != 0
+    os_arch   = server ? "x86_64" : "x86"
+    vm_opts   = server ? ['-server', '-d64', '-Xmx512M', '-XX:MaxPermSize=256M'] : ['-client', '-d32', '-Xms128M', '-Xmx256M', '-XX:MaxPermSize=128M']
+    user_opts = "#{ENV['JAVA_OPTS']} #{$config['jvm.opts']}".split.compact
+    libpath   = make_path([$config['jvm.library.path'], "lib/native/#{OS_NAME}/#{os_arch}"])
+
     [vm_opts, user_opts, @java_opts,'-cp', classpath, %{-Djava.library.path=#{libpath}}]
   end
 
@@ -591,7 +597,11 @@ if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?("#{$cakedir}/p
   bakepath = "#{$cakedir}/dev"
 else
   log(:cake, "running from ~/.m2") if verbose?
-  download("#{$releases}/cake", __FILE__) if $command == :upgrade
+
+  if $command == :upgrade
+    download("#{$releases}/cake", __FILE__, :force => true)
+    FileUtils.chmod 0755, __FILE__
+  end
 
   $version = STABLE
   clojure  = get("http://build.clojure.org/releases", "org/clojure/clojure/#{CLOJURE}/clojure-#{CLOJURE}.jar")
@@ -605,7 +615,6 @@ log(:deps, "cake version is #{$version}") if debug?
 
 cake = JVM.new(
   [bakepath, cakepath, "src", "src/clj", "#{$home}/.cake/lib/dev/*"],
-  [$config['jvm.library.path'], "lib/ext/native", "lib/native", "lib/dev/native"],
   ["-Dcake.project=#{$project}", "-Dbake.path=#{bakepath}"]
 )
 
