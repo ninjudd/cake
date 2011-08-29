@@ -43,7 +43,7 @@
     (bake [script (with-root *pwd* (str (file script)))
            args   (rest (drop-while (partial not= script) *args*))]
           (binding [*command-line-args* args]
-            (load-file *fi)))))
+            (load-file script)))))
 
 (deftask repl #{compile-java}
   "Start an interactive shell with history and tab completion."
