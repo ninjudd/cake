@@ -187,11 +187,7 @@ def parse_opts!
 end
 
 def debug?
-  ENV['CAKE_DEBUG'] or $opts[:d] or $opts[:debug]
-end
-
-def verbose?
-  debug? or $opts[:v] or $opts[:verbose]
+  ENV['DEBUG']
 end
 
 def restart?
@@ -344,7 +340,7 @@ class JVM
   def start
     return if running?
 
-    log(:cake, "starting jvm") if verbose?
+    log(:cake, "starting jvm") if debug?
     @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
     @pid = daemon ["java", java_opts, "clojure.main", "-e", "(require 'cake.main) (cake.main/start-server #{port})"].flatten.compact
     log(:cake, "cake started with pid #{@pid} on port #{@port}") if debug?
@@ -515,7 +511,7 @@ private
   def prompt(prompt, opts = {})
     if opts[:echo] == false
       output = `stty -echo 2>&1`
-      log($command, output) if verbose?
+      log($command, output) if debug?
       echo_off = $? == 0
       prompt << ' (WARNING, input will be visible on console!)' unless echo_off
       prompt << ':'
@@ -562,6 +558,8 @@ end
 #==================================
 
 parse_opts!
+puts "ruby version: #{RUBY_VERSION}" if debug?
+
 $script   = File.expand_path($opts[:run].first) if $opts[:run]
 $pwd      = Dir.getwd
 $project  = project_dir($pwd)
@@ -578,12 +576,12 @@ Dir.chdir($project)
 
 if debug?
   puts "config: #{$config.inspect}"
-  puts "vars:   #{$vars}"
+  puts "vars: #{$vars}"
 end
 
 # Bootstrap cake dependencies.
 if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?("#{$cakedir}/project.clj") and not stable?
-  log(:cake, "running from git checkout") if verbose?
+  log(:cake, "running from git checkout") if debug?
   if $command == :upgrade
     log(:upgrade, "pulling latest code from git")
     Dir.chdir($cakedir) do
@@ -596,7 +594,7 @@ if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?("#{$cakedir}/p
   cakepath = ["#{$cakedir}/src", "#{$cakedir}/lib/*"]
   bakepath = "#{$cakedir}/dev"
 else
-  log(:cake, "running from ~/.m2") if verbose?
+  log(:cake, "running from ~/.m2") if debug?
 
   if $command == :upgrade
     download("#{$releases}/cake", __FILE__, :force => true)
