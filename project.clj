@@ -10,7 +10,8 @@
                  [org.clojars.ninjudd/java.classpath "0.1.2-SNAPSHOT"]
                  [com.jcraft/jsch "0.1.42"]
                  [difform "1.1.1"]
-                 [org.clojars.rosejn/clansi "1.2.0-SNAPSHOT" :exclusions [org.clojure/clojure]]]
+                 [org.clojars.rosejn/clansi "1.2.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
+                 [clj-stacktrace "0.2.3"]]
   :dev-dependencies [[org.clojars.flatland/cake-marginalia "0.6.3"]]
   :tasks [cake-marginalia.tasks]
   :copy-deps true)
