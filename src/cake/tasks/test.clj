@@ -132,7 +132,8 @@
     (bake-ns (:use bake.test clojure.test
                    [clojure.string :only [join]]
                    [bake.core :only [with-context in-project-classloader?]])
-             (let [{:keys [ns-count test-count assertion-count pass-count fail-count error-count]}
+             (let [start (System/currentTimeMillis)
+                   {:keys [ns-count test-count assertion-count pass-count fail-count error-count]}
                    (reduce (fn [acc {:keys [ns test-count assertion-count pass-count fail-count error-count]}]
                              (-> acc
                                  (update-in [:ns-count] + 1)
@@ -148,8 +149,13 @@
                                                          (merge (test-opts) (apply hash-map opts)))]
                              (report-ns ns (bake-invoke run-ns-tests ns tests))))]
                (println (ansi/style (apply str (repeat 50 " ")) :underline))
-               (println (format "\nRan %d tests across %d namespaces, containing %d assertions in %d seconds."
-                                test-count ns-count assertion-count 40))
+               (println (format "\nRan %d tests across %d namespaces, containing %d assertions in %.2f seconds."
+                                test-count
+                                ns-count
+                                assertion-count
+                                (/ (- (System/currentTimeMillis)
+                                      start)
+                                   1000.0)))
                (println (ansi/style (format "%d OK, %d failures, %d errors." pass-count fail-count error-count)
                                     (if (= 0 (+ fail-count error-count)) :green :red)))))))
 
