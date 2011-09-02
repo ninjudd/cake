@@ -97,10 +97,11 @@
       (when error (doall (map (partial report-error name) error))))))
 
 (defn report-ns [ns results]
-  (println (ansi/style (str"\ncake test " ns) :cyan :underline))
+  (print (ansi/style (apply str (repeat 40 "-")) :white))
+  (println (ansi/style (str"\ncake test " ns) :cyan))
   (doseq [test-result (doall (:tests results))]
     (report-test ns test-result))
-  (let [{:keys [fail-count pass-count error-count assertion-count test-count]}
+  (let [{:keys [fail-count pass-count error-count assertion-count test-count] :as aggregate}
         (reduce (fn [acc [name {:keys [assertions]}]]
                   (let [acc (update-in acc [:test-count] inc)]
                     (let [grouped (group-by :type assertions)
@@ -112,7 +113,7 @@
                           (update-in [:pass-count] + pass-count)
                           (update-in [:error-count] + error-count)
                           (update-in [:assertion-count] + fail-count pass-count error-count)))))
-                {:test-count 0, :assertion-count 0, :pass-count 0, :fail-count 0, :error-count 0}
+                {:ns ns, :test-count 0, :assertion-count 0, :pass-count 0, :fail-count 0, :error-count 0}
                 (:tests results))]
     (println (format "\nRan %s tests containing %s assertions."
                      test-count
@@ -123,18 +124,34 @@
                          (if (= 0 (+ fail-count
                                      error-count))
                            :green
-                           :red)))))
+                           :red)))
+    aggregate))
 
 (defn run-project-tests [& opts]
   (with-test-classloader
     (bake-ns (:use bake.test clojure.test
                    [clojure.string :only [join]]
                    [bake.core :only [with-context in-project-classloader?]])
-             (doseq [[ns tests] (bake-invoke get-test-vars
-                                             (flatten (for [test-path (:test-path *project*)]
-                                                        (find-namespaces-in-dir (java.io.File. test-path))))
-                                             (merge (test-opts) (apply hash-map opts)))]
-               (report-ns ns (bake-invoke run-ns-tests ns tests))))))
+             (let [{:keys [ns-count test-count assertion-count pass-count fail-count error-count]}
+                   (reduce (fn [acc {:keys [ns test-count assertion-count pass-count fail-count error-count]}]
+                             (-> acc
+                                 (update-in [:ns-count] + 1)
+                                 (update-in [:test-count] + test-count)
+                                 (update-in [:assertion-count] + assertion-count)
+                                 (update-in [:pass-count] + pass-count)
+                                 (update-in [:fail-count] + fail-count)
+                                 (update-in [:error-count] + error-count)))
+                           {:ns-count 0, :test-count 0, :assertion-count 0, :pass-count 0, :fail-count 0, :error-count 0}
+                           (for [[ns tests] (bake-invoke get-test-vars
+                                                         (flatten (for [test-path (:test-path *project*)]
+                                                                    (find-namespaces-in-dir (java.io.File. test-path))))
+                                                         (merge (test-opts) (apply hash-map opts)))]
+                             (report-ns ns (bake-invoke run-ns-tests ns tests))))]
+               (println (ansi/style (apply str (repeat 50 " ")) :underline))
+               (println (format "\nRan %d tests across %d namespaces, containing %d assertions in %d seconds."
+                                test-count ns-count assertion-count 40))
+               (println (ansi/style (format "%d OK, %d failures, %d errors." pass-count fail-count error-count)
+                                    (if (= 0 (+ fail-count error-count)) :green :red)))))))
 
 (deftask test #{compile-java}
   "Run project tests."
