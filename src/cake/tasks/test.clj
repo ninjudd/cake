@@ -47,7 +47,9 @@
                             actual)))
       form)))
 
-(defn test-opts []
+(defn test-opts
+  "figure out whichs tests to run based on cake's command line options"
+  []
   (let [args (into (:test *opts*) (:autotest *opts*))]
     (merge {:tags #{} :functions #{} :namespaces #{}}
            (if (empty? args)
@@ -58,17 +60,16 @@
                                              :else         :namespaces)))
                        set)))))
 
+(defn report-assertion-fail
+  "report a test failure"
+  [name {:keys [file line message expected actual]}]
+  (println (ansi/style (format "FAIL in (%s) (%s:%d)" name file line) :red))
+  (when [message] (println message))
+  (println "expected:\n" expected "\nactual:\n" (actual-diff actual)))
 
-
-(defn report-fail [name m]
-  (println (ansi/style (format "FAIL in (%s) (%s:%d)" name (:file m) (:line m)) :red))
-  (when-let [message (:message m)]
-    (println message))
-  (println "expected:\n" (:expected m))
-  (println "actual:\n" (actual-diff (:actual m))))
-
-(defn report-error
-  "this is a hack of clj-stacktrace.repl/pst-on"
+;; this is a hack of clj-stacktrace.repl/pst-on
+(defn report-assertion-error
+  "report a test error"
   [name m]
   (letfn [(find-source-width [excp]
             (let [this-source-width (st-utils/fence
@@ -86,33 +87,39 @@
       (if-let [cause (:cause exec)]
         (#'st/pst-cause-on *out* true cause source-width)))))
 
-(defn report-test [ns test-result]
+(defn report-test
+  "reports an error or a failure for a test, or prints *out* if it exists."
+  [ns test-result]
   (let [[name {:keys [out assertions]}] test-result
         {:keys [pass fail error]} (group-by :type assertions)]
     (when (or out fail error)
       (println)
       (println (ansi/style (str "cake test " ns "/" name) :yellow))
       (when out (print out))
-      (when fail (doall (map (partial report-fail name) fail)))
-      (when error (doall (map (partial report-error name) error))))))
+      (when fail (doall (map (partial report-assertion-fail name) fail)))
+      (when error (doall (map (partial report-assertion-error name) error))))))
 
-(defn report-ns [ns results]
+(defn accumulate-assertions [acc [name {:keys [assertions]} :as all]]
+  (let [acc (update-in acc [:test-count] inc)]
+    (let [grouped (group-by :type assertions)
+          fail-count (count (:fail grouped))
+          pass-count (count (:pass grouped))
+          error-count (count (:error grouped))]
+      (-> acc
+          (update-in [:fail-count] + fail-count)
+          (update-in [:pass-count] + pass-count)
+          (update-in [:error-count] + error-count)
+          (update-in [:assertion-count] + fail-count pass-count error-count)))))
+
+(defn report-ns
+  "generate a summary for the namespace with `results`"
+  [ns results]
   (print (ansi/style (apply str (repeat 40 "-")) :white))
   (println (ansi/style (str"\ncake test " ns) :cyan))
   (doseq [test-result (doall (:tests results))]
     (report-test ns test-result))
   (let [{:keys [fail-count pass-count error-count assertion-count test-count] :as aggregate}
-        (reduce (fn [acc [name {:keys [assertions]}]]
-                  (let [acc (update-in acc [:test-count] inc)]
-                    (let [grouped (group-by :type assertions)
-                          fail-count (count (:fail grouped))
-                          pass-count (count (:pass grouped))
-                          error-count (count (:error grouped))]
-                      (-> acc
-                          (update-in [:fail-count] + fail-count)
-                          (update-in [:pass-count] + pass-count)
-                          (update-in [:error-count] + error-count)
-                          (update-in [:assertion-count] + fail-count pass-count error-count)))))
+        (reduce accumulate-assertions
                 {:ns ns, :test-count 0, :assertion-count 0, :pass-count 0, :fail-count 0, :error-count 0}
                 (:tests results))]
     (println (format "\nRan %s tests containing %s assertions."
@@ -127,14 +134,16 @@
                            :red)))
     aggregate))
 
-(defn run-project-tests [& opts]
+(defn run-project-tests
+  "run the tests based on the command line options"
+  [& opts]
   (with-test-classloader
     (bake-ns (:use bake.test clojure.test
                    [clojure.string :only [join]]
                    [bake.core :only [with-context in-project-classloader?]])
              (let [start (System/currentTimeMillis)
                    {:keys [ns-count test-count assertion-count pass-count fail-count error-count]}
-                   (reduce (fn [acc {:keys [ns test-count assertion-count pass-count fail-count error-count]}]
+                   (reduce (fn [acc {:keys [ns test-count assertion-count pass-count fail-count error-count] :as this-all}]
                              (-> acc
                                  (update-in [:ns-count] + 1)
                                  (update-in [:test-count] + test-count)
