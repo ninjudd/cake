@@ -155,7 +155,7 @@
                     (clojure.main/with-bindings
                       (bake.io/with-streams ins# outs#
                         (binding [~@(shared-bindings)]
-                          (apply ~form '~(map first named-args)))))))]
+                          (apply ~form ~(vec (map first named-args))))))))]
     (apply eval-in *classloader*
            `(clojure.main/with-bindings (eval '~form))
            *ins* *outs* (map second core-args))))
