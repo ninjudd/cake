@@ -147,7 +147,7 @@
   [form & args]
   (let [named-args (for [arg args]
                      (if (printable? arg)
-                       [arg]
+                       [(list 'quote arg)]
                        [(gensym "arg") arg]))
         core-args (filter #(= 2 (count %)) named-args)
         form `(do (in-ns '~*bake-ns*)
