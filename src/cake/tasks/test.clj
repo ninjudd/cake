@@ -114,7 +114,7 @@
 (defn report-ns
   "generate a summary for the namespace with `results`"
   [ns results]
-  (print (ansi/style (apply str (repeat 40 "-")) :white))
+  (println (ansi/style (apply str (repeat 40 " ")) :underline))
   (println (ansi/style (str"\ncake test " ns) :cyan))
   (doseq [test-result (doall (:tests results))]
     (report-test ns test-result))
@@ -157,14 +157,15 @@
                                                                     (find-namespaces-in-dir (java.io.File. test-path))))
                                                          (merge (test-opts) (apply hash-map opts)))]
                              (report-ns ns (bake-invoke run-ns-tests ns tests))))]
-               (println (ansi/style (apply str (repeat 50 " ")) :underline))
-               (println (format "\nRan %d tests in %d namespaces, containing %d assertions, in %.2f seconds."
-                                test-count
-                                ns-count
-                                assertion-count
-                                (/ (- (System/currentTimeMillis)
-                                      start)
-                                   1000.0)))
+               (let [summary (format "\nRan %d tests in %d namespaces, containing %d assertions, in %.2f seconds."
+                                     test-count
+                                     ns-count
+                                     assertion-count
+                                     (/ (- (System/currentTimeMillis)
+                                           start)
+                                        1000.0))]
+                 (println (ansi/style (apply str (repeat (- (count summary) 2) " ")) :underline))
+                 (println summary))
                (println (ansi/style (format "%d OK, %d failures, %d errors." pass-count fail-count error-count)
                                     (if (= 0 (+ fail-count error-count)) :green :red)))))))
 
