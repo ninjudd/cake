@@ -1,7 +1,7 @@
 (ns cake.project
   (:use cake
         [classlojure :exclude [with-classloader]]
-        [classlojure :only [core-java-class?]]
+        [classlojure :only [printable?]]
         [cake.deps :only [deps]]
         [bake.core :only [debug?]]
         [cake.file :only [file global-file path-string]]
@@ -146,9 +146,9 @@
   which is then invoked on the provided arguments."
   [form & args]
   (let [named-args (for [arg args]
-                     (if (core-java-class? arg)
-                       [(gensym "arg") arg]
-                       [arg]))
+                     (if (printable? arg)
+                       [arg]
+                       [(gensym "arg") arg]))
         core-args (filter #(= 2 (count %)) named-args)
         form `(do (in-ns '~*bake-ns*)
                   (fn [ins# outs# ~@(map first core-args)]
