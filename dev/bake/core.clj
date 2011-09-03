@@ -88,3 +88,10 @@
           "amd64" "x86_64"
           "i386"  "x86"
           arch))))
+
+(defn as-fn
+  "this is also in useful.fn"
+  [x]
+  (if (ifn? x)
+    x
+    (constantly x)))
