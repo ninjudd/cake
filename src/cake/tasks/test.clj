@@ -158,7 +158,7 @@
                                                          (merge (test-opts) (apply hash-map opts)))]
                              (report-ns ns (bake-invoke run-ns-tests ns tests))))]
                (println (ansi/style (apply str (repeat 50 " ")) :underline))
-               (println (format "\nRan %d tests across %d namespaces, containing %d assertions in %.2f seconds."
+               (println (format "\nRan %d tests in %d namespaces, containing %d assertions, in %.2f seconds."
                                 test-count
                                 ns-count
                                 assertion-count
