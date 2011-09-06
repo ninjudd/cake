@@ -1,5 +1,6 @@
 (ns bake.test
   (:use clojure.test
+        [clojure.string :only [trim-newline]]
         [cake :only [*config*]]
         [bake.core :only [verbose? log as-fn]]
         [bake.reload :only [last-reloaded last-modified reload]]
@@ -173,19 +174,31 @@
 
 (declare *ns-results* *current-test*)
 
-(defn update-results [m]
-  (swap! *ns-results* update-in [:tests *current-test* :assertions] (fnil conj []) m))
+(defn reset-streams! []
+  (set! *out* (StringWriter.))
+  (set! *err* *out*))
+
+(defn update-results [& objects]
+  (doseq [object objects]
+    (let [object (if (instance? StringWriter object)
+                   (do (reset-streams!)
+                       (not-empty (trim-newline (.toString object))))
+                   (if (seq *testing-contexts*)
+                     (assoc object :testing-contexts (testing-contexts-str))
+                     object))]
+      (when object
+        (swap! *ns-results* update-in [*current-test*] (fnil conj []) object)))))
 
 (defmulti my-report :type)
 
 (defmethod my-report :pass [m]
-  (update-results (dissoc m :actual)))
+  (update-results *out* (dissoc m :actual)))
 
 (defmethod my-report :fail [m]
-  (update-results m))
+  (update-results *out* m))
 
 (defmethod my-report :error [m]
-  (update-results (update-in m [:actual] parse-exception)))
+  (update-results *out* (update-in m [:actual] parse-exception)))
 
 ;; the methods below are never called because i'm calling test-var directly
 
@@ -203,11 +216,10 @@
 
 (defmethod my-report :begin-test-var [m]
   (set! *current-test* (:name (meta (:var m))))
-  (set! *out* (StringWriter.))
-  (set! *err* *out*))
+  (reset-streams!))
 
 (defmethod my-report :end-test-var [m]
-  (swap! *ns-results* assoc-in [:tests *current-test* :out] (not-empty (.toString *out*)))
+  (update-results *out*)
   (set! *current-test* nil))
 
 (defn run-ns-tests [ns tests]
@@ -220,7 +232,7 @@
               *out* *out* ;; this is so it gets restored
               *err* *err*
               *report-counters* (ref *initial-report-counters*)
-              *ns-results* (atom {:tests {}})
+              *ns-results* (atom {})
               *current-test* nil]
       (if (= '(test-ns-hook) tests)
         ((var-get (ns-resolve ns 'test-ns-hook)))
