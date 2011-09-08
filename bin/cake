@@ -313,15 +313,10 @@ class JVM
     @pid, @port, @version = IO.read(pidfile).split("\n"); @pid = @pid.to_i; @port = @port.to_i
 
     Process.kill(0, @pid) # make sure pid is valid
-    TCPSocket.new("localhost", @port).close if @port # make sure jvm is running on port
 
     kill if @version != $version or newer?("#{$project}/lib/dev", pidfile)
-  rescue Errno::ENOENT, Errno::ESRCH, Errno::ECONNREFUSED, Errno::EBADF, Errno::EPERM, Process::Error => e
-    if e.kind_of?(Errno::ECONNREFUSED) and cake_pids.include?(@pid)
-      log(:cake, "defunct jvm") if debug?
-      kill(true)
-    end
-    reset! # no pidfile or invalid pid or connection refused
+  rescue Errno::ENOENT, Errno::ESRCH, Errno::EBADF, Errno::EPERM, Process::Error => e
+    reset! # no pidfile or invalid pid
   end
 
   def java_opts
@@ -610,6 +605,7 @@ else
   bakepath = bakejar
 end
 log(:deps, "cake version is #{$version}") if debug?
+tail_pid = fork {tail_log(0)} if $opts[:l] or debug?
 
 cake = JVM.new(
   [bakepath, cakepath, "src", "src/clj", "#{$home}/.cake/lib/dev/*"],
@@ -649,4 +645,4 @@ else
   cake.send_command($command)
 end
 
-tail_log(0) if $opts[:l]
+Process.kill(TERM, tail_pid) if tail_pid
