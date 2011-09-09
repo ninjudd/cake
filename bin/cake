@@ -307,17 +307,20 @@ class JVM
   def initialize(classpath, java_opts = "")
     @classpath = make_path(classpath)
     @java_opts = java_opts
-    @pidfile   = ".cake/pid/#{[ENV['USER'], Socket.gethostname, $config['jvm.separate-contexts'] && $opts[:context]].compact.join('-')}"
+    @pidfile   = ".cake/pid/#{pid_context.compact.join('-')}"
     @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
   end
 
+  def pid_context
+    [ENV['USER'], Socket.gethostname, $version, $config['jvm.separate-contexts'] && $opts[:context]]
+  end
+
   def pid
-    @pid, @version, @port = IO.read(pidfile).split("\n")
+    @pid, @port = IO.read(pidfile).split("\n")
     @pid  = @pid.to_i  if @pid
     @port = @port.to_i if @port
 
     Process.kill(0, @pid) # make sure pid is valid
-    kill if @version != $version or newer?("#{$project}/lib/dev", pidfile)
 
     @pid
   rescue Errno::ENOENT, Errno::ESRCH, Errno::EBADF, Errno::EPERM, Process::Error => e
@@ -348,7 +351,7 @@ class JVM
     log(:cake, "starting jvm") if debug?
     @pid = daemon ["java", java_opts, "clojure.main", "-e", "(require 'cake.main) (cake.main/start-server)"].flatten.compact
     log(:cake, "cake started with pid #{@pid}") if debug?
-    File.open(pidfile, 'w') {|f| f.write("#{@pid}\n#{$version}\n") }
+    File.open(pidfile, 'w') {|f| f.write("#{@pid}\n") }
   end
 
   def kill(force = $opts[:"9"])
