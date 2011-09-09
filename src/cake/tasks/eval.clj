@@ -2,7 +2,7 @@
   (:use cake
         [cake.core :only [deftask bake]]
         [cake.file :only [with-root file]]
-        [cake.utils :only [*readline-marker*]]
+        [cake.utils :only [*readline-marker* keepalive!]]
         [bake.repl :only [repl]]))
 
 (defn- read-form [string]
@@ -48,6 +48,7 @@
 (deftask repl #{compile-java}
   "Start an interactive shell with history and tab completion."
   {cake? :cake}
+  (keepalive!)
   (if cake?
     (repl *readline-marker*)
     (bake (:use bake.repl) [marker *readline-marker*]

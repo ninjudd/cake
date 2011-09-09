@@ -1,5 +1,6 @@
 (ns cake.tasks.swank
   (:use cake cake.core
+        [cake.utils :only [keepalive!]]
         [useful.utils :only [if-ns]]
         [bake.core :only [current-context]])
   (:import [java.io StringWriter PrintWriter]))
@@ -9,6 +10,7 @@
 (defn- serve-swank [context]
   "Run swank connection thread in the project classloader."
   (fn [socket]
+    (keepalive!)
     (bake (:use [bake.core :only [set-context!]])
           (:require swank.swank swank.core.server)
           [socket socket, context context]

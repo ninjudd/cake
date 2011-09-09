@@ -3,7 +3,7 @@
         [cake.deps :only [fetch-deps!]]
         [cake.task :only [run-task run?]]
         [cake.file :only [file global-file]]
-        [cake.utils :only [*readline-marker*]]
+        [cake.utils :only [*readline-marker* keepalive! start-watchdog!]]
         [cake.project :only [reload  reset-classloaders! reset-test-classloader! append-dev-dependencies!]]
         [cake.tasks.swank :only [start-swank]]
         [useful.java :only [on-shutdown]]
@@ -18,6 +18,7 @@
 (defn process-command [[task readline-marker]]
   (binding [*readline-marker* readline-marker]
     (in-project {:outs *outs* :verbose (debug?) :root *root*}
+      (keepalive!)
       (doseq [dir ["lib" "classes" "build"]]
         (.mkdirs (file dir)))
       (handler-case :type
@@ -44,5 +45,6 @@
     (let [server (server/create process-command)
           port   (.getLocalPort (:server-socket server))]
       (spit *pidfile* (str port "\n") :append true)))
+  (start-watchdog!)
   nil)
 
