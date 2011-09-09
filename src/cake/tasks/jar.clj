@@ -122,7 +122,7 @@
         (flush)))))
 
 (defn add-jar-contents [task jars]
-  (doseq [jar jars :let [name (.replace (.getName jar) ".jar" "")]]
+  (doseq [jar jars :let [name (.replace (.getName (file jar)) ".jar" "")]]
     (add-zipfileset task {:src jar :excludes "META-INF/**/*, project.clj, LICENSE"})
     (add-zipfileset task {:src jar :includes "META-INF/**/*" :prefix (str "META-INF/" name)})))
 
