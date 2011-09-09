@@ -30,8 +30,8 @@
              *ins*  ~ins]
      ~@forms))
 
-(defmacro init-log [log-file]
-  (let [log (FileOutputStream. log-file true)]
+(defmacro init-log []
+  (let [log (FileOutputStream. ".cake/log" true)]
     (System/setOut (PrintStream. log))
     (System/setErr (PrintStream. log))))
 

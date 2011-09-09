@@ -291,7 +291,7 @@ def killall
 end
 
 def tail_log(num_lines)
-  exec("tail -n#{num_lines || 10} -f #{$project}/.cake/cake.log")
+  exec("tail -n#{num_lines || 10} -f #{$project}/.cake/log")
 end
 
 def with_logging

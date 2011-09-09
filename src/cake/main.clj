@@ -31,7 +31,7 @@
           (println (name task) "aborted:" (:message *condition*)))))))
 
 (defn start-server []
-  (init-log ".cake/cake.log")
+  (init-log)
   (reload-project-files)
   (eval (:startup *project*))
   (on-shutdown #(eval (:shutdown *project*)))
