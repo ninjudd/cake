@@ -5,7 +5,7 @@
         [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]]
         [clojure.string :only [split join]]
-        [useful.map :only [map-to]]
+        [useful.map :only [map-to map-vals]]
         [useful.fn :only [all !]])
   (:require depot.maven
             [depot.deps :as depot])
@@ -22,6 +22,7 @@
                 :ext-dependencies     (all (! :dev) (! :test) :ext)
                 :ext-dev-dependencies (all (! :test) :dev :ext)
                 :test-dependencies    (all :test)})
+
 (def ^{:dynamic true} *overwrite* nil)
 
 (defn subproject-path [dep]
@@ -83,26 +84,30 @@
   (defn copy-deps [dest]
     (let [build (file "build" "deps")
           dep-types (keys dep-types)]
-      (when (or *overwrite*
-                (not (file-exists? dest)))
-        (doseq [type dep-types]
-          (when-let [jars (fetch-deps type)]
-            (ant Copy {:todir (file build (subdir type)) :flatten true}
-              (.addFileset (:fileset (meta jars))))))
-        (rmdir dest)
-        (mv build dest))
+      (doseq [type dep-types]
+        (when-let [jars (fetch-deps type)]
+          (ant Copy {:todir (file build (subdir type)) :flatten true}
+            (.addFileset (:fileset (meta jars))))))
+      (rmdir dest)
+      (mv build dest)
       (map-to #(fileset-seq {:dir (file dest (subdir %)) :includes "*.jar"})
               dep-types))))
 
 (defn fetch-deps! []
-  (let [lib (file (first (:library-path *project*)))]
-    (install-subprojects!)
-    (println "Fetching dependencies...")
-    (reset! dep-jars
-            (if (:copy-deps *project*)
-              (copy-deps lib)
-              (map-to fetch-deps (keys dep-types))))
-    (extract-native! lib)))
+  (let [lib        (file (first (:library-path *project*)))
+        deps-cache (file lib "deps.cache")]
+    (if (and (not *overwrite*) (file-exists? deps-cache))
+      (reset! dep-jars (read-string (slurp deps-cache)))
+      (do (install-subprojects!)
+          (println "Fetching dependencies...")
+          (reset! dep-jars
+                  (map-vals
+                   (if (:copy-deps *project*)
+                     (copy-deps lib)
+                     (map-to fetch-deps (keys dep-types)))
+                   #(vec (map (memfn getPath) %))))
+          (extract-native! lib)
+          (spit deps-cache (pr-str @dep-jars))))))
 
 (defn clear-deps! []
   (doseq [type dep-types]
