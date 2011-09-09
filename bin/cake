@@ -294,29 +294,42 @@ def tail_log(num_lines)
   exec("tail -n#{num_lines || 10} -f #{$project}/.cake/cake.log")
 end
 
+def with_logging
+  @tail_pid = fork {tail_log(0)} if $opts[:l] or debug?
+  yield
+ensure
+  Process.kill(TERM, @tail_pid) if @tail_pid
+end
+
 class JVM
-  attr_reader :classpath, :port, :pid, :pidfile, :load_time
+  attr_reader :classpath, :pidfile, :load_time
 
   def initialize(classpath, java_opts = "")
     @classpath = make_path(classpath)
     @java_opts = java_opts
-    @pidfile   = ".cake/#{[ENV['USER'], Socket.gethostname, $config['jvm.separate-contexts'] && $opts[:context]].compact.join('-')}"
+    @pidfile   = ".cake/pid/#{[ENV['USER'], Socket.gethostname, $config['jvm.separate-contexts'] && $opts[:context]].compact.join('-')}"
     @load_time = File.exists?(pidfile) ? File.mtime(pidfile) : Time.now
-    refresh
   end
 
-  def running?
-    not pid.nil?
-  end
-
-  def refresh
-    @pid, @port, @version = IO.read(pidfile).split("\n"); @pid = @pid.to_i; @port = @port.to_i
+  def pid
+    @pid, @version, @port = IO.read(pidfile).split("\n")
+    @pid  = @pid.to_i  if @pid
+    @port = @port.to_i if @port
 
     Process.kill(0, @pid) # make sure pid is valid
-
     kill if @version != $version or newer?("#{$project}/lib/dev", pidfile)
+
+    @pid
   rescue Errno::ENOENT, Errno::ESRCH, Errno::EBADF, Errno::EPERM, Process::Error => e
     reset! # no pidfile or invalid pid
+  end
+
+  def port
+    while pid
+      break if @port
+      sleep 0.1
+    end
+    @port
   end
 
   def java_opts
@@ -326,22 +339,16 @@ class JVM
     user_opts = "#{ENV['JAVA_OPTS']} #{$config['jvm.opts']}".split.compact
     libpath   = make_path([$config['jvm.library.path'], "lib/native/#{OS_NAME}/#{os_arch}"])
 
-    [vm_opts, user_opts, @java_opts,'-cp', classpath, %{-Djava.library.path=#{libpath}}]
+    [vm_opts, user_opts, @java_opts, "-Dcake.pidfile=#{pidfile}", '-cp', classpath, %{-Djava.library.path=#{libpath}}]
   end
 
-  MIN_PORT = 2**14
-  MAX_PORT = 2**16
-
   def start
-    return if running?
+    return if pid
 
     log(:cake, "starting jvm") if debug?
-    @port = rand(MAX_PORT - MIN_PORT) + MIN_PORT
-    @pid = daemon ["java", java_opts, "clojure.main", "-e", "(require 'cake.main) (cake.main/start-server #{port})"].flatten.compact
-    log(:cake, "cake started with pid #{@pid} on port #{@port}") if debug?
-    File.open(pidfile, 'w') {|f| f.write("#{pid}\n#{port}\n#{$version}\n") }
-  rescue Errno::EADDRNOTAVAIL => e # port already in use
-    retry
+    @pid = daemon ["java", java_opts, "clojure.main", "-e", "(require 'cake.main) (cake.main/start-server)"].flatten.compact
+    log(:cake, "cake started with pid #{@pid}") if debug?
+    File.open(pidfile, 'w') {|f| f.write("#{@pid}\n#{$version}\n") }
   end
 
   def kill(force = $opts[:"9"])
@@ -352,13 +359,6 @@ class JVM
       reset!
     else
       log(:kill, "jvm not running") if $command == :kill
-    end
-  end
-
-  def ping
-    with_socket do |socket|
-      socket.write ":ping {}\n"
-      log($command, "jvm not running") unless socket.gets == "pong\n"
     end
   end
 
@@ -407,26 +407,19 @@ private
     File.unlink(pidfile) if File.exists?(pidfile)
     @pid, @port = []
     @load_time = Time.now
+    nil
   end
 
   def stale?(file)
     File.exists?(file) and File.mtime(file) > load_time
   end
 
-  def with_socket(retries = $timeout)
-    return unless port
+  def with_socket
     socket = TCPSocket.new("localhost", port)
-    result = yield(socket)
-    result
-  rescue Errno::ECONNREFUSED, Errno::EBADF => e
-    sleep 1
-    if retries
-      if (retries -= 1) == 0
-        log :cake, "connection to jvm is taking a long time...",
-                   "you can use ^C to abort and use 'cake kill' or 'cake kill -9' to force the jvm to restart"
-      end
-      retry unless retries < -$timeout
-    end
+    yield(socket)
+  rescue Errno::EADDRNOTAVAIL => e
+    log(:cake, "error connecting to socket")
+    exit
   ensure
     socket.close if socket
   end
@@ -523,6 +516,7 @@ end
 
 def initialize_cake_dirs
   FileUtils.makedirs("#{$project}/.cake/run")
+  FileUtils.makedirs("#{$project}/.cake/pid")
   FileUtils.makedirs("#{$home}/.cake/run")
   project_clj = "#{$home}/.cake/project.clj"
   File.open(project_clj, 'w') do |file|
@@ -604,45 +598,50 @@ else
   cakepath = [cakejar, clojure, bakejar]
   bakepath = bakejar
 end
-log(:deps, "cake version is #{$version}") if debug?
-tail_pid = fork {tail_log(0)} if $opts[:l] or debug?
+log(:cake, "cake version is #{$version}") if debug?
 
-cake = JVM.new(
-  [bakepath, cakepath, "src", "src/clj", "#{$home}/.cake/lib/dev/*"],
-  ["-Dcake.project=#{$project}", "-Dbake.path=#{bakepath}"]
-)
+with_logging do
+  cake = JVM.new(
+    [bakepath, cakepath, "src", "src/clj", "#{$home}/.cake/lib/dev/*"],
+    ["-Dcake.project=#{$project}", "-Dbake.path=#{bakepath}"]
+  )
 
-if $command == :upgrade
-  killall
-  puts "cake upgraded to #{$version}"
-  exit
-elsif $command == :default and $opts[:version]
-  puts "cake #{$version}"
-  exit
-elsif $command == :log
-  tail_log($opts[:log])
-elsif $command == :killall
-  killall || puts("No matching processes belonging to you were found")
-  exit
-elsif $command == :kill
-  cake.kill
-  exit
-elsif $command == :ps
-  puts ps.sort.reverse
-  exit
+  if $command == :upgrade
+    killall
+    puts "cake upgraded to #{$version}"
+    exit
+  elsif $command == :default and $opts[:version]
+    puts "cake #{$version}"
+    exit
+  elsif $command == :log
+    tail_log($opts[:log])
+  elsif $command == :killall
+    killall || puts("No matching processes belonging to you were found")
+    exit
+  elsif $command == :kill
+    cake.kill
+    exit
+  elsif $command == :ps
+    puts ps.sort.reverse
+    exit
+  elsif $command == :pid
+    puts cake.pid if cake.pid
+    exit
+  elsif $command == :port
+    puts cake.port if cake.port
+    exit
+  end
+
+  cake.kill if restart?
+  cake.start
+
+  if $command == :console
+    num_windows = $opts[:console].first || 1
+    interval    = $opts[:i] ? $opts[:i].first : 4
+    system("jconsole -interval=#{interval}" + " #{cake.pid}" * num_windows.to_i + "&")
+  elsif $command == :repl
+    cake.repl
+  else
+    cake.send_command($command)
+  end
 end
-
-cake.kill if restart?
-cake.start
-
-if $command == :console
-  num_windows = $opts[:console].first || 1
-  interval    = $opts[:i] ? $opts[:i].first : 4
-  system("jconsole -interval=#{interval}" + " #{cake.pid}" * num_windows.to_i + "&")
-elsif $command == :repl
-  cake.repl
-else
-  cake.send_command($command)
-end
-
-Process.kill(TERM, tail_pid) if tail_pid

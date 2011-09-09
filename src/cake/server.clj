@@ -48,8 +48,8 @@
   (and (instance? clojure.lang.Compiler$CompilerException e)
        (instance? UnsatisfiedLinkError (.getCause e))))
 
-(defn create [port f]
-  (server-socket/create-server port
+(defn create [f]
+  (server-socket/create-server 0
     (fn [ins outs]
       (with-streams ins outs
         (try

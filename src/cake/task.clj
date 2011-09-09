@@ -18,7 +18,9 @@
    'log      ["Tail the cake log file. Optionally pass the number of lines of history to show."]
    'kill     ["Kill running cake jvm processes. Use -9 to force."]
    'killall  ["Kill all running cake jvm processes for all projects."]
-   'console  ["Open a jconsole connection to the cake jvm. Optionally pass the number of tiled windows."]})
+   'console  ["Open a jconsole connection to the cake jvm. Optionally pass the number of tiled windows."]
+   'pid      ["Print the pid of the cake jvm running in the current directory."]
+   'port     ["Print the port of the cake jvm running in the current directory."]})
 
 (defn parse-task-opts [forms]
   (let [[deps forms] (if (set? (first forms))

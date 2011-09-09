@@ -30,7 +30,7 @@
         (handle :abort-task
           (println (name task) "aborted:" (:message *condition*)))))))
 
-(defn start-server [port]
+(defn start-server []
   (init-log ".cake/cake.log")
   (reload-project-files)
   (eval (:startup *project*))
@@ -41,6 +41,8 @@
     (reset-classloaders!)
     (when-let [autostart (get *config* "swank.autostart")]
       (start-swank autostart))
-    (server/create port process-command))
+    (let [server (server/create process-command)
+          port   (.getLocalPort (:server-socket server))]
+      (spit *pidfile* (str port "\n") :append true)))
   nil)
 
