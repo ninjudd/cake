@@ -34,9 +34,6 @@
       (args params))
     (println "warning:" *root* "is not a git repository")))
 
-(defn ftime [string time]
-  (format (apply str (map #(str "%1$t" %) string)) time))
-
 (defn keepalive! []
   (touch *pidfile*))
 

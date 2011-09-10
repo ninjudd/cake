@@ -1,7 +1,6 @@
 (ns cake.tasks.version
   (:use cake cake.core uncle.core
         [bake.core :only [log]]
-        [cake.utils :only [ftime]]
         [useful.map :only [update]]
         [clojure.string :only [join]]
         [cake.utils :only [git]])
@@ -59,8 +58,9 @@
 
 (defn snapshot-timestamp [version]
   (if (snapshot? version)
-    (let [t (java.util.Calendar/getInstance)]
-      (.replaceAll version "SNAPSHOT" (str (ftime "Ymd" t) "." (ftime "HMS" t))))
+    (let [time  (System/currentTimeMillis)
+          ftime #(format (apply str (map (partial str "%1$t") %)) time)]
+      (.replaceAll version "SNAPSHOT" (str (ftime "Ymd") "." (ftime "HMS"))))
     version))
 
 (deftask tag
