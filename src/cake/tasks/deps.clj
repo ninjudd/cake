@@ -3,7 +3,7 @@
         [bake.core :only [log]]
         [cake.core :only [deftask defile]]
         [cake.tasks.jar :only [jarfile]]
-        [cake.deps :only [clear-deps! fetch-deps! *overwrite* print-deps]]
+        [cake.deps :only [fetch-deps! *overwrite* print-deps]]
         [cake.project :only [reset-classloaders!]]
         [depot.deps :only [publish]]
         [depot.pom :only [prxml-tags]]))
@@ -13,8 +13,6 @@
 
 (deftask deps
   "Fetch dependencies specified in project.clj."
-  (when (= "force" (first (:deps *opts*)))
-    (clear-deps!))
   (binding [*overwrite* true]
     (fetch-deps!))
   (print-deps)

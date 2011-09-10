@@ -108,7 +108,3 @@
                    #(vec (map (memfn getPath) %))))
           (extract-native! lib)
           (spit deps-cache (pr-str @dep-jars))))))
-
-(defn clear-deps! []
-  (doseq [type dep-types]
-    (depot/clear-deps *project* type)))
