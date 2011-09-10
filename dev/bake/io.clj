@@ -30,8 +30,10 @@
              *ins*  ~ins]
      ~@forms))
 
-(defmacro init-log []
+(defn init-log []
   (let [log (FileOutputStream. ".cake/log" true)]
+    (binding [*out* (OutputStreamWriter. log)]
+      (println (format "--- cake server started [%tc] ---" (System/currentTimeMillis))))
     (System/setOut (PrintStream. log))
     (System/setErr (PrintStream. log))))
 
