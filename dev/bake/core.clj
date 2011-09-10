@@ -15,7 +15,10 @@
     right))
 
 (defn log [& message]
-  (println (format "%11s %s" (str "[" *current-task* "]") (join " " message))))
+  (let [[task message] (if (keyword? (first message))
+                         [(first message) (rest message)]
+                         [*current-task*  message])]
+    (println (format "%11s %s" (str "[" (name task) "]") (join " " message)))))
 
 (defn in-cake-jvm?
   "Returns true if we are running from a jvm started by cake."

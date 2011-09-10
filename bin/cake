@@ -617,7 +617,7 @@ with_logging do
     puts "cake #{$version}"
     exit
   elsif $command == :log
-    tail_log($opts[:log])
+    tail_log($opts[:log].first)
   elsif $command == :killall
     killall || puts("No matching processes belonging to you were found")
     exit
