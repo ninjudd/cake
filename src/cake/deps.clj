@@ -5,7 +5,7 @@
         [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]]
         [clojure.string :only [split join]]
-        [useful.map :only [map-to map-vals]]
+        [useful.map :only [into-map map-to map-vals]]
         [useful.fn :only [all !]])
   (:require depot.maven
             [depot.deps :as depot])
@@ -22,8 +22,6 @@
                 :ext-dependencies     (all (! :dev) (! :test) :ext)
                 :ext-dev-dependencies (all (! :test) :dev :ext)
                 :test-dependencies    (all :test)})
-
-(def ^{:dynamic true} *overwrite* nil)
 
 (defn subproject-path [dep]
   (when *config*
@@ -57,6 +55,9 @@
            (doall (map println (filter (partial re-matches #"\d+\) .*")
                                        (split (.getMessage e) #"\n"))))
            (println)))))
+
+(defn deps-cache []
+  (file (first (:library-path *project*)) "deps.cache"))
 
 (defn deps [type]
   (get @dep-jars type))
@@ -93,11 +94,13 @@
       (map-to #(fileset-seq {:dir (file dest (subdir %)) :includes "*.jar"})
               dep-types))))
 
-(defn fetch-deps! []
-  (let [lib        (file (first (:library-path *project*)))
-        deps-cache (file lib "deps.cache")]
-    (if (and (not *overwrite*) (file-exists? deps-cache))
-      (reset! dep-jars (read-string (slurp deps-cache)))
+(defn fetch-deps! [& opts]
+  (let [opts  (into-map opts)
+        lib   (first (:library-path *project*))
+        cache (deps-cache)]
+    (if (and (not (:overwrite opts))
+             (file-exists? cache))
+      (reset! dep-jars (read-string (slurp cache)))
       (do (install-subprojects!)
           (println "Fetching dependencies...")
           (reset! dep-jars
@@ -107,4 +110,4 @@
                      (map-to fetch-deps (keys dep-types)))
                    #(vec (map (memfn getPath) %))))
           (extract-native! lib)
-          (spit deps-cache (pr-str @dep-jars))))))
+          (spit cache (pr-str @dep-jars))))))

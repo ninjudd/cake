@@ -1,9 +1,10 @@
 (ns cake.tasks.deps
   (:use [cake :only [*opts* *project*]]
         [bake.core :only [log]]
+        [cake.file :only [older?]]
         [cake.core :only [deftask defile]]
         [cake.tasks.jar :only [jarfile]]
-        [cake.deps :only [fetch-deps! *overwrite* print-deps]]
+        [cake.deps :only [fetch-deps! print-deps deps-cache]]
         [cake.project :only [reset-classloaders!]]
         [depot.deps :only [publish]]
         [depot.pom :only [prxml-tags]]))
@@ -13,10 +14,13 @@
 
 (deftask deps
   "Fetch dependencies specified in project.clj."
-  (binding [*overwrite* true]
-    (fetch-deps!))
-  (print-deps)
-  (reset-classloaders!))
+  {called-directly? :deps}
+  (when (or called-directly?
+            (older? (deps-cache) "project.clj"))
+    (fetch-deps! :overwrite true)
+    (when called-directly?
+      (print-deps))
+    (reset-classloaders!)))
 
 (deftask update #{deps}
   "Update cake plugins and restart the persistent JVM."

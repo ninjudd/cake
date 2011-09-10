@@ -60,8 +60,7 @@
 
 (defn build-context [context]
   (let [cake-clj (file "build" context "cake.clj")]
-    (when (some (partial older? cake-clj)
-                ["project.clj" "context.clj"])
+    (when (some (partial older? cake-clj) ["project.clj" "context.clj"])
       (ant Copy {:todir (parent cake-clj) :overwrite true}
         (add-zipfileset (bakepath :includes "cake.clj")))
       (replace-token cake-clj "(comment project)" (pr-str `(quote ~(project-with-context context))))
