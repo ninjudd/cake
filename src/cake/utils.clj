@@ -2,7 +2,8 @@
   (:use cake
         [cake.file :only [file touch]]
         [uncle.core :only [ant args argline]]
-        [bake.core :only [os-name]])
+        [bake.core :only [os-name]]
+        [clojure.java.io :only [writer]])
   (:import (org.apache.tools.ant.taskdefs ExecTask)))
 
 (def *readline-marker* nil)
@@ -44,7 +45,10 @@
        (fn []
          (let [idle (- (System/currentTimeMillis) (.lastModified *pidfile*))]
            (when (> idle timeout)
-             (println "Auto shutdown after" (/ idle 1000.0) "idle seconds.")
+             (binding [*out* (writer (System/out))]
+               (println (format "[%tc] -- auto shutdown after %d idle seconds"
+                                (System/currentTimeMillis)
+                                (int (/ idle 1000)))))
              (System/exit 1))
            (Thread/sleep (- timeout idle))
            (recur)))))))

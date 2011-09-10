@@ -1,6 +1,6 @@
 (ns bake.io
   (:use cake
-        [clojure.java.io :only [copy]])
+        [clojure.java.io :only [copy writer]])
   (:import (java.io File FileInputStream FileOutputStream PrintStream PrintWriter InputStreamReader OutputStreamWriter)
            (java.net JarURLConnection)
            (clojure.lang Atom LineNumberingPushbackReader)))
@@ -32,8 +32,9 @@
 
 (defn init-log []
   (let [log (FileOutputStream. ".cake/log" true)]
-    (binding [*out* (OutputStreamWriter. log)]
-      (println (format "--- cake server started [%tc] ---" (System/currentTimeMillis))))
+    (binding [*out* (writer log)]
+      (println (format "[%tc] -- cake server started"
+                       (System/currentTimeMillis))))
     (System/setOut (PrintStream. log))
     (System/setErr (PrintStream. log))))
 
