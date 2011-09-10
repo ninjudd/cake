@@ -95,19 +95,22 @@
               dep-types))))
 
 (defn fetch-deps! [& opts]
-  (let [opts  (into-map opts)
-        lib   (first (:library-path *project*))
-        cache (deps-cache)]
-    (if (and (not (:overwrite opts))
-             (file-exists? cache))
-      (reset! dep-jars (read-string (slurp cache)))
-      (do (install-subprojects!)
-          (println "Fetching dependencies...")
-          (reset! dep-jars
-                  (map-vals
-                   (if (:copy-deps *project*)
-                     (copy-deps lib)
-                     (map-to fetch-deps (keys dep-types)))
-                   #(vec (map (memfn getPath) %))))
-          (extract-native! lib)
-          (spit cache (pr-str @dep-jars))))))
+  (let [opts        (into-map opts)
+        cache       (deps-cache)
+        [deps jars] (when (and (not (:force opts)) (file-exists? cache))
+                      (read-string (slurp cache)))
+        overwrite?  (= deps (:dependencies *project*))]
+    (if overwrite?
+      (reset! dep-jars jars)
+      (let [lib (first (:library-path *project*))]
+        (install-subprojects!)
+        (log :deps "Fetching dependencies...")
+        (reset! dep-jars
+                (map-vals
+                 (if (:copy-deps *project*)
+                   (copy-deps lib)
+                   (map-to fetch-deps (keys dep-types)))
+                 #(vec (map (memfn getPath) %))))
+        (extract-native! lib)
+        (spit cache (pr-str [(:dependencies *project*) @dep-jars]))))
+    overwrite?))

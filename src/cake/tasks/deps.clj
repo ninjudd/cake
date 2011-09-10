@@ -15,12 +15,10 @@
 (deftask deps
   "Fetch dependencies specified in project.clj."
   {called-directly? :deps}
-  (when (or called-directly?
-            (older? (deps-cache) "project.clj"))
-    (fetch-deps! :overwrite true)
-    (when called-directly?
-      (print-deps))
-    (reset-classloaders!)))
+  (when (fetch-deps! :force called-directly?)
+    (reset-classloaders!))
+  (when called-directly?
+    (print-deps)))
 
 (deftask update #{deps}
   "Update cake plugins and restart the persistent JVM."
