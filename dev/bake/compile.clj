@@ -7,10 +7,11 @@
   (:import (java.io File)))
 
 
-(defn stale-namespaces [source-path]
+(defn stale-namespaces [source-path compile-path]
   (reduce (fn [stale sourcefile]
             (when-let [namespace (second (read-file-ns-decl sourcefile))]
-              (if (and (> (.lastModified sourcefile) (.lastModified (classfile namespace))))
+              (if (> (.lastModified sourcefile)
+                     (.lastModified (classfile compile-path namespace)))
                 (union stale (conj (dependents @dep-graph namespace)
                                    namespace))
                 stale)))
@@ -18,7 +19,7 @@
 
 (defn compile-stale [source-path compile-path namespaces]
   (binding [*compile-path* compile-path]
-    (let [stale    (stale-namespaces source-path)
+    (let [stale    (stale-namespaces source-path compile-path)
           compile? (if (= :all namespaces)
                      (constantly true)
                      (partial contains? (set namespaces)))]

@@ -7,12 +7,14 @@
         [clojure.set :only [union difference]])
   (:import (java.io File)))
 
-(defn classfile [ns]
-  (File. "classes"
-    (.. (str ns)
-        (replace "-" "_")
-        (replace "." "/")
-        (concat "__init.class"))))
+(defn classfile
+  ([ns] (classfile (first (:compile-path *project*)) ns))
+  ([dir ns]
+     (File. dir
+            (.. (str ns)
+                (replace "-" "_")
+                (replace "." "/")
+                (concat "__init.class")))))
 
 (defn reload-namespaces
   "Remove all specified namespaces then reload them."

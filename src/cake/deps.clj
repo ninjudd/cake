@@ -63,8 +63,8 @@
 
 (defn- jar-name [jar]
   (if (:long *opts*)
-    (.getPath jar)
-    (.getName jar)))
+    (.getPath (file jar))
+    (.getName (file jar))))
 
 (defn print-deps []
   (println)

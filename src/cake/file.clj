@@ -3,7 +3,7 @@
         [useful.map :only [into-map]]
         [clojure.string :only [join]]
         uncle.core)
-  (:import [org.apache.tools.ant.taskdefs Copy Move Touch Delete Mkdir]
+  (:import [org.apache.tools.ant.taskdefs Copy Move Touch Delete Chmod Mkdir Replace]
            [java.io File]))
 
 (defn- expand-path [root path]
@@ -31,11 +31,20 @@
   ([root & path]
      (File. (apply file-name root path))))
 
-(defn path-string [file-or-path]
-  (.getPath (file file-or-path)))
+(defn path-string [& path]
+  (.getPath (apply file path)))
+
+(defn parent [& path]
+  (.getParentFile (apply file path)))
 
 (defn file-exists? [& path]
   (.exists (apply file path)))
+
+(defn directory? [& path]
+  (.isDirectory (apply file path)))
+
+(defn file? [& path]
+  (.isFile (apply file path)))
 
 (defn global-file [& path]
   (apply file *global-root* path))
@@ -68,8 +77,19 @@
   (ant Mkdir
     (into-map opts :dir file)))
 
+(defn chmod [file perm & opts]
+  (let [type (if (directory? file) :dir :file)]
+    (ant Chmod
+      (into-map opts type file :perm perm))))
+
 (defn newer? [& args]
   (apply > (for [arg args]
              (if (number? arg)
                arg
                (.lastModified (if (string? arg) (file arg) arg))))))
+
+(defn older? [& args]
+  (apply newer? (reverse args)))
+
+(defn replace-token [file token value]
+  (ant Replace {:file file :token token :value value}))

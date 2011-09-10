@@ -7,7 +7,7 @@
         [useful.utils :only [verify]]
         [useful.map :only [into-map]])
   (:require [clojure.xml :as xml])
-  (:import [org.apache.tools.ant.taskdefs Jar War Copy Delete Chmod Replace]
+  (:import [org.apache.tools.ant.taskdefs Jar War Copy]
            [org.apache.tools.ant.types FileSet ZipFileSet]
            [org.codehaus.plexus.logging.console ConsoleLogger]
            [org.apache.maven.artifact.ant InstallTask Pom]
@@ -58,27 +58,27 @@
   (doseq [path (*project* path-name)]
     (add-zipfileset task (assoc opts :dir path))))
 
+(defn build-context [context]
+  (let [cake-clj (file "build" context "cake.clj")]
+    (when (some (partial older? cake-clj)
+                ["project.clj" "context.clj"])
+      (ant Copy {:todir (parent cake-clj) :overwrite true}
+        (add-zipfileset (bakepath :includes "cake.clj")))
+      (replace-token cake-clj "(comment project)" (pr-str `(quote ~(project-with-context context))))
+      (when (nil? context)
+        (replace-token cake-clj "(comment context)" (pr-str `(quote ~*context*)))))
+    cake-clj))
+
 (defn add-source-files [task & [opts]]
   (when-not (:omit-source *project*)
     (add-path task :source-path (assoc opts :includes "**/*.clj, **/*.java")))
   (when (:bake *project*)
+    (add-fileset task {:file (build-context (current-context))})
     (add-zipfileset task (bakepath opts :excludes "cake.clj"))))
-
-(defn build-context []
-  (ant Copy {:todir "build/jar" :overwrite true}
-       (add-zipfileset (bakepath :includes "cake.clj")))
-  (let [cake-clj "build/jar/cake.clj"
-        context (current-context)
-        project (project-with-context context)]
-    (ant Replace {:file cake-clj :token "(comment project)" :value (pr-str `(quote ~project))})
-    (when (nil? context)
-      (ant Replace {:file cake-clj :token "(comment context)" :value (pr-str `(quote ~*context*))}))))
 
 (defn build-jar []
   (let [[maven cake] (for [tool '[maven cake]]
                        (format "META-INF/%s/%s/%s" tool (:group-id *project*) (:artifact-id *project*)))]
-    (when (:bake *project*)
-      (build-context))
     (ant Jar {:dest-file (jarfile)}
       (add-manifest (manifest))
       (add-license)
@@ -93,7 +93,7 @@
 
 (defn clean [pattern]
   (when (:clean *opts*)
-    (ant Delete {:dir (file ".") :includes pattern})))
+    (rmdir "." :includes pattern)))
 
 (deftask jar #{compile}
   "Build a jar file containing project source and class files."
@@ -153,7 +153,7 @@
             (.write bin (.getBytes unix))
             (.write bin (.getBytes dos)))
           (copy uberjar bin))
-        (ant Chmod {:file binfile :perm "+x"})))
+        (chmod binfile "+x")))
     (println "Cannot create bin without :main namespace in project.clj")))
 
 (defn warfile [] (artifact :war-name ".war"))
@@ -164,7 +164,6 @@
     (add-fileset    task {:dir (file path "html")})))
 
 (defn build-war []
-  (build-context)
   (ant War {:dest-file (warfile)}
     (add-manifest (manifest))
     (add-license)
@@ -172,7 +171,8 @@
     (add-web-files)
     (add-path :compile-path   {:prefix "WEB-INF/classes" :includes "**/*.class"})
     (add-path :resources-path {:prefix "WEB-INF/classes"})
-    (add-zipfileset {:dir (file "build" "jar")      :prefix "WEB-INF/classes"})
+    (add-zipfileset {:dir (file "build" "jar") :prefix "WEB-INF/classes"})
+    (add-zipfileset {:dir (file "build" "jar") :prefix "WEB-INF/classes"})
     (add-fileset    {:dir (file "build" "war")})
     (add-file-mappings (:war-files *project*))))
 
