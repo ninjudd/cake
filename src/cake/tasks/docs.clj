@@ -5,10 +5,10 @@
         (cake [core :only [deftask]]
               [task :only [tasks]])))
 
-(deftask gen-docs #{deps}
+(deftask docs #{deps}
   "Generate documentation for tasks."
-  "If a filename is passed, documentation is written to that file. Otherwise,
-it is written to tasks.md in the current directory."
+  "If a filename is passed, documentation is written to that file."
+  "Otherwise, it is written to tasks.md in the current directory."
   {[file] :task-docs}
   (let [file (or file "tasks.md")]
     (log (str "Generating documentation in " file "."))
