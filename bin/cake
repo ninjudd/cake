@@ -290,15 +290,18 @@ def killall
   end.size > 0
 end
 
-def tail_log(num_lines)
-  exec("tail -n#{num_lines || 10} -f #{$project}/.cake/log")
+def tail_log(files, num_lines = 0)
+  files.collect! do |file|
+    "#{$project}/.cake/#{file}.log".tap {|file| FileUtils.touch(file)}
+  end
+  exec("tail -q -n#{num_lines || 10} -F #{files.join(' ')}")
 end
 
 def with_logging
-  @tail_pid = fork {tail_log(0)} if $opts[:l] or debug?
+  @tail_pid = fork {tail_log($opts[:l] ? [:err, :out] : [:err])}
   yield
 ensure
-  Process.kill(TERM, @tail_pid) if @tail_pid
+  Process.kill(KILL, @tail_pid)
 end
 
 class JVM
@@ -617,7 +620,7 @@ with_logging do
     puts "cake #{$version}"
     exit
   elsif $command == :log
-    tail_log($opts[:log].first)
+    tail_log([:err, :out], $opts[:log].first)
   elsif $command == :killall
     killall || puts("No matching processes belonging to you were found")
     exit
