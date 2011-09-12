@@ -172,11 +172,9 @@
 (deftask test #{compile-java}
   "Run project tests."
   "Specify which tests to run as arguments like: namespace, namespace/function, or :tag"
-  (run-project-tests))
-
-(deftask autotest #{compile-java}
-  "Automatically run tests whenever your project code changes."
-  "Specify tests to run just like the test task. Specify the interval with --interval."
-  (run-project-tests)
-  (while true
-    (run-project-tests :autotest true)))
+  "Use --auto to automatically run tests whenever your project code changes."
+  (if (:auto *opts*)
+    (do (run-project-tests)
+        (while true
+          (run-project-tests :autotest true)))
+    (run-project-tests)))
