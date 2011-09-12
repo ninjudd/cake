@@ -12,7 +12,7 @@
     (doseq [doc docs] (println "  " doc))))
 
 (def system-tasks #{"ps" "pid" "port" "kill" "killall" "log" "upgrade" "console"})
-(def hidden-tasks #{"default" "eat" "bake"})
+(def hidden-tasks #{"default"})
 
 (defn taskdocs [pattern]
   (filter
