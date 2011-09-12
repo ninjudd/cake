@@ -149,7 +149,7 @@
     (search terms)))
 
 (deftask add
-  "Install a library from into your project."
+  "Install a library from Clojars into your project."
   "The library will be added to the :deps or :dependencies vector in your project.clj.
    If you pass the --dev option, it'll be added to :dev-deps or :dev-dependencies."
   {[library-name version] :add [dev] :dev}
