@@ -142,14 +142,14 @@
       (describe library-name))))
 
 (deftask search
-  "Search clojars.org for libraries."
+  "Search clojars for libraries."
   {terms :search}
   (if (nil? terms)
     (println "Usage: cake search <terms>")
     (search terms)))
 
 (deftask add
-  "Install a library from Clojars into your project."
+  "Install a library from clojars into your project."
   "The library will be added to the :deps or :dependencies vector in your project.clj.
    If you pass the --dev option, it'll be added to :dev-deps or :dev-dependencies."
   {[library-name version] :add [dev] :dev}
