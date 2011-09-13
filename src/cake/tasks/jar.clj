@@ -75,20 +75,24 @@
     (add-fileset task {:file (build-context (current-context))})
     (add-zipfileset task (bakepath opts :excludes "cake.clj"))))
 
+(defn meta-inf [prefix]
+  (format "META-INF/%s/%s/%s" prefix (:group-id *project*) (:artifact-id *project*)))
+
+(defn add-meta-inf [task]
+  (add-zipfileset task {:dir (file ".") :prefix (meta-inf "maven") :includes "pom.xml"})
+  (add-zipfileset task {:dir (file ".") :prefix (meta-inf "cake")  :includes "*.clj"}))
+
 (defn build-jar []
-  (let [[maven cake] (for [tool '[maven cake]]
-                       (format "META-INF/%s/%s/%s" tool (:group-id *project*) (:artifact-id *project*)))]
-    (ant Jar {:dest-file (jarfile)}
-      (add-manifest (manifest))
-      (add-license)
-      (add-source-files)
-      (add-path :compile-path {:includes "**/*.class"})
-      (add-path :resources-path)
-      (add-zipfileset {:dir (file ".") :prefix maven  :includes "pom.xml"})
-      (add-zipfileset {:dir (file ".") :prefix cake   :includes "*.clj"})
-      (add-fileset    {:dir (file "build" "jar")})
-      (add-zipfileset {:dir (file "native") :prefix "native"})
-      (add-file-mappings (:jar-files *project*)))))
+  (ant Jar {:dest-file (jarfile)}
+    (add-manifest (manifest))
+    (add-license)
+    (add-meta-inf)
+    (add-source-files)
+    (add-path :compile-path {:includes "**/*.class"})
+    (add-path :resources-path)
+    (add-fileset    {:dir (file "build" "jar")})
+    (add-zipfileset {:dir (file "native") :prefix "native"})
+    (add-file-mappings (:jar-files *project*))))
 
 (defn clean [pattern]
   (when (:clean *opts*)
@@ -122,8 +126,7 @@
 
 (defn add-jar-contents [task jars]
   (doseq [jar jars :let [name (.replace (.getName (file jar)) ".jar" "")]]
-    (add-zipfileset task {:src jar :excludes "META-INF/**/*, project.clj, LICENSE"})
-    (add-zipfileset task {:src jar :includes "META-INF/**/*" :prefix (str "META-INF/" name)})))
+    (add-zipfileset task {:src jar :excludes "META-INF/**, project.clj, LICENSE"})))
 
 (defn build-uberjar [jarfile jars]
   (let [plexus-components (file "build/uberjar/META-INF/plexus/components.xml")]
@@ -131,6 +134,7 @@
     (ant Jar {:dest-file jarfile :duplicate "preserve"}
          (add-manifest (manifest))
          (add-jar-contents jars)
+         (add-meta-inf)
          (add-fileset {:dir (file "build" "uberjar")}))))
 
 (deftask uberjar #{jar}
