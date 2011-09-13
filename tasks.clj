@@ -3,15 +3,15 @@
         [cake.utils :only [git]]
         [bake.core :only [log]]
         [cake.tasks.jar :only [build-uberjar jars jarfile]]
-        [cake.tasks.version :only [snapshot? snapshot-timestamp]])
+        [cake.tasks.version :only [snapshot? stable?]])
   (:import [org.apache.tools.ant.taskdefs Jar Copy Move ExecTask]
            [java.io File]))
 
 (defn bakejar []
   (file (str "bake-" (:version *project*) ".jar")))
 
-(defn clojure-jar []
-  (str "clojure-" (.replace (clojure-version) "SNAPSHOT" "*") ".jar"))
+(defn clojure-jar? [file]
+  (re-matches #"^.*/clojure-[\d\.]+[-\w*]?\.jar$" file))
 
 (defn add-dev-jars [task]
   (doseq [jar (fileset-seq {:dir "lib/dev" :includes "*.jar"})]
@@ -21,7 +21,7 @@
 (deftask uberjar #{jar}
   "Create a standalone jar containing all project dependencies."
   (let [jar (jarfile)]
-    (build-uberjar jar (jars :excludes [(clojure-jar)]))
+    (build-uberjar jar (remove clojure-jar? (rest (jars))))
     (ant Jar {:dest-file (bakejar)}
       (add-fileset {:dir "dev"})
       add-dev-jars)
@@ -36,7 +36,8 @@
       (git "pull"))
     (ant Copy {:file (jarfile) :todir (file "releases" "jars")})
     (ant Copy {:file (bakejar) :todir (file "releases" "jars")})
-    (ant Copy {:file (file "bin" "cake") :tofile (file "releases" "cake")})
+    (when (stable? (:version *project*))
+      (ant Copy {:file (file "bin" "cake") :tofile (file "releases" "cake")}))
     (with-root (file "releases")
       (git "add" "jars" "cake")
       (git "commit" "--allow-empty" "-m" (format "'release cake %s'" (:version *project*)))

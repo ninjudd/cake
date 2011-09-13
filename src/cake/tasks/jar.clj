@@ -102,7 +102,7 @@
 (defn uberjarfile [] (artifact :uberjar-name ".jar"))
 
 (defn jars []
-  (concat [(jarfile)]
+  (concat [(.getPath (jarfile))]
           (deps :dependencies)
           (deps :ext-dependencies)))
 

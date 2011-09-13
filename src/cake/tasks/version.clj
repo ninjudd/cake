@@ -54,7 +54,10 @@
     (println (:artifact-id *project*) (:version *project*))))
 
 (defn snapshot? [version]
-  (.endsWith version "SNAPSHOT"))
+  (.endsWith version "-SNAPSHOT"))
+
+(defn stable? [version]
+  (not (.contains version "-")))
 
 (defn snapshot-timestamp [version]
   (if (snapshot? version)
