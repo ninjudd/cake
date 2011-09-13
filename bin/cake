@@ -589,7 +589,7 @@ if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?("#{$cakedir}/p
     log(:upgrade, "pulling latest code from git")
     Dir.chdir($cakedir) do
       system('git pull')
-      system('cake deps -S')
+      system('cake deps -Sq')
     end
   end
 

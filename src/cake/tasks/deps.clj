@@ -14,10 +14,10 @@
 
 (deftask deps
   "Fetch dependencies specified in project.clj."
-  {called-directly? :deps}
+  {called-directly? :deps quiet? :q}
   (when (fetch-deps! :force called-directly?)
     (reset-classloaders!))
-  (when called-directly?
+  (when (and called-directly? (not quiet?))
     (print-deps)))
 
 (deftask update #{deps}
