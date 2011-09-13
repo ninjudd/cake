@@ -39,10 +39,11 @@
      (do-something-else))"
   [name & forms]
   (verify (not (implicit-tasks name)) (str "Cannot redefine implicit task: " name))
-  (let [{:keys [deps docs actions destruct pred]} (parse-task-opts forms)]
+  (let [{:keys [deps docs actions destruct pred]} (parse-task-opts forms)
+        fn-name (symbol (str (ns-name *ns*) "_" name))]
     `(append-task! '~name ~(conj {:deps deps :docs docs}
                                  (when (seq actions)
-                                   `{:actions [(fn [~destruct]
+                                   `{:actions [(fn ~fn-name [~destruct]
                                                  (when ~pred ~@actions))]})))))
 
 (defn- in-ts [ts task-decl]
