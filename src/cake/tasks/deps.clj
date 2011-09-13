@@ -7,10 +7,10 @@
         [cake.deps :only [fetch-deps! print-deps deps-cache]]
         [cake.classloader :only [reset-classloaders!]]
         [depot.deps :only [publish]]
-        [depot.pom :only [prxml-tags]]))
+        [depot.pom :only [xml-tags]]))
 
 (defile "pom.xml" #{"project.clj"}
-  (prxml-tags :project *project*))
+  (xml-tags :project *project*))
 
 (deftask deps
   "Fetch dependencies specified in project.clj."

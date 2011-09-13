@@ -7,7 +7,7 @@
         [useful.map :only [update]]
         [uncle.core :only [*task-name*]]
         [clojure.java.io :only [writer]]
-        [clojure.contrib.prxml :only [*prxml-indent* prxml]]))
+        [clojure.data.xml :only [sexp-as-element emit]]))
 
 (declare tasks)
 (declare run?)
@@ -139,8 +139,7 @@
 (defmethod generate-file :xml
   [forms]
   (with-outfile
-    (binding [*prxml-indent* 2]
-      (prxml forms))
+    (emit (sexp-as-element forms) :indent 2)
     (println)))
 
 (defn- run-actions

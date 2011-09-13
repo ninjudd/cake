@@ -11,7 +11,7 @@
         [bake.core :only [debug?]]
         [bake.reload :only [reload-project-files]]
         [uncle.core :only [in-project]]
-        [clojure.contrib.condition :only [handler-case *condition*]])
+        [slingshot.core :only [try+]])
   (:require [cake.tasks default global]
             [cake.server :as server]))
 
@@ -21,15 +21,15 @@
       (keepalive!)
       (doseq [dir ["lib" "classes" "build"]]
         (.mkdirs (file dir)))
-      (handler-case :type
+      (try+
         (if (or (:r *opts*) (:reset *opts*))
           (if (:test *opts*)
             (reset-test-classloader!)
             (reset-classloaders!))
           (reload))
         (run-task (symbol (name task)))
-        (handle :abort-task
-          (println (name task) "aborted:" (:message *condition*)))))))
+        (catch :abort-task e
+          (println (name task) "aborted:" (:message e)))))))
 
 (defn start-server []
   (init-log)

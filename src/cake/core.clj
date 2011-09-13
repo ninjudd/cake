@@ -4,7 +4,7 @@
         [cake.project :only [create]]
         [useful.map :only [update into-map merge-in]]
         [useful.utils :only [verify syntax-quote]]
-        [clojure.contrib.condition :only [raise]]
+        [slingshot.core :only [throw+]]
         [clojure.string :only [join]]
         [bake.core :only [force?]])
   (:require [cake.classloader :as classloader]))
@@ -95,4 +95,4 @@
   `(classloader/bake-invoke ~@args))
 
 (defn abort-task [& message]
-  (raise {:type :abort-task :message (join " " message)}))
+  (throw+ {:abort-task true :message (join " " message)}))
