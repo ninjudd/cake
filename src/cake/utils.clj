@@ -45,10 +45,11 @@
        (fn []
          (let [idle (- (System/currentTimeMillis) (.lastModified *pidfile*))]
            (when (> idle timeout)
-             (binding [*out* (writer (System/out))]
-               (println (format "[%tc] -- auto shutdown after %d idle seconds"
-                                (System/currentTimeMillis)
-                                (int (/ idle 1000)))))
+             (doseq [out [*console* *out*]]
+               (binding [*out* out]
+                 (println (format "[%tc] -- auto shutdown after %d idle seconds"
+                                  (System/currentTimeMillis)
+                                  (int (/ idle 1000))))))
              (System/exit 1))
            (Thread/sleep (- timeout idle))
            (recur)))))))

@@ -33,11 +33,13 @@
 
 (defn start-server []
   (init-log)
+  (println (format "[%tc] -- cake server started" (System/currentTimeMillis)))
   (reload-project-files)
   (eval (:startup *project*))
   (on-shutdown #(eval (:shutdown *project*)))
   (in-project {:outs System/out :verbose (debug?) :root *root* :default-task "startup"}
-    (fetch-deps!)
+    (binding [*out* *console*]
+      (fetch-deps!))
     (append-dev-dependencies!)
     (reset-classloaders!)
     (when-let [autostart (get *config* "swank.autostart")]

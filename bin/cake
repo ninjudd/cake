@@ -43,7 +43,7 @@ else
   def daemon(cmd)
     puts cmd.join(' ') if debug?
     pid = fork do
-      if $config['jvm.detach-output'] or not $stdin.tty?
+      if not $stdin.tty?
         $stdout.close
         $stderr.close
       end
@@ -206,6 +206,11 @@ def log(command, *messages)
   end
 end
 
+def system_try(command)
+  `#{command} 2>&1`
+  $? == 0
+end
+
 class Configuration < Hash
   def initialize(*paths)
     paths.each do |path|
@@ -253,7 +258,7 @@ rescue NotImplementedError, Errno::EINVAL
   file
 end
 
-GET = system('which wget > /dev/null') ? "wget -O" : "curl -fo" # prefer wget because it retries on incomplete transfers
+GET = system_try('which wget') ? "wget -O" : "curl -fo" # prefer wget because it retries on incomplete transfers
 def download(url, path, opts = {})
   return path if File.exists?(path) and not opts[:force]
   FileUtils.makedirs(File.dirname(path))
@@ -290,16 +295,19 @@ def killall
   end.size > 0
 end
 
+TAIL = system_try('tail -q /dev/null') ? 'tail -q' : 'tail'
 def tail_log(files, num_lines = 0)
   files.collect! do |file|
     "#{$project}/.cake/#{file}.log".tap {|file| FileUtils.touch(file)}
   end
-  exec("tail -q -n#{num_lines || 10} -F #{files.join(' ')}")
+  exec("#{TAIL} -n#{num_lines || 10} -F #{files.join(' ')}")
 end
 
 def with_logging
-  @tail_pid = fork {tail_log($opts[:l] ? [:err, :out] : [:err])}
+  tail = $opts[:l] || $opts[:L]
+  @tail_pid = fork {tail_log(tail  ? [:err, :out] : [:err])}
   yield
+  Process.wait(@tail_pid) if $opts[:L]
 ensure
   Process.kill(KILL, @tail_pid)
 end
@@ -339,7 +347,7 @@ class JVM
   end
 
   def java_opts
-    server    = $config['jvm.server'] == 'true' || `java -d32 -version 2>&1` =~ /Cannot run Java in 32 bit mode/ || $? != 0
+    server    = $config['jvm.server'] == 'true' || !system_try('java -d32 -version')
     os_arch   = server ? "x86_64" : "x86"
     vm_opts   = server ? ['-server', '-d64', '-Xmx512M', '-XX:MaxPermSize=256M'] : ['-client', '-d32', '-Xms128M', '-Xmx256M', '-XX:MaxPermSize=128M']
     user_opts = "#{ENV['JAVA_OPTS']} #{$config['jvm.opts']}".split.compact

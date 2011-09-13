@@ -21,9 +21,10 @@
 (def dep-jars (atom nil))
 (def test-classloader nil)
 
-(def ^{:dynamic true} *ins*  nil)
-(def ^{:dynamic true} *outs* nil)
-(def ^{:dynamic true} *errs* nil)
+(def ^{:dynamic true} *ins*     nil)
+(def ^{:dynamic true} *outs*    nil)
+(def ^{:dynamic true} *errs*    nil)
+(def ^{:dynamic true} *console* nil) ; console out where cake was originally started
 
 (defn read-config [file]
   (into {} (when (.exists file)

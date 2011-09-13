@@ -11,9 +11,9 @@
 (defmacro defproject [name & [version & opts :as all]]
   (let [opts (syntax-quote (into-map (if (string? version) (conj opts [:version version]) all)))]
     `(let [project# (project/create '~name ~opts)]
-       (alter-var-root #'*context*      (fn [_#] {}))
-       (alter-var-root #'*project*      (fn [_#] project#))
-       (alter-var-root #'*project-root* (fn [_#] project#)))))
+       (alter-var-root #'*context*      (constantly {}))
+       (alter-var-root #'*project*      (constantly project#))
+       (alter-var-root #'*project-root* (constantly project#)))))
 
 (defmacro defcontext [name & opts]
   (let [opts (syntax-quote opts)]

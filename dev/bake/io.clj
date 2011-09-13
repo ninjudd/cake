@@ -31,11 +31,15 @@
      ~@forms))
 
 (defn init-log []
-  (System/setErr (PrintStream. (FileOutputStream. ".cake/err.log" true)))
-  (System/setOut (PrintStream. (FileOutputStream. ".cake/out.log" true)))
-  (binding [*out* (writer (System/out))]
-    (println (format "[%tc] -- cake server started"
-                     (System/currentTimeMillis)))))
+  (alter-var-root #'*console* (constantly *out*))
+  (let [outs (PrintStream. (FileOutputStream. ".cake/out.log" true))
+        errs (PrintStream. (FileOutputStream. ".cake/err.log" true))]
+    (alter-var-root #'*outs* (constantly outs))
+    (alter-var-root #'*errs* (constantly errs))
+    (alter-var-root #'*out*  (constantly (writer outs)))
+    (alter-var-root #'*err*  (constantly (writer errs)))
+    (System/setOut outs)
+    (System/setErr errs)))
 
 (defn disconnect [& [wait]]
   (let [outs *outs*]

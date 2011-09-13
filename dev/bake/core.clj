@@ -58,7 +58,7 @@
        ~@forms)))
 
 (defn set-project! [project]
-  (alter-var-root #'*project* (fn [_] project)))
+  (alter-var-root #'*project* (constantly project)))
 
 (defn set-context! [context]
   (let [context (or context (:context *project*))]

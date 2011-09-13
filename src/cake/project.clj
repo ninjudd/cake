@@ -76,7 +76,7 @@
 
 (defn reset-test-classloader! []
   (alter-var-root #'test-classloader
-    (fn [_] (make-classloader (deps :test-dependencies)))))
+    (constantly (make-classloader (deps :test-dependencies)))))
 
 (defn reset-classloaders! []
   (reset-classloader!)
