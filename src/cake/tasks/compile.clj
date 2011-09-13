@@ -1,11 +1,11 @@
 (ns cake.tasks.compile
   (:use cake
         [cake.core :only [deftask bake invoke]]
-        [uncle.core :only [ant add-fileset fileset-seq]]
         [cake.file :only [file newer? mkdir file-exists?]]
-        [cake.project :only [reset-classloaders! with-classloader classpath]]
-        [bake.core :only [verbose? debug? log os-name os-arch]]
+        [cake.classloader :only [reset-classloaders! with-classloader classpath]]
         [cake.utils :only [sudo prompt-read]]
+        [bake.core :only [verbose? debug? log os-name os-arch]]
+        [uncle.core :only [ant add-fileset fileset-seq]]
         [useful.string :only [pluralize]])
   (:import [org.apache.tools.ant.taskdefs Copy Javac Java]))
 

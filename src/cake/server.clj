@@ -1,11 +1,11 @@
 (ns cake.server
   (:use cake
-        [cake.project :only [bake]]
+        [cake.classloader :only [bake]]
         [bake.core :only [with-context current-context print-stacktrace]]
-        [clojure.main :only [skip-whitespace]]
         [bake.io :only [with-streams]]
         [bake.reload :only [reload]]
-        [useful.utils :only [if-ns]])
+        [useful.utils :only [if-ns]]
+        [clojure.main :only [skip-whitespace]])
   (:require [cake.utils.server-socket :as server-socket]
             [bake.complete :as complete])
   (:import [java.io File PrintStream InputStreamReader OutputStreamWriter PrintWriter OutputStream

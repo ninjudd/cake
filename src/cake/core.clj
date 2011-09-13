@@ -1,16 +1,17 @@
 (ns cake.core
   (:use cake cake.task
         [cake.file :only [mkdir]]
+        [cake.project :only [create]]
         [useful.map :only [update into-map merge-in]]
         [useful.utils :only [verify syntax-quote]]
         [clojure.contrib.condition :only [raise]]
         [clojure.string :only [join]]
         [bake.core :only [force?]])
-  (:require [cake.project :as project]))
+  (:require [cake.classloader :as classloader]))
 
 (defmacro defproject [name & [version & opts :as all]]
   (let [opts (syntax-quote (into-map (if (string? version) (conj opts [:version version]) all)))]
-    `(let [project# (project/create '~name ~opts)]
+    `(let [project# (create '~name ~opts)]
        (alter-var-root #'*context*      (constantly {}))
        (alter-var-root #'*project*      (constantly project#))
        (alter-var-root #'*project-root* (constantly project#)))))
@@ -83,8 +84,14 @@
   `(binding [*opts* (or ~opts *opts*)]
      (run-task '~name)))
 
+(defmacro bake-ns [& args]
+  `(classloader/bake-ns ~@args))
+
 (defmacro bake [& args]
-  `(project/bake ~@args))
+  `(classloader/bake ~@args))
+
+(defmacro bake-invoke [& args]
+  `(classloader/bake-invoke ~@args))
 
 (defn abort-task [& message]
   (raise {:type :abort-task :message (join " " message)}))

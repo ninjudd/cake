@@ -5,7 +5,7 @@
         [cake.core :only [deftask defile]]
         [cake.tasks.jar :only [jarfile]]
         [cake.deps :only [fetch-deps! print-deps deps-cache]]
-        [cake.project :only [reset-classloaders!]]
+        [cake.classloader :only [reset-classloaders!]]
         [depot.deps :only [publish]]
         [depot.pom :only [prxml-tags]]))
 

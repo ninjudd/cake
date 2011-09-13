@@ -1,9 +1,7 @@
 (ns cake.tasks.check
-    "Check syntax and warn on reflection."
-  (:use cake
-        cake.core
+  (:use cake cake.core
         [cake.file :only [file rmdir]]
-        [cake.project :only [reset-classloaders!]]))
+        [cake.classloader :only [reset-classloaders!]]))
 
 (deftask check #{compile-java}
   "Check syntax and warn on reflection."
@@ -28,7 +26,5 @@
                             (load-file (.getPath src-file))
                             (catch ExceptionInInitializerError e
                               (print-stacktrace e))))
-                      (do
-                        (log "Skipping namespace " (second src-file-ns-decl))
-                        (log "  Reason: Dependency on cake.core")))))))
+                      (log "Skipping task namespace:" (second src-file-ns-decl)))))))
   (reset-classloaders!))

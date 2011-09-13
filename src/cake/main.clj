@@ -4,7 +4,7 @@
         [cake.task :only [run-task run?]]
         [cake.file :only [file global-file]]
         [cake.utils :only [*readline-marker* keepalive! start-watchdog!]]
-        [cake.project :only [reload  reset-classloaders! reset-test-classloader! append-dev-dependencies!]]
+        [cake.classloader :only [reload  reset-classloaders! reset-test-classloader! append-dev-dependencies!]]
         [cake.tasks.swank :only [start-swank]]
         [useful.java :only [on-shutdown]]
         [bake.io :only [init-log]]

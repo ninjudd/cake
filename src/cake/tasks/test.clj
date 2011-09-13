@@ -1,10 +1,9 @@
 (ns cake.tasks.test
   (:use cake cake.core
+        [cake.classloader :only [with-test-classloader]]
         [bake.core :only [in-project-classloader?]]
-        [cake.project :only [bake-ns bake-invoke]]
-        [useful.map :only [map-vals]]
-        [cake.project :only [with-test-classloader]]
         [bake.find-namespaces :only [find-namespaces-in-dir]]
+        [useful.map :only [map-vals]]
         [clojure.pprint :only [pprint]]
         [clj-stacktrace.repl :as st]
         [clj-stacktrace.utils :as st-utils])
