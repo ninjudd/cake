@@ -61,9 +61,14 @@
   (ant Move
     (into-map opts :file from :tofile to)))
 
-(defn touch [file & opts]
-  (ant Touch
-    (into-map opts :file file)))
+(defn mkdir [path]
+  (.mkdirs (file path)))
+
+(defn touch [path]
+  (let [f (file path)]
+    (if (.exists f)
+      (.setLastModified f (System/currentTimeMillis))
+      (.createNewFile f))))
 
 (defn rm [file & opts]
   (ant Delete
@@ -71,10 +76,6 @@
 
 (defn rmdir [file & opts]
   (ant Delete
-    (into-map opts :dir file)))
-
-(defn mkdir [file & opts]
-  (ant Mkdir
     (into-map opts :dir file)))
 
 (defn chmod [file perm & opts]

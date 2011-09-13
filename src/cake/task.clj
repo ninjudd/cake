@@ -182,4 +182,4 @@
               (log "Starting..."))
             (run-actions task))
           (when (symbol? taskname)
-            (touch (task-run-file taskname) :verbose false)))))))
+            (touch (task-run-file taskname))))))))
