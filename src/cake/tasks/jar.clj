@@ -72,7 +72,8 @@
   (when-not (:omit-source *project*)
     (add-path task :source-path (assoc opts :includes "**/*.clj, **/*.java")))
   (when (:bake *project*)
-    (add-fileset task {:file (build-context (current-context))})
+    (let [[file dir] (split-path (build-context (current-context)))]
+      (add-zipfileset task (into-map opts {:dir dir :includes file})))
     (add-zipfileset task (bakepath opts :excludes "cake.clj"))))
 
 (defn meta-inf [prefix]
@@ -174,7 +175,6 @@
     (add-web-files)
     (add-path :compile-path   {:prefix "WEB-INF/classes" :includes "**/*.class"})
     (add-path :resources-path {:prefix "WEB-INF/classes"})
-    (add-zipfileset {:dir (file "build" "jar") :prefix "WEB-INF/classes"})
     (add-zipfileset {:dir (file "build" "jar") :prefix "WEB-INF/classes"})
     (add-fileset    {:dir (file "build" "war")})
     (add-file-mappings (:war-files *project*))))

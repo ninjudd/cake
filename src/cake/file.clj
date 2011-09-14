@@ -34,6 +34,10 @@
 (defn path-string [& path]
   (.getPath (apply file path)))
 
+(defn split-path [& path]
+  (let [f (apply file path)]
+    [(.getName f) (.getParent f)]))
+
 (defn parent [& path]
   (.getParentFile (apply file path)))
 
