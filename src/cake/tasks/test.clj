@@ -64,9 +64,7 @@
 (defn accumulate-assertions [acc [name assertions]]
   (let [acc         (update-in acc [:test-count] inc)
         grouped     (group-by  :type assertions)
-        fail-count  (count     (:fail grouped))
-        pass-count  (count     (:pass grouped))
-        error-count (count     (:error grouped))]
+        [fail-count pass-count error-count] (map count ((juxt :fail :pass :error) grouped))]
     (-> acc
         (update-in [:fail-count]      + fail-count)
         (update-in [:pass-count]      + pass-count)
@@ -75,24 +73,27 @@
                                         pass-count
                                         error-count))))
 
+(defn frequency-map [& keys]
+  (into {}
+        (for [k keys]
+          {k 0})))
+
 (defn parse-ns-results
   "generate a summary datastructure for the namespace with `results`"
   [ns results]
   {:ns ns
    :type :ns
    :aggregates (reduce accumulate-assertions
-                       {:test-count      0
-                        :assertion-count 0
-                        :pass-count      0
-                        :fail-count      0
-                        :error-count     0}
+                       (frequency-map :test-count :assertion-count :pass-count :fail-count :error-count)
                        results)
-   :tests (remove nil? (for [[test assertions] results]
-                         (when-let [display (seq
-                                             (remove #(= :pass (:type %))
-                                                     assertions))]
-                           {:name    test
-                            :display display})))})
+   :tests (for [[test assertions] results
+                :let [display (seq
+                               (remove
+                                (comp #{:pass} :type)
+                                assertions))]
+                :when display]
+            {:name    test
+             :display display})})
 
 (defn printfs [style formatter & args]
   (println (apply ansi/style (apply format formatter args) style)))
@@ -172,12 +173,7 @@
              (let [start (System/currentTimeMillis)
                    {:keys [ns-count test-count assertion-count pass-count fail-count error-count]}
                    (reduce display-and-aggregate-ns
-                           {:ns-count        0
-                            :test-count      0
-                            :assertion-count 0
-                            :pass-count      0
-                            :fail-count      0
-                            :error-count     0}
+                           (frequency-map :ns-count :test-count :assertion-count :pass-count :fail-count :error-count)
                            (for [[ns tests] (bake-invoke get-test-vars
                                                          (flatten (for [test-path (:test-path *project*)]
                                                                     (find-namespaces-in-dir (java.io.File. test-path))))
