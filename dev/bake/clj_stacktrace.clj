@@ -33,10 +33,11 @@
   [class-name]
   (re-gsub #"_" "-" (re-get #"([^$]+)\$" class-name 1)))
 
-                                        ; drop everything before and including the first $
-                                        ; drop everything after and including and the second $
-                                        ; drop any __xyz suffixes
-                                        ; sub _PLACEHOLDER_ for the corresponding char
+; drop everything before and including the first $
+; drop everything after and including and the second $
+; drop any __xyz suffixes
+; sub _PLACEHOLDER_ for the corresponding char
+
 (def clojure-fn-subs
   [[#"^[^$]*\$" ""]
    [#"\$.*"    ""]
