@@ -1,6 +1,6 @@
 (ns cake.utils
   (:use cake
-        [cake.file :only [file touch]]
+        [cake.file :only [file touch mtime]]
         [uncle.core :only [ant args argline]]
         [bake.core :only [os-name]]
         [clojure.java.io :only [writer]])
@@ -43,7 +43,7 @@
     (let [timeout (* 1000 (Integer. timeout))]
       (future-call
        (fn []
-         (let [idle (- (System/currentTimeMillis) (.lastModified *pidfile*))]
+         (let [idle (- (System/currentTimeMillis) (mtime *pidfile*))]
            (when (> idle timeout)
              (doseq [out [*console* *out*]]
                (binding [*out* out]

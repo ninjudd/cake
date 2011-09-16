@@ -31,24 +31,27 @@
   ([root & path]
      (File. (apply file-name root path))))
 
-(defn path-string [& path]
-  (.getPath (apply file path)))
+(defn path-string [path]
+  (.getPath (file path)))
 
-(defn split-path [& path]
-  (let [f (apply file path)]
+(defn split-path [path]
+  (let [f (file path)]
     [(.getName f) (.getParent f)]))
 
-(defn parent [& path]
-  (.getParentFile (apply file path)))
+(defn parent [path]
+  (.getParentFile (file path)))
 
-(defn file-exists? [& path]
-  (.exists (apply file path)))
+(defn file-exists? [path]
+  (.exists (file path)))
 
-(defn directory? [& path]
-  (.isDirectory (apply file path)))
+(defn directory? [path]
+  (.isDirectory (file path)))
 
-(defn file? [& path]
-  (.isFile (apply file path)))
+(defn file? [path]
+  (.isFile (file path)))
+
+(defn mtime [path]
+  (.lastModified (file path)))
 
 (defn global-file [& path]
   (apply file *global-root* path))
