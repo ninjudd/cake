@@ -48,7 +48,7 @@
       (add-fileset {:dir (file "build" "native" os-name os-arch "lib")}))))
 
 (deftask compile #{compile-native compile-java deps}
-  "Compile all clojure and java source files. Use 'cake compile force' to recompile."
+  "Compile clojure and java source files. Use 'cake compile force' to recompile."
   (when (= "force" (first (:compile *opts*)))
     (invoke clean {}))
   (let [jar-classes (file "build" "jar")]

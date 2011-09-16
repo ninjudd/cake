@@ -323,7 +323,10 @@ class JVM
   end
 
   def pid_context
-    [ENV['USER'], Socket.gethostname, $version, $config['jvm.separate-contexts'] && $opts[:context]]
+    [ENV['USER'],
+     Socket.gethostname,
+     $version.split('-').first,
+     $config['jvm.separate-contexts'] && $opts[:context]]
   end
 
   def pid
