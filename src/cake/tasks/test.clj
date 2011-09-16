@@ -185,18 +185,20 @@
                                run-ns-tests
                                ns
                                tests))))]
-               (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2f seconds."
-                        test-count
-                        ns-count
-                        assertion-count
-                        (/ (- (System/currentTimeMillis)
-                              start)
-                           1000.0))
-               (printfs (colorize fail-count error-count)
-                        "%d OK, %d failures, %d errors."
-                        pass-count
-                        fail-count
-                        error-count)))))
+               (if (< 0 test-count)
+                 (do (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2f seconds."
+                              test-count
+                              ns-count
+                              assertion-count
+                              (/ (- (System/currentTimeMillis)
+                                    start)
+                                 1000.0))
+                     (printfs (colorize fail-count error-count)
+                              "%d OK, %d failures, %d errors."
+                              pass-count
+                              fail-count
+                              error-count))
+                 (printfs [:red] "No tests matched arguments."))))))
 
 (deftask test #{compile-java}
   "Run project tests."
