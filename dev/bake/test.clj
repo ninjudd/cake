@@ -58,20 +58,6 @@
 (defmethod my-report :error [m]
   (update-results *out* (update-in m [:actual] parse-exception)))
 
-;; the methods below are never called because i'm calling test-var directly
-
-(defmethod my-report :default [m]
-  (prn :here))
-
-(defmethod my-report :summary [m]
-  (prn :here))
-
-(defmethod my-report :begin-test-ns [m]
-  (prn :here))
-
-(defmethod my-report :end-test-ns [m]
-  (prn :here))
-
 (defmethod my-report :begin-test-var [m]
   (set! *current-test* (:name (meta (:var m))))
   (reset-streams!))
