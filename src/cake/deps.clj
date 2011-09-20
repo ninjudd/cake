@@ -1,6 +1,6 @@
 (ns cake.deps
   (:use cake uncle.core
-        [cake.file :only [with-root file-exists? rmdir mv file]]
+        [cake.file :only [with-root file-exists? rmdir mv file parent mkdir]]
         [cake.utils :only [cake-exec]]
         [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]]
@@ -112,5 +112,6 @@
                    (map-to fetch-deps (keys dep-types)))
                  #(vec (map (memfn getPath) %))))
         (extract-native! lib)
+        (mkdir (parent cache))
         (spit cache (pr-str [(:dependencies *project*) @dep-jars]))))
     overwrite?))
