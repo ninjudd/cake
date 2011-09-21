@@ -4,7 +4,7 @@
         [cake.task :only [run-task run?]]
         [cake.file :only [file global-file]]
         [cake.utils :only [*readline-marker* keepalive! start-watchdog!]]
-        [cake.classloader :only [reload  reset-classloaders! reset-test-classloader! append-dev-dependencies!]]
+        [cake.classloader :only [reload  reset-classloaders! reset-test-classloader! append-plugin-dependencies!]]
         [cake.tasks.swank :only [start-swank]]
         [useful.java :only [on-shutdown]]
         [bake.io :only [init-log]]
@@ -40,7 +40,7 @@
   (in-project {:outs System/out :verbose (debug?) :root *root* :default-task "startup"}
     (binding [*out* *console*]
       (fetch-deps!))
-    (append-dev-dependencies!)
+    (append-plugin-dependencies!)
     (reset-classloaders!)
     (when-let [autostart (get *config* "swank.autostart")]
       (start-swank autostart))

@@ -40,7 +40,7 @@
                         paths)))
 
 (defn make-classloader [& paths]
-  (let [ext-deps (deps :ext-dependencies)
+  (let [ext-deps     (deps :ext-dependencies)
         ext-dev-deps (deps :ext-dev-dependencies)]
     (when (or ext-deps ext-dev-deps)
       (wrap-ext-classloader (mapcat to-urls (concat ext-deps ext-dev-deps)))))
@@ -57,9 +57,9 @@
   [classloader]
   (System/setProperty "java.class.path" (join ":" (get-classpath classloader))))
 
-(defn append-dev-dependencies! []
+(defn append-plugin-dependencies! []
   (apply append-classpath! base-classloader
-         (mapcat to-urls (deps :dev-dependencies))))
+         (mapcat to-urls (deps :plugin-dependencies))))
 
 (defn reset-classloader! []
   (alter-var-root #'*classloader*

@@ -1,27 +1,13 @@
 (ns cake.tasks.version
-  (:use cake cake.core uncle.core
+  (:use cake cake.core cake.utils.version
+        [cake.utils :only [git]]
         [bake.core :only [log]]
-        [useful.map :only [update]]
-        [clojure.string :only [join]]
-        [cake.utils :only [git]])
+        [uncle.core :only [ant]]
+        [useful.map :only [update]])
   (:import [org.apache.tools.ant.taskdefs Replace]))
-
-(def version-levels [:major :minor :patch])
 
 (defn defline [version]
   (format "(defproject %s \"%s\"" (:artifact-id *project*) version))
-
-(defn version-map [version]
-  (let [[version snapshot] (.split version "-")]
-    (into {:snapshot snapshot}
-          (map vector
-               version-levels
-               (map #(Integer/parseInt %)
-                    (.split version "\\."))))))
-
-(defn version-str [version]
-  (str (join "." (map #(or (version %) 0) version-levels))
-       (when (version :snapshot) "-SNAPSHOT")))
 
 (defn bump
   ([] (bump (version-map (:version *project*))

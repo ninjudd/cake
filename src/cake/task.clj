@@ -1,11 +1,14 @@
 (ns cake.task
   (:use cake
-        [clojure.set :only [difference]]
         [bake.core :only [print-stacktrace log verbose?]]
         [cake.file :only [file newer? touch]]
+        [cake.utils.version :only [version-mismatch?]]
+        [cake.project :only [add-group]]
         [useful.utils :only [verify adjoin]]
         [useful.map :only [update]]
         [uncle.core :only [*task-name*]]
+        [clojure.set :only [difference]]
+        [clojure.string :only [split]]
         [clojure.java.io :only [writer]]
         [clojure.contrib.prxml :only [*prxml-indent* prxml]]))
 
@@ -65,15 +68,16 @@
 (defn task-namespaces
   "Returns all required task namespaces for the given namespace (including transitive requirements)."
   [namespace]
-  (try (require namespace)
-       (catch java.io.FileNotFoundException e
-         (when (and (not= 'tasks namespace)
-                    (not= "deps" (first *args*)))
-           (println "warning: unable to find tasks namespace" namespace)
-           (println "  if you've added a new plugin to :dev-dependencies you must run 'cake deps' to install it"))))
-  (into [namespace]
-        (mapcat task-namespaces
-                (resolve-var namespace 'required-tasks))))
+  (when namespace
+    (try (require namespace)
+         (catch java.io.FileNotFoundException e
+           (when (and (not= 'tasks namespace)
+                      (not= "deps" (first *args*)))
+             (println "warning: unable to find tasks namespace" namespace)
+             (println "  if you've added a new plugin to :dev-dependencies you must run 'cake deps' to install it"))))
+    (into [namespace]
+          (mapcat task-namespaces
+                  (resolve-var namespace 'required-tasks)))))
 
 (defn default-tasks []
   (if (= "global" (:artifact-id *project*))
@@ -83,9 +87,14 @@
 (defn combine-task [task1 task2]
   (when-not (= {:replace true} task2)
     (let [task1 (or (when-not (:replace task2) task1)
-                    {:actions [] :docs [] :deps #{}})]
+                    {:actions [] :docs [] :deps #{} :bake-deps []})]
       (adjoin (update task1 :deps difference (:remove-deps task2))
               (select-keys task2 [:actions :docs :deps])))))
+
+(defn plugin-namespace [dep]
+  (let [plugin-name (-> dep first name)]
+    (when-let [ns (second (re-matches #"^cake-(.*)$" plugin-name))]
+      (symbol (str ns ".tasks")))))
 
 (defn get-tasks []
   (reduce
@@ -95,7 +104,9 @@
        tasks))
    {}
    (mapcat task-namespaces
-           (into (default-tasks) (:tasks *project*)))))
+           (concat (default-tasks)
+                   (map plugin-namespace (:cake-plugins *project*))
+                   (:tasks *project*)))))
 
 (defn task-run-file [taskname]
   (file ".cake" "run" taskname))
@@ -161,6 +172,13 @@
          ~@forms
          (set! run? (assoc run? ~taskname true)))))
 
+(defn check-bake-deps [task]
+  (doseq [[project version] (:bake-deps task)]
+    (let [actual (get-in *project* [:dependencies (add-group project) :version])]
+      (when (version-mismatch? version actual)
+        (log (str (format "Warning: cannot find required dependency %s %s" project version)
+                  (when actual (str "; found " actual))))))))
+
 (defn run-task
   "Execute the specified task after executing all prerequisite tasks."
   [taskname]
@@ -180,6 +198,7 @@
                     *File* (if-not (symbol? taskname) (expand-defile-path taskname))]
             (when (verbose?)
               (log "Starting..."))
+            (check-bake-deps task)
             (run-actions task))
           (when (symbol? taskname)
             (touch (task-run-file taskname))))))))

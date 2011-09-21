@@ -82,8 +82,9 @@
     (into-map opts :file file)))
 
 (defn rmdir [file & opts]
-  (ant Delete
-    (into-map opts :dir file)))
+  (when (file-exists? file)
+    (ant Delete
+      (into-map opts :dir file))))
 
 (defn chmod [file perm & opts]
   (let [type (if (directory? file) :dir :file)]
