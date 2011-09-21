@@ -52,7 +52,7 @@
     (spit (file template ".gitignore")
           (apply str (interleave [".cake" "pom.xml" "*.jar" "*.war" "lib" "classes" "build" "/+project+"] (repeat "\n"))))
     (log "Created template file: .gitignore")
-    (extract-resource "LICENSE" template)
+    (extract-resource *classloader* "LICENSE" template)
     (log "Created template LICENSE file (Eclipse Public License)")))
 
 (deftask new

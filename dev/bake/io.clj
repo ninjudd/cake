@@ -5,16 +5,17 @@
            (java.net JarURLConnection)
            (clojure.lang Atom LineNumberingPushbackReader)))
 
-(defn resource-stream [name]
-  (if-let [url (.findResource (.getClassLoader clojure.lang.RT) name)]
+;; TODO: move to classlojure
+(defn resource-stream [classloader name]
+  (if-let [url (.findResource classloader name)]
     (let [conn (.openConnection url)]
       (if (instance? JarURLConnection conn)
         (let [jar (cast JarURLConnection conn)]
           (.getInputStream jar))
         (FileInputStream. (File. (.getFile url)))))))
 
-(defn extract-resource [name dest-dir]
-  (if-let [s (resource-stream name)]
+(defn extract-resource [classloader name dest-dir]
+  (if-let [s (resource-stream classloader name)]
     (let [dest (File. dest-dir name)]
       (.mkdirs (.getParentFile dest))
       (copy s dest)
