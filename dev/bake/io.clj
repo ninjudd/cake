@@ -1,7 +1,8 @@
 (ns bake.io
   (:use cake
         [clojure.java.io :only [copy writer]])
-  (:import (java.io File FileInputStream FileOutputStream PrintStream PrintWriter InputStreamReader OutputStreamWriter)
+  (:import (java.io File FileInputStream FileOutputStream BufferedOutputStream
+                    PrintStream PrintWriter InputStreamReader OutputStreamWriter)
            (java.net JarURLConnection)
            (clojure.lang Atom LineNumberingPushbackReader)))
 
@@ -31,12 +32,23 @@
              *ins*  ~ins]
      ~@forms))
 
-(defn init-log []
+(defmacro multi-outstream [var]
+  `(PrintStream.
+    (proxy [BufferedOutputStream] [nil]
+      (write
+        ([b#]
+           (.write ~var b#))
+        ([b# off# len#]
+           (.write ~var b# off# len#)))
+      (flush []
+        (.flush ~var)))))
+
+(defn init-multi-out []
   (alter-var-root #'*console* (constantly *out*))
-  (let [outs (PrintStream. (FileOutputStream. ".cake/out.log" true))
-        errs (PrintStream. (FileOutputStream. ".cake/err.log" true))]
-    (alter-var-root #'*outs* (constantly outs))
-    (alter-var-root #'*errs* (constantly errs))
+  (alter-var-root #'*outs*    (constantly (FileOutputStream. ".cake/out.log" true)))
+  (alter-var-root #'*errs*    (constantly (FileOutputStream. ".cake/err.log" true)))
+  (let [outs (multi-outstream *outs*)
+        errs (multi-outstream *errs*)]
     (alter-var-root #'*out*  (constantly (writer outs)))
     (alter-var-root #'*err*  (constantly (writer errs)))
     (System/setOut outs)

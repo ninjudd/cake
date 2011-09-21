@@ -7,7 +7,7 @@
         [cake.classloader :only [reload  reset-classloaders! reset-test-classloader! append-plugin-dependencies!]]
         [cake.tasks.swank :only [start-swank]]
         [useful.java :only [on-shutdown]]
-        [bake.io :only [init-log]]
+        [bake.io :only [init-multi-out]]
         [bake.core :only [debug?]]
         [bake.reload :only [reload-project-files]]
         [uncle.core :only [in-project]]
@@ -32,7 +32,7 @@
           (println (name task) "aborted:" (:message *condition*)))))))
 
 (defn start-server []
-  (init-log)
+  (init-multi-out)
   (println (format "[%tc] -- cake server started" (System/currentTimeMillis)))
   (reload-project-files)
   (eval (:startup *project*))
