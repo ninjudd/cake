@@ -1,10 +1,9 @@
 (ns cake.classloader
   (:use cake
-        [classlojure :exclude [with-classloader]]
-        [classlojure :only [printable?]]
         [cake.deps :only [deps]]
-        [bake.core :only [debug?]]
         [cake.file :only [file global-file path-string]]
+        [bake.core :only [debug?]]
+        [classlojure.core :exclude [with-classloader]]
         [uncle.core :only [fileset-seq]]
         [clojure.string :only [split join]]
         [clojure.pprint :only [pprint]])
