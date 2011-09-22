@@ -67,7 +67,7 @@
                :war-name     (or (:war-name opts) artifact-version)
                :uberjar-name (or (:uberjar-name opts) (str artifact-version "-standalone"))
                :dependencies (merge-with adjoin
-                               (qualify :main   (dep-map (mapcat opts [:dependencies :native-dependencies])))
+                               (dep-map (mapcat opts [:dependencies :native-dependencies]))
                                (qualify :dev    (dep-map (:dev-dependencies  opts)))
                                (qualify :test   (dep-map (:test-dependencies opts)))
                                (qualify :plugin (dep-map (:cake-plugins      opts)))))

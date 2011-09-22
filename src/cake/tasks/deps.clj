@@ -4,13 +4,14 @@
         [cake.file :only [older?]]
         [cake.core :only [deftask defile]]
         [cake.tasks.jar :only [jarfile]]
-        [cake.deps :only [fetch-deps! print-deps deps-cache]]
+        [cake.deps :only [fetch-deps! print-deps deps-cache dep-types]]
         [cake.classloader :only [reset-classloaders!]]
+        [useful.map :only [update filter-vals]]
         [depot.deps :only [publish]]
-        [depot.pom :only [prxml-tags]]))
+        [depot.pom :only [xml-tags]]))
 
 (defile "pom.xml" #{"project.clj"}
-  (prxml-tags :project *project*))
+  (xml-tags :project (update *project* :dependencies filter-vals (dep-types :dependencies))))
 
 (deftask deps
   "Fetch dependencies specified in project.clj."

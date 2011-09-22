@@ -6,7 +6,7 @@
         [clojure.java.shell :only [sh]]
         [clojure.string :only [split join]]
         [useful.map :only [into-map map-to map-vals]]
-        [useful.fn :only [all !]])
+        [useful.fn :only [all any !]])
   (:require depot.maven
             [depot.deps :as depot])
   (:import [org.apache.tools.ant.taskdefs Copy Delete]))
@@ -17,7 +17,7 @@
    ["clojars"           "http://clojars.org/repo"]
    ["maven"             "http://repo1.maven.org/maven2"]])
 
-(def dep-types {:dependencies         (all (! :ext) (! :test) (! :plugin) :main)
+(def dep-types {:dependencies         (any :main (! (any :dev :ext :test :plugin)))
                 :dev-dependencies     (all :dev (! :ext))
                 :ext-dependencies     (all :ext (! :dev))
                 :ext-dev-dependencies (all :dev :ext)
@@ -30,7 +30,7 @@
         (get *config* (str "subproject." (name dep))))))
 
 (defn install-subprojects! []
-  (doseq [type dep-types
+  (doseq [type (keys dep-types)
           dep  (keys (*project* type))]
     (when-let [path (subproject-path dep)]
       (with-root path
