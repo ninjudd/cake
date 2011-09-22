@@ -30,8 +30,7 @@
         (get *config* (str "subproject." (name dep))))))
 
 (defn install-subprojects! []
-  (doseq [type (keys dep-types)
-          dep  (keys (*project* type))]
+  (doseq [dep (keys (:dependencies *project*))]
     (when-let [path (subproject-path dep)]
       (with-root path
         (cake-exec "install")))))
