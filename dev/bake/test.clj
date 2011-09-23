@@ -2,33 +2,31 @@
   (:use clojure.test
         [clojure.string :only [trim-newline]]
         [cake :only [*config*]]
-        [bake.core :only [verbose? log as-fn]]
+        [bake.core :only [verbose? log all]]
         [bake.reload :only [last-reloaded last-modified reload]]
         [bake.notify :only [notify]]
         [bake.clj-stacktrace])
   (:import [java.io StringWriter IOException]))
 
-(defn get-test-vars [namespaces opts]
-  (let [[tags functions ns-opts] (map opts [:tags :functions :namespaces])
-        ns-opts (as-fn ns-opts)
-        run? (fn [ns]
-               (if (ns-opts ns)
+(defn test-vars [nses {:keys [tags functions namespaces]}]
+  (let [run? (fn [ns]
+               (if (or (every? empty? [namespaces functions])
+                       (namespaces ns))
                  (if (ns-resolve ns 'test-ns-hook)
                    (comp #{'test-ns-hook} first)
                    (comp :test meta second))
                  (fn [[fn-name f]]
-                   (or (some tags (:tags (meta f)))
-                       (functions (apply symbol (map name [ns fn-name])))))))
-        get-tests-for-ns (fn [ns]
-                           (require ns)
-                           (for [f (filter (run? ns) (ns-publics ns))]
-                             (key f)))]
-    (reduce (fn [acc ns]
-              (if-let [test-fns (seq (get-tests-for-ns ns))]
-                (assoc acc ns (doall test-fns))
-                acc))
-            {}
-            namespaces)))
+                   (functions (apply symbol (map name [ns fn-name]))))))
+        tags-match? (if (empty? tags)
+                      (constantly true)
+                      (fn [[fn-name f]]
+                        (some tags (:tags (meta f)))))]
+    (reduce (fn [vars ns]
+              (require ns)
+              (assoc vars
+                ns (map key (filter (all (run? ns) tags-match?)
+                                    (ns-publics ns)))))
+            {} nses)))
 
 (declare *ns-results* *current-test*)
 

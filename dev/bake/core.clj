@@ -92,9 +92,9 @@
           "i386"  "x86"
           arch))))
 
-(defn as-fn
-  "this is also in useful.fn"
-  [x]
-  (if (ifn? x)
-    x
-    (constantly x)))
+;; This function is from useful.fn
+(defn all
+  "Takes a list of predicates and returns a new predicate that returns true if all do."
+  [& preds]
+  (fn [& args]
+    (every? #(apply % args) preds)))

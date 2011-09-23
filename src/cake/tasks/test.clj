@@ -1,20 +1,23 @@
 (ns cake.tasks.test
   (:use cake cake.core
+        [cake.file :only [file]]
         [cake.classloader :only [with-test-classloader]]
         [bake.core :only [in-project-classloader?]]
         [bake.find-namespaces :only [find-namespaces-in-dir]]
+        [useful.utils :only [adjoin]]
         [useful.map :only [map-vals]]
         [clojure.pprint :only [pprint]]
         [clojure.string :only [trim-newline]]
         [clj-stacktrace.repl :as st]
         [clj-stacktrace.utils :as st-utils])
+  (:refer-clojure :exclude [+])
   (:require [com.georgejahad.difform :as difform]
             [clansi.core :as ansi])
   (:import [java.io File]))
 
-(do
-  ;; these functions were written by Brenton Ashworth
-  ;; https://github.com/brentonashworth/lein-difftest
+(def + (fnil clojure.core/+ 0 0))
+
+(do ;; written by Brenton Ashworth (https://github.com/brentonashworth/lein-difftest)
   (defn difform-str
     "Create a string that is the diff of the forms x and y."
     [x y]
@@ -38,8 +41,8 @@
 
   (defn actual-diff
     "Transform the actual form that comes from clojure.test into a diff
-   string. This will diff forms like (not (= ...)) and will return the string
-   representation of anything else."
+    string. This will diff forms like (not (= ...)) and will return the string
+    representation of anything else."
     [form]
     (if (diff? form)
       (let [[_ [_ actual expected]] form]
@@ -48,54 +51,38 @@
       form)))
 
 (defn test-opts
-  "figure out whichs tests to run based on cake's command line options"
-  []
-  (let [args (into (:test *opts*) (:autotest *opts*))]
-    (merge {:tags #{} :functions #{} :namespaces #{}}
-           (if (empty? args)
-             {:namespaces true}
-             (map-vals (->> (map read-string args)
-                            (group-by #(cond (keyword?  %) :tags
-                                             (namespace %) :functions
-                                             :else         :namespaces)))
-                       set)))))
+  "Parse the test command line args."
+  [args]
+  (adjoin {:tags #{} :functions #{} :namespaces #{}}
+          (group-by #(cond (keyword?  %) :tags
+                           (namespace %) :functions
+                           :else         :namespaces)
+                    (map read-string args))))
 
 (defn accumulate-assertions [acc [name assertions]]
-  (let [acc         (update-in acc [:test-count] inc)
-        grouped     (group-by  :type assertions)
-        [fail-count pass-count error-count] (map count ((juxt :fail :pass :error) grouped))]
-    (-> acc
-        (update-in [:fail-count]      + fail-count)
-        (update-in [:pass-count]      + pass-count)
-        (update-in [:error-count]     + error-count)
-        (update-in [:assertion-count] + fail-count
-                                        pass-count
-                                        error-count))))
+  (let [counts (map-vals (group-by :type assertions) count)]
+    (merge-with + acc
+                (assoc counts
+                  :test      1
+                  :assertion (reduce + (vals counts))))))
 
-(defn frequency-map [& keys]
-  (into {}
-        (for [k keys]
-          {k 0})))
-
-(defn parse-ns-results
-  "generate a summary datastructure for the namespace with `results`"
+(defn parse-results
+  "Generate a summary datastructure for the namespace with results."
   [ns results]
   {:ns ns
    :type :ns
-   :aggregates (reduce accumulate-assertions
-                       (frequency-map :test-count :assertion-count :pass-count :fail-count :error-count)
-                       results)
-   :tests (for [[test assertions] results
-                :let [display (seq
-                               (remove
-                                (comp #{:pass} :type)
-                                assertions))]
-                :when display]
-            {:name    test
-             :display display})})
+   :count (reduce accumulate-assertions {} results)
+   :tests (for [[test result] results]
+            {:name   test
+             :output (seq (remove (comp #{:pass} :type) result))})})
 
 (defn printfs [style formatter & args]
   (println (apply ansi/style (apply format formatter args) style)))
+
+(defn colorize [count]
+  (vector (if (= 0 (+ (:fail count) (:error count)))
+            :green
+            :red)))
 
 (defmulti report! :type)
 
@@ -108,8 +95,7 @@
                 (when message (str message "\n"))
                 " expected:\n" expected "\n actual:\n" (actual-diff actual) "\n")))
 
-;; this is a hack of clj-stacktrace.repl/pst-on
-(defmethod report! :error [m]
+(defmethod report! :error [m] ;; this is a hack of clj-stacktrace.repl/pst-on
   (letfn [(find-source-width [excp]
             (let [this-source-width (st-utils/fence
                                      (sort
@@ -127,84 +113,65 @@
         (#'st/pst-cause-on *out* true cause source-width))))
   (println))
 
-(defn colorize [& args]
-  (vector (if (= 0 (apply + args))
-            :green
-            :red)))
+(defmethod report! :ns [{:keys [ns count tests]}]
+  (printfs [:cyan] (str "cake test " ns "\n"))
+  (doseq [{:keys [name output] :as test} tests :when output]
+    (printfs [:yellow] (str "cake test " ns "/" name))
+    (dorun (map report! output)))
+  (printfs [] "Ran %s tests containing %s assertions."
+           (:test      count 0)
+           (:assertion count 0))
+  (printfs (colorize count)
+           "%s failures, %s errors."
+           (:fail  count 0)
+           (:error count 0))
+  (printfs [:underline] (apply str (repeat 40 " ")))
+  (println))
 
-(defmethod report! :ns [results]
-  (let [ns         (:ns results)
-        aggregates (:aggregates results)
-        {:keys [test-count assertion-count fail-count error-count]} aggregates]
-
-    (printfs [:cyan] (str "cake test " ns "\n"))
-    (doseq [{:keys [name] :as test} (:tests results)]
-      (printfs [:yellow] (str "cake test " ns "/" name))
-      (doseq [object (:display test)]
-        (report! object)))
-    (printfs [] "Ran %s tests containing %s assertions." test-count assertion-count)
-    (printfs (colorize fail-count error-count)
-             "%s failures, %s errors."
-             fail-count
-             error-count)
-    (printfs [:underline] (apply str (repeat 40 " ")))
-    (println)))
-
-(defn display-and-aggregate-ns [acc {{:keys [test-count assertion-count pass-count fail-count error-count]}
-                                     :aggregates :as results}]
+(defn display-and-aggregate
+  [acc {count :count :as results}]
   (report! results)
-  (-> acc
-      (update-in [:ns-count]        + 1)
-      (update-in [:test-count]      + test-count)
-      (update-in [:assertion-count] + assertion-count)
-      (update-in [:pass-count]      + pass-count)
-      (update-in [:fail-count]      + fail-count)
-      (update-in [:error-count]     + error-count)))
+  (merge-with + acc (assoc count :ns 1)))
+
+(defn test-vars
+  "Determine which tests to run in the project JVM."
+  [opts]
+  (let [test-files (mapcat (comp find-namespaces-in-dir file) (:test-path *project*))]
+    (bake-invoke test-vars test-files opts)))
 
 (defn run-project-tests
-  "run the tests based on the command line options"
-  [& opts]
+  "Run the tests based on the command line options."
+  [opts]
   (println)
   (with-test-classloader
     (bake-ns (:use bake.test clojure.test
                    [clojure.string :only [join]]
                    [bake.core :only [with-context in-project-classloader?]])
              (let [start (System/currentTimeMillis)
-                   {:keys [ns-count test-count assertion-count pass-count fail-count error-count]}
-                   (reduce display-and-aggregate-ns
-                           (frequency-map :ns-count :test-count :assertion-count :pass-count :fail-count :error-count)
-                           (for [[ns tests] (bake-invoke get-test-vars
-                                                         (flatten (for [test-path (:test-path *project*)]
-                                                                    (find-namespaces-in-dir (java.io.File. test-path))))
-                                                         (merge (test-opts)
-                                                                (apply hash-map opts)))]
-                             (parse-ns-results
-                              ns
-                              (bake-invoke
-                               run-ns-tests
-                               ns
-                               tests))))]
-               (if (< 0 test-count)
+                   count (reduce display-and-aggregate {}
+                                 (for [[ns tests] (test-vars opts) :when (seq tests)]
+                                   (parse-results ns (bake-invoke run-ns-tests ns tests))))]
+               (if (< 0 (:test count 0))
                  (do (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2f seconds."
-                              test-count
-                              ns-count
-                              assertion-count
-                              (/ (- (System/currentTimeMillis)
-                                    start)
-                                 1000.0))
-                     (printfs (colorize fail-count error-count)
+                              (:test      count 0)
+                              (:ns        count 0)
+                              (:assertion count 0)
+                              (/ (- (System/currentTimeMillis) start) 1000.0))
+                     (printfs (colorize count)
                               "%d OK, %d failures, %d errors."
-                              pass-count
-                              fail-count
-                              error-count))
+                              (:pass  count 0)
+                              (:fail  count 0)
+                              (:error count 0)))
                  (printfs [:red] "No tests matched arguments."))))))
 
 (deftask test #{compile-java}
   "Run project tests."
   "Specify which tests to run as arguments like: namespace, namespace/function, or :tag"
   "Use --auto to automatically run tests whenever your project code changes."
-  (if (:auto *opts*)
-    (do (run-project-tests)
-        (while true
-          (run-project-tests :autotest true)))
-    (run-project-tests)))
+  {auto? :auto args :test}
+  (let [opts (test-opts args)]
+    (if (:auto *opts*)
+      (do (run-project-tests opts)
+          (while true
+            (run-project-tests opts)))
+      (run-project-tests opts))))
