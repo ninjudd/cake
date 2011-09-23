@@ -2,7 +2,7 @@
   (:use cake cake.core
         [cake.file :only [file]]
         [cake.classloader :only [with-test-classloader]]
-        [bake.core :only [in-project-classloader?]]
+        [bake.core :only [in-project-classloader? with-timing]]
         [bake.find-namespaces :only [find-namespaces-in-dir]]
         [useful.utils :only [adjoin]]
         [useful.map :only [map-vals]]
@@ -59,23 +59,6 @@
                            :else         :namespaces)
                     (map read-string args))))
 
-(defn accumulate-assertions [acc [name assertions]]
-  (let [counts (map-vals (group-by :type assertions) count)]
-    (merge-with + acc
-                (assoc counts
-                  :test      1
-                  :assertion (reduce + (vals counts))))))
-
-(defn parse-results
-  "Generate a summary datastructure for the namespace with results."
-  [ns results]
-  {:ns ns
-   :type :ns
-   :count (reduce accumulate-assertions {} results)
-   :tests (for [[test result] results]
-            {:name   test
-             :output (seq (remove (comp #{:pass} :type) result))})})
-
 (defn printfs [style formatter & args]
   (println (apply ansi/style (apply format formatter args) style)))
 
@@ -118,9 +101,10 @@
   (doseq [{:keys [name output] :as test} tests :when output]
     (printfs [:yellow] (str "cake test " ns "/" name))
     (dorun (map report! output)))
-  (printfs [] "Ran %s tests containing %s assertions."
+  (printfs [] "Ran %s tests containing %s assertions in %.2fs."
            (:test      count 0)
-           (:assertion count 0))
+           (:assertion count 0)
+           (/ (:time count) 1000.0))
   (printfs (colorize count)
            "%s failures, %s errors."
            (:fail  count 0)
@@ -128,10 +112,30 @@
   (printfs [:underline] (apply str (repeat 40 " ")))
   (println))
 
+(defn accumulate-assertions [acc [name assertions]]
+  (let [counts (map-vals (group-by :type assertions) count)]
+    (merge-with + acc
+                (assoc counts
+                  :test      1
+                  :assertion (reduce + (vals counts))))))
+
+(defn parse-results
+  "Generate a summary datastructure for the namespace with results."
+  [ns [results time]]
+  {:ns ns
+   :type :ns
+   :count (assoc (reduce accumulate-assertions {} results)
+            :time time
+            :ns   1)
+   :tests (for [[test result] results]
+            {:name   test
+             :output (seq (remove (comp #{:pass} :type)
+                                  result))})})
+
 (defn display-and-aggregate
   [acc {count :count :as results}]
   (report! results)
-  (merge-with + acc (assoc count :ns 1)))
+  (merge-with + acc count))
 
 (defn test-vars
   "Determine which tests to run in the project JVM."
@@ -147,16 +151,17 @@
     (bake-ns (:use bake.test clojure.test
                    [clojure.string :only [join]]
                    [bake.core :only [with-context in-project-classloader?]])
-             (let [start (System/currentTimeMillis)
-                   count (reduce display-and-aggregate {}
-                                 (for [[ns tests] (test-vars opts) :when (seq tests)]
-                                   (parse-results ns (bake-invoke run-ns-tests ns tests))))]
+             (let [[count real-time] (with-timing
+                                       (reduce display-and-aggregate {}
+                                               (for [[ns tests] (test-vars opts) :when (seq tests)]
+                                                 (parse-results ns (bake-invoke run-ns-tests ns tests)))))]
                (if (< 0 (:test count 0))
-                 (do (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2f seconds."
+                 (do (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2fs (%.2fs real)."
                               (:test      count 0)
                               (:ns        count 0)
                               (:assertion count 0)
-                              (/ (- (System/currentTimeMillis) start) 1000.0))
+                              (/ (:time count) 1000.0)
+                              (/ real-time     1000.0))
                      (printfs (colorize count)
                               "%d OK, %d failures, %d errors."
                               (:pass  count 0)

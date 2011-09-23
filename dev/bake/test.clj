@@ -2,7 +2,7 @@
   (:use clojure.test
         [clojure.string :only [trim-newline]]
         [cake :only [*config*]]
-        [bake.core :only [verbose? log all]]
+        [bake.core :only [verbose? log all with-timing]]
         [bake.reload :only [last-reloaded last-modified reload]]
         [bake.notify :only [notify]]
         [bake.clj-stacktrace])
@@ -76,12 +76,13 @@
               *report-counters* (ref *initial-report-counters*)
               *ns-results* (atom {})
               *current-test* nil]
-      (if (= '(test-ns-hook) tests)
-        ((var-get (ns-resolve ns 'test-ns-hook)))
-        (once-fixtures
-         (fn []
-           (doseq [test tests]
-             (each-fixtures
-              (fn []
-                (test-var (ns-resolve ns test))))))))
-      @*ns-results*)))
+      (with-timing
+        (if (= '(test-ns-hook) tests)
+          ((var-get (ns-resolve ns 'test-ns-hook)))
+          (once-fixtures
+           (fn []
+             (doseq [test tests]
+               (each-fixtures
+                (fn []
+                  (test-var (ns-resolve ns test))))))))
+        @*ns-results*))))

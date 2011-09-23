@@ -92,6 +92,11 @@
           "i386"  "x86"
           arch))))
 
+(defmacro with-timing [& forms]
+  `(let [start# (System/currentTimeMillis)
+         value# (do ~@forms)]
+     [value# (- (System/currentTimeMillis) start#)]))
+
 ;; This function is from useful.fn
 (defn all
   "Takes a list of predicates and returns a new predicate that returns true if all do."
