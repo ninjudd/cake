@@ -101,12 +101,12 @@
   (doseq [{:keys [name output] :as test} tests :when output]
     (printfs [:yellow] (str "cake test " ns "/" name))
     (dorun (map report! output)))
-  (printfs [] "Ran %s tests containing %s assertions in %.2fs."
+  (printfs [] "Ran %s tests containing %s assertions in %.2fs"
            (:test      count 0)
            (:assertion count 0)
            (/ (:time count) 1000.0))
   (printfs (colorize count)
-           "%s failures, %s errors."
+           "%s failures, %s errors"
            (:fail  count 0)
            (:error count 0))
   (printfs [:underline] (apply str (repeat 40 " ")))
@@ -156,18 +156,18 @@
                                                (for [[ns tests] (test-vars opts) :when (seq tests)]
                                                  (parse-results ns (bake-invoke run-ns-tests ns tests)))))]
                (if (< 0 (:test count 0))
-                 (do (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2fs (%.2fs real)."
+                 (do (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2fs (%.2fs real)"
                               (:test      count 0)
                               (:ns        count 0)
                               (:assertion count 0)
                               (/ (:time count) 1000.0)
                               (/ real-time     1000.0))
                      (printfs (colorize count)
-                              "%d OK, %d failures, %d errors."
+                              "%d OK, %d failures, %d errors"
                               (:pass  count 0)
                               (:fail  count 0)
                               (:error count 0)))
-                 (printfs [:red] "No tests matched arguments."))))))
+                 (printfs [:red] "No tests matched arguments"))))))
 
 (deftask test #{compile-java}
   "Run project tests."
