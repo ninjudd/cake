@@ -62,15 +62,20 @@
 (defn reload []
   (let [last @last-modified
         now  (System/currentTimeMillis)]
-    (when-let [new-decls (seq (newer-namespace-decls last classpath))]
-      (let [new-names (map second new-decls)
-            affected  (affected-namespaces new-names @dep-graph)]
-        (swap! dep-graph update-dependency-graph new-decls)
-        (when-let [to-reload (seq (filter reload? affected))]
-          (reset! last-modified now)
-          (apply reload-namespaces to-reload)
-          (reset! last-reloaded now))))
-    (when (seq (newer-than last project-files))
-      (reset! last-modified now)
-      (reload-project-files project-files)
-      (reset! last-reloaded now))))
+    (seq
+     (doall
+      (concat
+       (when-let [new-decls (seq (newer-namespace-decls last classpath))]
+         (let [new-names (map second new-decls)
+               affected  (affected-namespaces new-names @dep-graph)]
+           (swap! dep-graph update-dependency-graph new-decls)
+           (when-let [to-reload (seq (filter reload? affected))]
+             (reset! last-modified now)
+             (apply reload-namespaces to-reload)
+             (reset! last-reloaded now)
+             to-reload)))
+       (when-let [modified (seq (newer-than last project-files))]
+         (reset! last-modified now)
+         (reload-project-files project-files)
+         (reset! last-reloaded now)
+         modified))))))

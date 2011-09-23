@@ -1,7 +1,7 @@
 (ns cake.tasks.test
   (:use cake cake.core
         [cake.file :only [file]]
-        [cake.classloader :only [with-test-classloader]]
+        [cake.classloader :only [reload-test-classes with-test-classloader]]
         [bake.core :only [in-project-classloader? with-timing]]
         [bake.find-namespaces :only [find-namespaces-in-dir]]
         [useful.utils :only [adjoin]]
@@ -62,23 +62,31 @@
 (defn printfs [style formatter & args]
   (println (apply ansi/style (apply format formatter args) style)))
 
+(defn clear-screen []
+  (print (str \u001b "[2J")
+         (str \u001b "[0;0H"))
+  (flush))
+
+(defn all-pass? [count]
+  (= 0 (+ (:fail count) (:error count))))
+
 (defn colorize [count]
-  (vector (if (= 0 (+ (:fail count) (:error count)))
+  (vector (if (all-pass? count)
             :green
             :red)))
 
-(defmulti report! :type)
+(defmulti report :type)
 
-(defmethod report! :default [object]
+(defmethod report :default [object]
   (println object "\n"))
 
-(defmethod report! :fail [{:keys [file line message expected actual testing-contexts] :as m}]
+(defmethod report :fail [{:keys [file line message expected actual testing-contexts] :as m}]
   (printfs [:red] "FAIL! in %s:%d" file line)
   (println (str (when testing-contexts (str testing-contexts "\n"))
                 (when message (str message "\n"))
                 " expected:\n" expected "\n actual:\n" (actual-diff actual) "\n")))
 
-(defmethod report! :error [m] ;; this is a hack of clj-stacktrace.repl/pst-on
+(defmethod report :error [m] ;; this is a hack of clj-stacktrace.repl/pst-on
   (letfn [(find-source-width [excp]
             (let [this-source-width (st-utils/fence
                                      (sort
@@ -96,11 +104,11 @@
         (#'st/pst-cause-on *out* true cause source-width))))
   (println))
 
-(defmethod report! :ns [{:keys [ns count tests]}]
+(defmethod report :ns [{:keys [ns count tests]}]
   (printfs [:cyan] (str "cake test " ns "\n"))
   (doseq [{:keys [name output] :as test} tests :when output]
     (printfs [:yellow] (str "cake test " ns "/" name))
-    (dorun (map report! output)))
+    (dorun (map report output)))
   (printfs [] "Ran %s tests containing %s assertions in %.2fs"
            (:test      count 0)
            (:assertion count 0)
@@ -132,9 +140,10 @@
              :output (seq (remove (comp #{:pass} :type)
                                   result))})})
 
-(defn display-and-aggregate
-  [acc {count :count :as results}]
-  (report! results)
+(defn report-and-aggregate
+  [acc {:keys [count opts] :as results}]
+  (when-not (and (:auto opts) (all-pass? count))
+    (report results))
   (merge-with + acc count))
 
 (defn test-vars
@@ -152,11 +161,15 @@
                    [clojure.string :only [join]]
                    [bake.core :only [with-context in-project-classloader?]])
              (let [[count real-time] (with-timing
-                                       (reduce display-and-aggregate {}
+                                       (reduce report-and-aggregate {}
                                                (for [[ns tests] (test-vars opts) :when (seq tests)]
-                                                 (parse-results ns (bake-invoke run-ns-tests ns tests)))))]
+                                                 (assoc (parse-results ns (bake-invoke run-ns-tests ns tests))
+                                                   :opts opts))))]
                (if (< 0 (:test count 0))
-                 (do (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2fs (%.2fs real)"
+                 (do (when (and (:auto opts) (all-pass? count))
+                       (clear-screen)
+                       (println))
+                     (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2fs (%.2fs real)"
                               (:test      count 0)
                               (:ns        count 0)
                               (:assertion count 0)
@@ -176,7 +189,10 @@
   {auto? :auto args :test}
   (let [opts (test-opts args)]
     (if (:auto *opts*)
-      (do (run-project-tests opts)
-          (while true
-            (run-project-tests opts)))
+      (do (clear-screen)
+          (loop [test? true]
+            (when test?
+              (run-project-tests (assoc opts :auto true)))
+            (Thread/sleep 5000)
+            (recur (reload-test-classes))))
       (run-project-tests opts))))
