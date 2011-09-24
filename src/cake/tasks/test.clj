@@ -2,8 +2,8 @@
   (:use cake cake.core
         [cake.file :only [file]]
         [cake.classloader :only [reload-test-classes with-test-classloader]]
-        [bake.core :only [in-project-classloader? with-timing]]
         [bake.find-namespaces :only [find-namespaces-in-dir]]
+        [bake.core :only [with-timing]]
         [useful.utils :only [adjoin]]
         [useful.map :only [map-vals]]
         [clojure.pprint :only [pprint]]
@@ -156,32 +156,32 @@
   "Run the tests based on the command line options."
   [opts]
   (println)
-  (with-test-classloader
-    (bake-ns (:use bake.test clojure.test
-                   [clojure.string :only [join]]
-                   [bake.core :only [with-context in-project-classloader?]])
-             (let [[count real-time] (with-timing
-                                       (reduce report-and-aggregate {}
-                                               (for [[ns tests] (test-vars opts) :when (seq tests)]
-                                                 (assoc (parse-results ns (bake-invoke run-ns-tests ns tests))
-                                                   :opts opts))))]
-               (if (< 0 (:test count 0))
-                 (do (when (and (:auto opts) (all-pass? count))
-                       (clear-screen)
-                       (println))
-                     (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2fs (%.2fs real)"
-                              (:test      count 0)
-                              (:ns        count 0)
-                              (:assertion count 0)
-                              (/ (:time count) 1000.0)
-                              (/ real-time     1000.0))
-                     (printfs (colorize count)
-                              "%d OK, %d failures, %d errors"
-                              (:pass  count 0)
-                              (:fail  count 0)
-                              (:error count 0)))
-                 (printfs [:red] "No tests matched arguments"))
-               (println)))))
+  (with-context :test
+    (with-test-classloader
+      (bake-ns (:use [bake.test :only [run-ns-tests test-vars]])
+        (let [[count real-time]
+              (with-timing
+                (reduce report-and-aggregate {}
+                        (for [[ns tests] (test-vars opts) :when (seq tests)]
+                          (assoc (parse-results ns (bake-invoke run-ns-tests ns tests))
+                            :opts opts))))]
+          (if (< 0 (:test count 0))
+            (do (when (and (:auto opts) (all-pass? count))
+                  (clear-screen)
+                  (println))
+                (printfs [] "Ran %d tests in %d namespaces, containing %d assertions, in %.2fs (%.2fs real)"
+                         (:test      count 0)
+                         (:ns        count 0)
+                         (:assertion count 0)
+                         (/ (:time count) 1000.0)
+                         (/ real-time     1000.0))
+                (printfs (colorize count)
+                         "%d OK, %d failures, %d errors"
+                         (:pass  count 0)
+                         (:fail  count 0)
+                         (:error count 0)))
+            (printfs [:red] "No tests matched arguments"))
+          (println))))))
 
 (deftask test #{compile-java}
   "Run project tests."

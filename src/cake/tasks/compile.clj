@@ -64,8 +64,7 @@
 
 (deftask install-native #{compile-native}
   (copy-native)
-  (let [files (vec (map str (fileset-seq {:dir (file (:library-path *project*)
-                                                     "native")
+  (let [files (vec (map str (fileset-seq {:dir (file "lib" "native")
                                           :includes "*"})))
         default "/usr/lib/java/"
         dest (prompt-read (format "java.library.path [%s]:" default))

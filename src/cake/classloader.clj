@@ -26,25 +26,27 @@
               (if (.isDirectory file) "/" "")))
        (path-files path)))
 
-(defn classpath [& paths]
+(defn classpath [paths]
   (mapcat to-urls (into [(System/getProperty "bake.path")
                          (mapcat *project* [:source-path :test-path
                                             :resources-path :dev-resources-path
                                             :compile-path :test-compile-path])
                          (deps :dependencies)
                          (deps :dev-dependencies)
-                         (when (:copy-deps *project*)
-                           (map #(str % "/*") (:library-path *project*)))
-                         (get *config* "project.classpath")
-                         (path-string (global-file "lib/dev/*"))]
+                         (get *config* "project.classpath")]
                         paths)))
 
-(defn make-classloader [& paths]
+(defn wrap-ext-classloader []
+  (wrap-ext-classloader (mapcat to-urls (fi) (deps 'dev)))
+
+  )
+
+(defn make-classloader [context]
   (let [ext-deps     (deps :ext-dependencies)
         ext-dev-deps (deps :ext-dev-dependencies)]
     (when (or ext-deps ext-dev-deps)
       (wrap-ext-classloader (mapcat to-urls (concat ext-deps ext-dev-deps)))))
-  (if-let [cl (classlojure (apply classpath paths))]
+  (if-let [cl (classlojure (classpath (deps context)))]
     (doto cl
       (eval-in '(do (require 'cake)
                     (require 'bake.io)

@@ -619,7 +619,7 @@ log(:cake, "cake version is #{$version}") if debug?
 
 with_logging do
   cake = JVM.new(
-    [bakepath, cakepath, "cake", "#{$home}/.cake/lib/dev/*"],
+    [bakepath, cakepath],
     ["-Dcake.project=#{$project}", "-Dbake.path=#{bakepath}"]
   )
 

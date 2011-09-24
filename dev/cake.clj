@@ -18,8 +18,8 @@
 (def ^{:dynamic true} *global-root*  (.getPath (File. (System/getProperty "user.home") ".cake")))
 (def ^{:dynamic true} *classloader*  nil)
 
-(def dep-jars (atom nil))
-(def test-classloader nil)
+(def dep-jars     (atom {}))
+(def classloaders (atom {}))
 
 (def ^{:dynamic true} *ins*     nil)
 (def ^{:dynamic true} *outs*    nil)

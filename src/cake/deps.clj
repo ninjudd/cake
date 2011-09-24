@@ -36,18 +36,8 @@
     (ant Copy {:todir dest :flatten true}
       (add-zipfileset {:src jar :includes "lib/*.jar" }))))
 
-(defn fetch-deps [type]
-  (binding [depot/*repositories* default-repos]
-    (try (depot/fetch-deps *project*)
-         (catch org.apache.tools.ant.BuildException e
-           (println "\nUnable to resolve the following dependencies:\n")
-           (doall (map println (filter (partial re-matches #"\d+\) .*")
-                                       (split (.getMessage e) #"\n"))))
-           (println)))))
-
-(defn deps-cache []
-  (file (mkdir (first (:library-path *project*))
-               (name (:context *project*)))
+(defn deps-cache [context]
+  (file (mkdir "lib" context)
         "deps.cache"))
 
 (defn- jar-name [jar]
@@ -55,40 +45,38 @@
     (.getPath (file jar))
     (.getName (file jar))))
 
-(defn print-deps []
+(defn print-deps [context]
   (println)
-  (doseq [type (keys dep-types)]
-    (when-let [jars (seq (deps type))]
-      (println (str (name type) ":"))
-      (doseq [jar (sort (map jar-name jars))]
-        (println " " jar))
-      (println))))
+  (when-let [jars (seq (deps context))]
+    (println (str (name type) ":"))
+    (doseq [jar (sort (map jar-name jars))]
+      (println " " jar))
+    (println)))
 
-(let [subdir {:dependencies         ""
-              :dev-dependencies     "dev"
-              :ext-dependencies     "ext"
-              :ext-dev-dependencies "ext/dev"
-              :test-dependencies    "test"
-              :plugin-dependencies  "plugin"}]
+(defn fetch-deps [context]
+  (binding [depot/*repositories* default-repos]
+    (try (depot/fetch-deps *project* context)
+         (catch org.apache.tools.ant.BuildException e
+           (println "\nUnable to resolve the following dependencies:\n")
+           (doall (map println (filter (partial re-matches #"\d+\) .*")
+                                       (split (.getMessage e) #"\n"))))
+           (println)))))
 
-  (defn copy-deps [dest]
-    (let [build (file "build" "deps")
-          dep-types (keys dep-types)]
-      (doseq [type dep-types]
-        (when-let [jars (fetch-deps type)]
-          (ant Copy {:todir (file build (subdir type)) :flatten true}
-            (.addFileset (:fileset (meta jars))))))
-      (rmdir dest)
-      (mv build dest)
-      (map-to #(fileset-seq {:dir (file dest (subdir %)) :includes "*.jar"})
-              dep-types))))
+(defn copy-deps [context dest]
+  (let [build (file "build" "deps")]
+    (when-let [jars (fetch-deps context)]
+      (ant Copy {:todir (file build context) :flatten true}
+        (.addFileset (:fileset (meta jars)))))
+    (rmdir dest)
+    (mv build dest)
+    (fileset-seq {:dir dest :includes "*.jar"})))
 
-(defn fetch-deps! [& {force? :force}]
-  (let [cache       (deps-cache)
+(defn fetch-deps! [context & {force? :force}]
+  (let [cache       (deps-cache context)
         [deps jars] (when (and (not force?) (file-exists? cache))
                       (read-string (slurp cache)))]
     (if (= deps (:dependencies *project*))
-      (do (reset! dep-jars jars)
+      (do (swap! dep-jars assoc context jars)
           true)
       (let [lib (parent cache)]
         (install-subprojects!)
@@ -96,19 +84,17 @@
         (spit cache
               (pr-str
                [(:dependencies *project*)
-                (reset! dep-jars
-                        (map-vals
-                         (if (:copy-deps *project*)
-                           (copy-deps lib)
-                           (map-to fetch-deps (keys dep-types)))
-                         #(vec (map (memfn getPath) %))))]))
+                (swap! dep-jars assoc context
+                       (vec (map (memfn getPath)
+                                 (if (:copy-deps *project*)
+                                   (copy-deps context lib)
+                                   (fetch-deps context)))))]))
         (extract-native! lib)
         false))))
 
-(defn deps []
-  (let [context (current-context)]
-    (or (get @dep-jars context)
-        (do (fetch-deps!)
-            (get @dep-jars context)))))
+(defn deps [context]
+  (or (get @dep-jars context)
+      (do (fetch-deps! context)
+          (get @dep-jars context))))
 
 
