@@ -180,7 +180,8 @@
                               (:pass  count 0)
                               (:fail  count 0)
                               (:error count 0)))
-                 (printfs [:red] "No tests matched arguments"))))))
+                 (printfs [:red] "No tests matched arguments"))
+               (println)))))
 
 (deftask test #{compile-java}
   "Run project tests."

@@ -5,6 +5,7 @@
         [bake.core :only [log os-name os-arch]]
         [clojure.java.shell :only [sh]]
         [clojure.string :only [split join]]
+        [useful.utils :only [defm]]
         [useful.map :only [into-map map-to map-vals]]
         [useful.fn :only [all any !]])
   (:require depot.maven
@@ -16,13 +17,6 @@
    ["clojure-snapshots" "http://build.clojure.org/snapshots"]
    ["clojars"           "http://clojars.org/repo"]
    ["maven"             "http://repo1.maven.org/maven2"]])
-
-(def dep-types {:dependencies         (any :main (! (any :dev :ext :test :plugin)))
-                :dev-dependencies     (all :dev (! :ext))
-                :ext-dependencies     (all :ext (! :dev))
-                :ext-dev-dependencies (all :dev :ext)
-                :plugin-dependencies  :plugin
-                :test-dependencies    :test})
 
 (defn subproject-path [dep]
   (when *config*
@@ -42,14 +36,9 @@
     (ant Copy {:todir dest :flatten true}
       (add-zipfileset {:src jar :includes "lib/*.jar" }))))
 
-(defn auto-exclusions [type]
-  (cond (= :dev-dependencies  type) '[org.clojure/clojure org.clojure/clojure-contrib]
-        (= :test-dependencies type) '[org.clojure/clojure]))
-
 (defn fetch-deps [type]
-  (binding [depot/*repositories* default-repos
-            depot/*exclusions*   (auto-exclusions type)]
-    (try (depot/fetch-deps *project* (dep-types type))
+  (binding [depot/*repositories* default-repos]
+    (try (depot/fetch-deps *project*)
          (catch org.apache.tools.ant.BuildException e
            (println "\nUnable to resolve the following dependencies:\n")
            (doall (map println (filter (partial re-matches #"\d+\) .*")
@@ -57,10 +46,9 @@
            (println)))))
 
 (defn deps-cache []
-  (file (first (:library-path *project*)) "deps.cache"))
-
-(defn deps [type]
-  (get @dep-jars type))
+  (file (mkdir (first (:library-path *project*))
+               (name (:context *project*)))
+        "deps.cache"))
 
 (defn- jar-name [jar]
   (if (:long *opts*)
@@ -80,7 +68,8 @@
               :dev-dependencies     "dev"
               :ext-dependencies     "ext"
               :ext-dev-dependencies "ext/dev"
-              :test-dependencies    "test"}]
+              :test-dependencies    "test"
+              :plugin-dependencies  "plugin"}]
 
   (defn copy-deps [dest]
     (let [build (file "build" "deps")
@@ -94,24 +83,32 @@
       (map-to #(fileset-seq {:dir (file dest (subdir %)) :includes "*.jar"})
               dep-types))))
 
-(defn fetch-deps! [& opts]
-  (let [opts        (into-map opts)
-        cache       (deps-cache)
-        [deps jars] (when (and (not (:force opts)) (file-exists? cache))
-                      (read-string (slurp cache)))
-        overwrite?  (= deps (:dependencies *project*))]
-    (if overwrite?
-      (reset! dep-jars jars)
-      (let [lib (first (:library-path *project*))]
+(defn fetch-deps! [& {force? :force}]
+  (let [cache       (deps-cache)
+        [deps jars] (when (and (not force?) (file-exists? cache))
+                      (read-string (slurp cache)))]
+    (if (= deps (:dependencies *project*))
+      (do (reset! dep-jars jars)
+          true)
+      (let [lib (parent cache)]
         (install-subprojects!)
         (log :deps "Fetching dependencies...")
-        (reset! dep-jars
-                (map-vals
-                 (if (:copy-deps *project*)
-                   (copy-deps lib)
-                   (map-to fetch-deps (keys dep-types)))
-                 #(vec (map (memfn getPath) %))))
+        (spit cache
+              (pr-str
+               [(:dependencies *project*)
+                (reset! dep-jars
+                        (map-vals
+                         (if (:copy-deps *project*)
+                           (copy-deps lib)
+                           (map-to fetch-deps (keys dep-types)))
+                         #(vec (map (memfn getPath) %))))]))
         (extract-native! lib)
-        (mkdir (parent cache))
-        (spit cache (pr-str [(:dependencies *project*) @dep-jars]))))
-    overwrite?))
+        false))))
+
+(defn deps []
+  (let [context (current-context)]
+    (or (get @dep-jars context)
+        (do (fetch-deps!)
+            (get @dep-jars context)))))
+
+

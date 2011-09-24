@@ -68,8 +68,9 @@
   (ant Move
     (into-map opts :file from :tofile to)))
 
-(defn mkdir [path]
-  (.mkdirs (file path)))
+(defn mkdir [& path]
+  (doto (apply file path)
+    (.mkdirs)))
 
 (defn touch [path]
   (let [f (file path)]

@@ -33,7 +33,8 @@
                                             :compile-path :test-compile-path])
                          (deps :dependencies)
                          (deps :dev-dependencies)
-                         (map #(str % "/*") (:library-path *project*))
+                         (when (:copy-deps *project*)
+                           (map #(str % "/*") (:library-path *project*)))
                          (get *config* "project.classpath")
                          (path-string (global-file "lib/dev/*"))]
                         paths)))
