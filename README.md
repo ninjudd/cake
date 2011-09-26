@@ -7,19 +7,17 @@ You can use `cake` with any editor, but it goes especially well with [emacs](htt
 `cake` is cross-platform. It works on OS X, Linux and Windows. Also, unlike most other JVM-based
 command line tools, it is fast!
 
-## Getting started
-
-### Install
+## Installation
 
 There are two ways to get Cake:
 
-#### Standalone script (stable)
+### Standalone script (stable)
 
 Make sure `~/bin/` is in your path, then execute the following command:
 
     curl http://releases.clojure-cake.org/cake -o ~/bin/cake && chmod +x ~/bin/cake
 
-#### Git repository (development)
+### Git repository (development)
 
     git clone git://github.com/flatland/cake.git
 
