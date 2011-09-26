@@ -54,7 +54,7 @@
            (println "\nUnable to resolve the following dependencies:\n")
            (doall (map println (filter (partial re-matches #"\d+\) .*")
                                        (split (.getMessage e) #"\n"))))
-           (println)))))
+           (throw e)))))
 
 (defn deps-cache []
   (file (first (:library-path *project*)) "deps.cache"))
