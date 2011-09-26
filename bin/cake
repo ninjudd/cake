@@ -596,6 +596,13 @@ if File.exists?("#{$cakedir}/src/cake/core.clj") and File.exists?("#{$cakedir}/p
     end
   end
 
+  if not File.exists?("#{$cakedir}/lib")
+    FileUtils.makedirs("#{$cakedir}/lib")
+    Dir.chdir($cakedir) do
+      system('cake deps -Sq')
+    end
+  end
+
   $version = `cd #{$cakedir} && git describe`.chomp
   cakepath = ["#{$cakedir}/src", "#{$cakedir}/lib/*"]
   bakepath = "#{$cakedir}/dev"

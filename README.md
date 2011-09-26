@@ -20,13 +20,13 @@ Make sure `~/bin/` is in your `$PATH`, then execute the following command:
 
     curl http://releases.clojure-cake.org/cake -o ~/bin/cake && chmod +x ~/bin/cake
 
-Cake will bootstrap itself the first time it starts up.
-
 ### Git repository (development)
 
     git clone git://github.com/flatland/cake.git
 
 Symlink `bin/cake` into your `$PATH`.
+
+Cake will bootstrap itself the first time it starts up.
 
 ## Getting Started
 
