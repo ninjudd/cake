@@ -11,12 +11,19 @@ command line tools, it is fast!
 
 ### Install
 
-On OS X with homebrew, you can install cake by running this command:
+There are two ways to get Cake:
 
-    brew install cake
+#### Standalone script (stable)
 
-That's it. Or if you don't have [homebrew](http://mxcl.github.com/homebrew/) or you're not on OS X, 
-try one of the [other installation methods](https://github.com/flatland/cake/wiki/Installation).
+Make sure `~/bin/` is in your path, then execute the following command:
+
+    curl http://releases.clojure-cake.org/cake -o ~/bin/cake && chmod +x ~/bin/cake
+
+#### Git repository (development)
+
+    git clone git://github.com/flatland/cake.git
+
+Symlink bin/cake into your path and make it executable.
 
 ## Getting Started
 
