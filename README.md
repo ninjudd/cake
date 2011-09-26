@@ -66,9 +66,11 @@ If you don't yet have a project.clj file, creating one is simple. Here's an exam
 
     cake new project-name
 
-## Documentation
+## Help
 
-For more detailed documentation, see the [wiki](https://github.com/flatland/cake/wiki).
+For more detailed documentation, see the [wiki](https://github.com/flatland/cake/wiki).  For
+questions and help, join us in [#flatland](irc://irc.freenode.net/#flatland) on irc or send a
+message to the [clojure-cake](http://groups.google.com/group/clojure-cake) google group.
 
 ## Contributors
 
