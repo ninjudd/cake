@@ -21,7 +21,7 @@ Make sure `~/bin/` is in your `$PATH`, then execute the following command:
 
     git clone git://github.com/flatland/cake.git
 
-Symlink bin/cake into your `$PATH`.
+Symlink `bin/cake` into your `$PATH`.
 
 ## Getting Started
 
