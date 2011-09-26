@@ -9,7 +9,10 @@ command line tools, it is fast!
 
 ## Installation
 
-There are two ways to get Cake:
+There are two ways to get Cake. If you are a user, the standalone script is easiest. If you want to
+help with cake development though, you should check out the `develop` branch of the git
+repository. You can always access the stable version of cake, even when running from git, by adding
+the `-S` flag to your command.
 
 ### Standalone script (stable)
 
