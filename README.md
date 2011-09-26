@@ -13,7 +13,7 @@ There are two ways to get Cake:
 
 ### Standalone script (stable)
 
-Make sure `~/bin/` is in your path, then execute the following command:
+Make sure `~/bin/` is in your `$PATH`, then execute the following command:
 
     curl http://releases.clojure-cake.org/cake -o ~/bin/cake && chmod +x ~/bin/cake
 
@@ -21,7 +21,7 @@ Make sure `~/bin/` is in your path, then execute the following command:
 
     git clone git://github.com/flatland/cake.git
 
-Symlink bin/cake into your path and make it executable.
+Symlink bin/cake into your `$PATH`.
 
 ## Getting Started
 
