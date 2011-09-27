@@ -49,15 +49,10 @@
 (defn fetch-deps [type]
   (binding [depot/*repositories* default-repos
             depot/*exclusions*   (auto-exclusions type)]
-    (try (depot/fetch-deps *project* (dep-types type))
-         (catch org.apache.tools.ant.BuildException e
-           (println "\nUnable to resolve the following dependencies:\n")
-           (doall (map println (filter (partial re-matches #"\d+\) .*")
-                                       (split (.getMessage e) #"\n"))))
-           (throw e)))))
+    (depot/fetch-deps *project* (dep-types type))))
 
 (defn deps-cache []
-  (file (first (:library-path *project*)) "deps.cache"))
+  (file (mkdir "lib") "deps.cache"))
 
 (defn deps [type]
   (get @dep-jars type))
@@ -105,13 +100,15 @@
       (let [lib (first (:library-path *project*))]
         (install-subprojects!)
         (log :deps "Fetching dependencies...")
-        (reset! dep-jars
-                (map-vals
-                 (if (:copy-deps *project*)
-                   (copy-deps lib)
-                   (map-to fetch-deps (keys dep-types)))
-                 #(vec (map (memfn getPath) %))))
-        (extract-native! lib)
-        (mkdir (parent cache))
-        (spit cache (pr-str [(:dependencies *project*) @dep-jars]))))
+        (try
+          (spit cache
+                (pr-str [(:dependencies *project*)
+                         (reset! dep-jars
+                                 (map-vals
+                                  (if (:copy-deps *project*)
+                                    (copy-deps lib)
+                                    (map-to fetch-deps (keys dep-types)))
+                                  #(vec (map (memfn getPath) %))))]))
+          (catch RuntimeException e))
+        (extract-native! lib)))
     overwrite?))

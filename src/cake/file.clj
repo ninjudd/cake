@@ -69,13 +69,15 @@
     (into-map opts :file from :tofile to)))
 
 (defn mkdir [path]
-  (.mkdirs (file path)))
+  (doto (file path)
+    .mkdirs))
 
 (defn touch [path]
   (let [f (file path)]
     (if (.exists f)
       (.setLastModified f (System/currentTimeMillis))
-      (.createNewFile f))))
+      (.createNewFile f))
+    f))
 
 (defn rm [file & opts]
   (ant Delete
