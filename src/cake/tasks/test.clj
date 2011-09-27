@@ -15,7 +15,7 @@
             [clansi.core :as ansi])
   (:import [java.io File]))
 
-(def ^:dynamic *difform* true)
+(def ^:dynamic *difform* (not (read-string (*config* "disable.difform" "false"))))
 
 (def + (fnil clojure.core/+ 0 0))
 
@@ -193,8 +193,7 @@
   "Specify which tests to run as arguments like: namespace, namespace/function, or :tag"
   "Use --auto to automatically run tests whenever your project code changes."
   {[difform?] :difform args :test}
-  (binding [*difform* (when (not= "true" (*config* "disable.difform"))
-                        (or (nil? difform?) (= "true" difform?)))]
+  (binding [*difform* (if difform? (read-string difform?) *difform*)]
     (let [opts (test-opts args)]
       (if (:auto *opts*)
         (do (clear-screen)
