@@ -15,6 +15,8 @@
             [clansi.core :as ansi])
   (:import [java.io File]))
 
+(def ^:dynamic *difform* true)
+
 (def + (fnil clojure.core/+ 0 0))
 
 (do ;; written by Brenton Ashworth (https://github.com/brentonashworth/lein-difftest)
@@ -84,7 +86,11 @@
   (printfs [:red] "FAIL! in %s:%d" file line)
   (println (str (when testing-contexts (str testing-contexts "\n"))
                 (when message (str message "\n"))
-                " expected:\n" expected "\n actual:\n" (actual-diff actual) "\n")))
+                " expected:\n" expected
+                "\n actual:\n" (if *difform*
+                                 (actual-diff actual)
+                                 actual)
+                "\n")))
 
 (defmethod report :error [m] ;; this is a hack of clj-stacktrace.repl/pst-on
   (letfn [(find-source-width [excp]
@@ -186,13 +192,15 @@
   "Run project tests."
   "Specify which tests to run as arguments like: namespace, namespace/function, or :tag"
   "Use --auto to automatically run tests whenever your project code changes."
-  {auto? :auto args :test}
-  (let [opts (test-opts args)]
-    (if (:auto *opts*)
-      (do (clear-screen)
-          (loop [test? true]
-            (when test?
-              (run-project-tests (assoc opts :auto true)))
-            (Thread/sleep 5000)
-            (recur (reload-test-classes))))
-      (run-project-tests opts))))
+  {[difform?] :difform args :test}
+  (binding [*difform* (when (not= "true" (*config* "disable.difform"))
+                        (or (nil? difform?) (= "true" difform?)))]
+    (let [opts (test-opts args)]
+      (if (:auto *opts*)
+        (do (clear-screen)
+            (loop [test? true]
+              (when test?
+                (run-project-tests (assoc opts :auto true)))
+              (Thread/sleep 5000)
+              (recur (reload-test-classes))))
+        (run-project-tests opts)))))
