@@ -6,7 +6,8 @@
         [clojure.java.shell :only [sh]]
         [clojure.string :only [split join]]
         [useful.map :only [into-map map-to map-vals]]
-        [useful.fn :only [all any !]])
+        [useful.fn :only [all any !]]
+        [useful.experimental :only [cond-let]])
   (:require depot.maven
             [depot.deps :as depot])
   (:import [org.apache.tools.ant.taskdefs Copy Delete]))
@@ -26,14 +27,21 @@
 
 (defn subproject-path [dep]
   (when *config*
-    (or (get *config* (str "subproject." (namespace dep) "." (name dep)))
-        (get *config* (str "subproject." (name dep))))))
+    (or (get *config* (str "subproject." (namespace dep) "." (name dep))
+        (get *config* (str "subproject." (name dep)))))))
+
+(defn expand-subproject [path]
+  (when path
+    (if-let [default (*config* "projects.directory")]
+      (file default path) 
+      (file path))))
 
 (defn install-subprojects! []
   (doseq [dep (keys (:dependencies *project*))]
-    (when-let [path (subproject-path dep)]
-      (with-root path
-        (cake-exec "install")))))
+      (when-let [path (expand-subproject (subproject-path dep))]
+        (prn path)
+        (with-root path
+          (cake-exec "install")))))
 
 (defn extract-native! [dest]
   (doseq [jars (vals @dep-jars), jar jars]
