@@ -566,7 +566,7 @@ end
 parse_opts!
 puts "ruby version: #{RUBY_VERSION}" if debug?
 
-$script   = File.expand_path($opts[:run].first) if $opts[:run]
+$script   = File.expand_path($opts[:run].first) if $opts[:run] and $opts[:run].first
 $pwd      = Dir.getwd
 $project  = project_dir($pwd)
 $file     = File.expand_path(__FILE__)

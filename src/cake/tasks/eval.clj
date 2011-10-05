@@ -34,16 +34,25 @@
 
 (deftask run #{compile-java}
   "Execute a script in the project jvm."
+  "Pass a path to a file and cake will run that file in the persistent JVM.
+  If you pass the -m option, cake will look for :main in your project and will
+  try to run it in the persistent JVM."
   {[script] :run m :m}
-  (if m
-    (bake [main (:main *project*)
-           args (remove #{"run" "-m"} *args*)]
-          (require main)
-          (-> (str main "/-main") symbol resolve (apply args)))
-    (bake [script (with-root *pwd* (str (file script)))
-           args   (rest (drop-while (partial not= script) *args*))]
-          (binding [*command-line-args* args]
-            (load-file script)))))
+  (cond 
+   m (bake [main (:main *project*)
+            args (remove #{"run" "-m"} *args*)]
+           (if main
+             (do (require main) 
+                 (-> (str main "/-main") symbol resolve (apply args)))
+             (println ":main is not specified in your project.")))
+   script (bake [script (with-root *pwd* (file script))
+                 args   (rest (drop-while (partial not= (str script)) *args*))]
+                (if (.exists script) 
+                  (binding [*command-line-args* args]
+                    (load-file (str script)))
+                  (println "File does not exist.")))
+   :else (println "You need to either pass me a file, or pass the -m option. " 
+                  "Run `cake help run` for more information.")))
 
 (deftask repl #{compile-java}
   "Start an interactive shell with history and tab completion."
