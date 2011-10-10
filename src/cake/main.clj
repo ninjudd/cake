@@ -9,7 +9,7 @@
         [useful.java :only [on-shutdown]]
         [bake.io :only [init-multi-out]]
         [bake.core :only [debug?]]
-        [bake.reload :only [reload-project-files]]
+        [bake.reload :only [reload-project-files load-files project-files task-files]]
         [uncle.core :only [in-project]]
         [clojure.contrib.condition :only [handler-case *condition*]])
   (:require [cake.tasks default global]
@@ -34,7 +34,7 @@
 (defn start-server []
   (init-multi-out)
   (println (format "[%tc] -- cake server started" (System/currentTimeMillis)))
-  (reload-project-files)
+  (reload-project-files project-files)
   (eval (:startup *project*))
   (on-shutdown #(eval (:shutdown *project*)))
   (in-project {:outs System/out :verbose (debug?) :root *root* :default-task "startup"}
@@ -47,6 +47,7 @@
     (let [server (server/create process-command)
           port   (.getLocalPort (:server-socket server))]
       (spit *pidfile* (str port "\n") :append true)))
+  (load-files task-files)
   (start-watchdog!)
   nil)
 
