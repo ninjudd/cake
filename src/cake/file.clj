@@ -62,7 +62,9 @@
 
 (defn cp [from to & opts]
   (ant Copy
-    (into-map opts :file from :tofile to)))
+    (into-map opts :file from
+              (if (directory? to)
+                :todir, :tofile) to)))
 
 (defn mv [from to & opts]
   (ant Move
