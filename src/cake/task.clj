@@ -94,7 +94,7 @@
 (defn plugin-namespace [dep]
   (let [plugin-name (-> dep first name)]
     (when-let [ns (second (re-matches #"^cake-(.*)$" plugin-name))]
-      (symbol (str ns ".tasks")))))
+      (symbol (str "cake.tasks." ns)))))
 
 (defn get-tasks []
   (reduce
