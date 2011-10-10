@@ -44,9 +44,9 @@
   (doseq [name task-names :let [sym (symbol name)]]
     (if-let [task (get tasks sym)]
       (print-task name (:deps task) (:docs task))
-      (if-let [doc (implicit-tasks sym)]
+      (when-let [doc (implicit-tasks sym)]
         (print-task name [] doc)))
-    (list-tasks (re-pattern name) false)))
+    (list-tasks (re-pattern (str name "\\.")) false)))
 
 (deftask help
   "Print tasks with documentation. Use 'cake help TASK' for more details."

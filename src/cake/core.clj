@@ -56,10 +56,10 @@
    Creates a task named after the namespace that prints a list of tasks in that namespace."
   [ts & forms]
   (let [[docs forms] (split-with string? forms)
-        docs (update (vec docs) 0 #(str % " --"))]
+        docs (update (vec docs) 0 #(str % ".."))]
     `(do
        (deftask ~ts ~@docs
-         (invoke ~'help {:help [~(name ts)]}))
+         (invoke ~'help (assoc *opts* :help [~(name ts)])))
        ~@(map (partial in-ts ts) forms))))
 
 (defmacro defile
