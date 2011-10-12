@@ -30,7 +30,8 @@
                                     (ns-publics ns)))))
             {} nses)))
 
-(declare *ns-results* *current-test*)
+(def ^:dynamic *ns-results*)
+(def ^:dynamic *current-test*)
 
 (defn reset-streams! []
   (set! *out* (StringWriter.))
