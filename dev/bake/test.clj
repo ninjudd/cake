@@ -1,11 +1,13 @@
 (ns bake.test
   (:use clojure.test
+        [clojure.walk :only [postwalk]]
         [clojure.string :only [trim-newline]]
         [cake :only [*config*]]
         [bake.core :only [verbose? log all with-timing]]
         [bake.reload :only [last-reloaded last-modified reload]]
         [bake.notify :only [notify]]
-        [bake.clj-stacktrace])
+        [bake.clj-stacktrace]
+        [useful.fn :only [to-fix given]])
   (:import [java.io StringWriter IOException]))
 
 (defn test-vars [nses {:keys [tags functions namespaces]}]
@@ -34,14 +36,20 @@
   (set! *out* (StringWriter.))
   (set! *err* *out*))
 
+(defn unprintable? [obj]
+  (not (get-method print-dup (type obj))))
+
+(defn make-printable [obj]
+  (symbol (format "#=(symbol %s)" (pr-str (pr-str obj)))))
+
 (defn update-results [& objects]
   (doseq [object objects]
     (let [object (if (instance? StringWriter object)
                    (do (reset-streams!)
                        (not-empty (trim-newline (.toString object))))
-                   (if (seq *testing-contexts*)
-                     (assoc object :testing-contexts (testing-contexts-str))
-                     object))]
+                   (-> (postwalk (to-fix unprintable? make-printable) object)
+                       (given (seq *testing-contexts*)
+                              assoc :testing-contexts (testing-contexts-str))))]
       (when object
         (swap! *ns-results* update-in [*current-test*] (fnil conj []) object)))))
 
