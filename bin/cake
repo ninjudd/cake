@@ -335,7 +335,7 @@ class JVM
     @pid  = @pid.to_i  if @pid
     @port = @port.to_i if @port
 
-    Process.kill(0, @pid) # make sure pid is valid
+    Process.kill(0, @pid) if @pid # make sure pid is valid
 
     @pid
   rescue Errno::ENOENT, Errno::ESRCH, Errno::EBADF, Errno::EPERM, Process::Error => e
