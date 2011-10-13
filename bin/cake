@@ -298,7 +298,8 @@ end
 TAIL = system_try('tail -q /dev/null') ? 'tail -q' : 'tail'
 def tail_log(files, num_lines = 0)
   files.collect! do |file|
-    "#{$project}/.cake/#{file}.log".tap {|file| FileUtils.touch(file)}
+    file = "#{$project}/.cake/#{file}.log"
+    FileUtils.touch(file)
   end
   exec("#{TAIL} -n#{num_lines || 10} -F #{files.join(' ')}")
 end
