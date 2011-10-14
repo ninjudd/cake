@@ -12,7 +12,7 @@
 (defn- add-global-plugins [project]
   (update-in project
              [:dependencies]
-             #(merge %2 %)
+             merge
              (filter-vals
               (-> "project.clj" global-file read-project :dependencies)
               :plugin)))
