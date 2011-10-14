@@ -5,7 +5,7 @@
         [cake.utils.version :only [version-mismatch?]]
         [cake.project :only [add-group]]
         [useful.utils :only [verify adjoin]]
-        [useful.map :only [update]]
+        [useful.map :only [update filter-vals]]
         [uncle.core :only [*task-name*]]
         [clojure.set :only [difference]]
         [clojure.string :only [split]]
@@ -105,7 +105,7 @@
    {}
    (mapcat task-namespaces
            (concat (default-tasks)
-                   (map plugin-namespace (:cake-plugins *project*))
+                   (map plugin-namespace (filter-vals (:dependencies *project*) :plugin))
                    (:tasks *project*)))))
 
 (defn task-run-file [taskname]

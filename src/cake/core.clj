@@ -1,16 +1,24 @@
 (ns cake.core
   (:use cake cake.task
-        [cake.file :only [mkdir]]
-        [cake.project :only [create-project]]
-        [useful.map :only [update into-map merge-in]]
+        [cake.file :only [mkdir global-file]]
+        [cake.project :only [create-project read-project]]
+        [useful.map :only [update into-map merge-in filter-vals]]
         [useful.utils :only [verify syntax-quote]]
         [clojure.contrib.condition :only [raise]]
         [clojure.string :only [join]]
         [bake.core :only [force?]])
   (:require [cake.classloader :as classloader]))
 
+(defn- add-global-plugins [project]
+  (update-in project
+             [:dependencies]
+             #(merge %2 %)
+             (filter-vals
+              (-> "project.clj" global-file read-project :dependencies)
+              :plugin)))
+
 (defmacro defproject [& opts]
-  `(let [project# '~(apply create-project opts)]
+  `(let [project# '~(add-global-plugins (apply create-project opts))]
      (alter-var-root #'*context*      (constantly {}))
      (alter-var-root #'*project*      (constantly project#))
      (alter-var-root #'*project-root* (constantly project#))))
