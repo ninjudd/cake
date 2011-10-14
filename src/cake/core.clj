@@ -10,12 +10,10 @@
   (:require [cake.classloader :as classloader]))
 
 (defn- add-global-plugins [project]
-  (update project
-          :dependencies
-          merge
-          (filter-vals
-           (-> "project.clj" global-file read-project :dependencies)
-           :plugin)))
+  (update project :dependencies
+          merge (-> "project.clj" global-file read-project
+                    :dependencies
+                    (filter-vals :plugin))))
 
 (defmacro defproject [& opts]
   `(let [project# '~(add-global-plugins (apply create-project opts))]

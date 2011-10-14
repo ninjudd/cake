@@ -105,7 +105,8 @@
    {}
    (mapcat task-namespaces
            (concat (default-tasks)
-                   (map plugin-namespace (filter-vals (:dependencies *project*) :plugin))
+                   (map plugin-namespace
+                        (filter-vals (:dependencies *project*) :plugin))
                    (:tasks *project*)))))
 
 (defn task-run-file [taskname]
