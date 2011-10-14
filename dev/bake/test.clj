@@ -6,8 +6,7 @@
         [bake.core :only [verbose? log all with-timing]]
         [bake.reload :only [last-reloaded last-modified reload]]
         [bake.notify :only [notify]]
-        [bake.clj-stacktrace]
-        [useful.fn :only [to-fix given]])
+        [bake.clj-stacktrace])
   (:import [java.io StringWriter IOException]))
 
 (defn test-vars [nses {:keys [tags functions namespaces]}]
@@ -41,18 +40,18 @@
   (not (get-method print-dup (type obj))))
 
 (defn make-printable [obj]
-  (symbol (format "#=(symbol %s)" (pr-str (pr-str obj)))))
+  (if (unprintable? obj)
+    (symbol (format "#=(symbol %s)" (pr-str (pr-str obj))))
+    obj))
 
 (defn update-results [& objects]
   (doseq [object objects]
-    (let [object (if (instance? StringWriter object)
-                   (do (reset-streams!)
-                       (not-empty (trim-newline (.toString object))))
-                   (-> (postwalk (to-fix unprintable? make-printable) object)
-                       (given (seq *testing-contexts*)
-                              assoc :testing-contexts (testing-contexts-str))))]
-      (when object
-        (swap! *ns-results* update-in [*current-test*] (fnil conj []) object)))))
+    (when-let [results (if (instance? StringWriter object)
+                         (do (reset-streams!)
+                             (not-empty (trim-newline (.toString object))))
+                         (-> (postwalk make-printable object)
+                             (assoc :testing-contexts (testing-contexts-str))))]
+      (swap! *ns-results* update-in [*current-test*] (fnil conj []) results))))
 
 (defmulti my-report :type)
 

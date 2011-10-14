@@ -84,7 +84,7 @@
 
 (defmethod report :fail [{:keys [file line message expected actual testing-contexts] :as m}]
   (printfs [:red] "FAIL! in %s:%d" file line)
-  (println (str (when testing-contexts (str testing-contexts "\n"))
+  (println (str (when (seq testing-contexts) (str testing-contexts "\n"))
                 (when message (str message "\n"))
                 " expected:\n" expected
                 "\n actual:\n" (if *difform*
