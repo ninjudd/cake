@@ -3,10 +3,11 @@
         [cake.file :only [file]]
         [clojure.string :only [trim-newline]]
         [clojure.java.shell :only [sh]]
-        [useful.utils :only [adjoin]]
+        [useful.utils :only [adjoin syntax-quote pop-if]]
         [useful.map :only [update into-map map-vals]]
-        [useful.fn :only [given]]
-        [clojure.java.io :only [reader]]))
+        [useful.fn :only [given fix !]]
+        [clojure.java.io :only [reader]])
+  (:import (java.io PushbackReader)))
 
 (defn group [dep]
   (if ('#{clojure clojure-contrib} dep)
@@ -51,13 +52,12 @@
 (defn qualify [type deps]
   (map-vals deps #(assoc % type true)))
 
-(defn create [project-name opts]
-  (let [base-version (:version opts)
-        version (trim-newline
-                 (if (string? base-version)
-                   base-version
-                   (get-version base-version)))
-        artifact (name project-name)
+(defn create-project [project-name & opts]
+  (let [[opts version]   (pop-if opts string?)
+        opts             (eval (syntax-quote (into-map opts)))
+        version          (fix (or version (:version opts))
+                              (! string?) (comp trim-newline get-version))
+        artifact         (name project-name)
         artifact-version (str artifact "-" version)]
     (-> opts
         (assoc :artifact-id  artifact
@@ -70,10 +70,10 @@
                :war-name     (or (:war-name opts) artifact-version)
                :uberjar-name (or (:uberjar-name opts) (str artifact-version "-standalone"))
                :dependencies (merge-with adjoin
-                               (dep-map (mapcat opts [:dependencies :native-dependencies]))
-                               (qualify :dev    (dep-map (:dev-dependencies  opts)))
-                               (qualify :test   (dep-map (:test-dependencies opts)))
-                               (qualify :plugin (dep-map (:cake-plugins      opts)))))
+                                         (dep-map (mapcat opts [:dependencies :native-dependencies]))
+                                         (qualify :dev    (dep-map (:dev-dependencies  opts)))
+                                         (qualify :test   (dep-map (:test-dependencies opts)))
+                                         (qualify :plugin (dep-map (:cake-plugins      opts)))))
         (assoc-path :source-path        "src")
         (assoc-path :test-path          "test")
         (assoc-path :resources-path     "resources")
@@ -82,3 +82,9 @@
         (assoc-path :compile-path       "classes")
         (assoc-path :test-compile-path  :test-path "classes")
         (given (:java-source-path opts) update :source-path conj (:java-source-path opts)))))
+
+(defn read-project [file]
+  (binding [*in* (PushbackReader. (reader file))]
+    (let [project (read)]
+      (when (= 'defproject (first project))
+        (apply create-project (rest project))))))

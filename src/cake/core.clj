@@ -1,7 +1,7 @@
 (ns cake.core
   (:use cake cake.task
         [cake.file :only [mkdir]]
-        [cake.project :only [create]]
+        [cake.project :only [create-project]]
         [useful.map :only [update into-map merge-in]]
         [useful.utils :only [verify syntax-quote]]
         [clojure.contrib.condition :only [raise]]
@@ -9,12 +9,11 @@
         [bake.core :only [force?]])
   (:require [cake.classloader :as classloader]))
 
-(defmacro defproject [name & [version & opts :as all]]
-  (let [opts (syntax-quote (into-map (if (string? version) (conj opts [:version version]) all)))]
-    `(let [project# (create '~name ~opts)]
-       (alter-var-root #'*context*      (constantly {}))
-       (alter-var-root #'*project*      (constantly project#))
-       (alter-var-root #'*project-root* (constantly project#)))))
+(defmacro defproject [& opts]
+  `(let [project# '~(apply create-project opts)]
+     (alter-var-root #'*context*      (constantly {}))
+     (alter-var-root #'*project*      (constantly project#))
+     (alter-var-root #'*project-root* (constantly project#))))
 
 (defmacro defcontext [name & opts]
   (let [opts (syntax-quote opts)]
