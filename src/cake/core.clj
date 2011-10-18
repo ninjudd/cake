@@ -1,19 +1,13 @@
 (ns cake.core
   (:use cake cake.task
-        [cake.file :only [mkdir global-file]]
-        [cake.project :only [create-project read-project]]
-        [useful.map :only [update into-map merge-in filter-vals]]
+        [cake.file :only [mkdir]]
+        [cake.project :only [create-project read-project add-global-plugins]]
+        [useful.map :only [update into-map merge-in]]
         [useful.utils :only [verify syntax-quote]]
         [clojure.contrib.condition :only [raise]]
         [clojure.string :only [join]]
         [bake.core :only [force?]])
   (:require [cake.classloader :as classloader]))
-
-(defn- add-global-plugins [project]
-  (update project :dependencies
-          merge (-> "project.clj" global-file read-project
-                    :dependencies
-                    (filter-vals :plugin))))
 
 (defmacro defproject [& opts]
   `(let [project# '~(add-global-plugins (apply create-project opts))]

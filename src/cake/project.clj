@@ -1,10 +1,10 @@
 (ns cake.project
   (:use cake
-        [cake.file :only [file]]
+        [cake.file :only [file global-file]]
         [clojure.string :only [trim-newline]]
         [clojure.java.shell :only [sh]]
         [useful.utils :only [adjoin syntax-quote pop-if]]
-        [useful.map :only [update into-map map-vals]]
+        [useful.map :only [update into-map map-vals filter-vals]]
         [useful.fn :only [given fix !]]
         [clojure.java.io :only [reader]])
   (:import (java.io PushbackReader)))
@@ -88,3 +88,9 @@
     (let [project (read)]
       (when (= 'defproject (first project))
         (apply create-project (rest project))))))
+
+(defn add-global-plugins [project]
+  (update project :dependencies
+          merge (-> "project.clj" global-file read-project
+                    :dependencies
+                    (filter-vals :plugin))))
