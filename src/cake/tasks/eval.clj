@@ -22,6 +22,21 @@
     (bake [forms (map read-form forms)]
       (eval `(do ~@forms)))))
 
+(deftask eval-file #{compile-java}
+  "Eval the given file in the project JVM with *command-line-args* bound."
+  {[script] :eval-file cake? :cake}
+  (let [script (with-root *pwd* (file script))
+        args   (drop 2 *args*)]
+    (if-not (.exists script)
+      (println "file does not exist:" script)
+      (if cake?
+        (binding [*command-line-args* args]
+          (load-file (str script)))
+        (bake [script (str script)
+               args   args]
+          (binding [*command-line-args* args]
+            (load-file script)))))))
+
 (deftask filter #{compile-java}
   "Thread each line in stdin through the given forms, printing the results."
   "The line is passed as a string with a trailing newline, and println is called with the result of the final form."
@@ -33,26 +48,13 @@
           (eval `(-> ~line ~@forms println)))))
 
 (deftask run #{compile-java}
-  "Execute a script in the project jvm."
-  "Pass a path to a file and cake will run that file in the persistent JVM.
-  If you pass the -m option, cake will look for :main in your project and will
-  try to run it in the persistent JVM."
-  {[script] :run m :m}
-  (cond 
-   m (bake [main (:main *project*)
-            args (remove #{"run" "-m"} *args*)]
-           (if main
-             (do (require main) 
-                 (-> (str main "/-main") symbol resolve (apply args)))
-             (println ":main is not specified in your project.")))
-   script (bake [script (with-root *pwd* (file script))
-                 args   (rest (drop-while (partial not= (str script)) *args*))]
-                (if (.exists script) 
-                  (binding [*command-line-args* args]
-                    (load-file (str script)))
-                  (println "File does not exist.")))
-   :else (println "You need to either pass me a file, or pass the -m option. " 
-                  "Run `cake help run` for more information.")))
+  "Execute your project's main function in the persistent JVM."
+  (bake [main (:main *project*)
+         args (rest *args*)]
+    (if main
+      (do (require main)
+          (-> (str main "/-main") symbol resolve (apply args)))
+      (println ":main is not specified in your project."))))
 
 (deftask repl #{compile-java}
   "Start an interactive shell with history and tab completion."
