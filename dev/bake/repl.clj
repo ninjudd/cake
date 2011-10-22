@@ -7,7 +7,9 @@
 (defmacro with-wrapper [& forms]
   `(((or (eval (:repl-wrapper *project*)) identity)
      (fn []
-       (eval (:repl-init *project*))
+       (let [init# (eval (:repl-init *project*))]
+         (when (fn? init#)
+           (init#)))
        ~@forms))))
 
 (defn repl [marker]
