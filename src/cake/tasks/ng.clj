@@ -3,9 +3,9 @@
 
 (if-ns (:import vimclojure.nailgun.NGServer)
   (do
-    (defn start-ng-server  [host]
+    (defn start-ng-server [host]
       (bake [host host]
-            (vimclojure.nailgun.NGServer/main  (into-array [host]))))
+            (vimclojure.nailgun.NGServer/main (into-array [host]))))
 
     (deftask ng #{compile-java}
       "Start the nailgun server."

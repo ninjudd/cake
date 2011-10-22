@@ -11,7 +11,8 @@
   "Run swank connection thread in the project classloader."
   (fn [socket]
     (keepalive!)
-    (bake (:use [bake.core :only [set-context!]])
+    (bake (:use [bake.core :only [with-context]]
+                [bake.repl :only [with-wrapper]])
           (:require swank.swank swank.core.server)
           [socket socket, context context]
           (let [socket-serve     (ns-resolve 'swank.core.server 'socket-serve)
@@ -19,9 +20,9 @@
                 opts {:encoding (or (some #(System/getProperty %)
                                           ["swank.encoding" "file.encoding"])
                                     "UTF-8")}]
-            (eval (:swank-init *project*))
-            (set-context! context)
-            (socket-serve connection-serve socket opts)))))
+            (with-context context
+              (with-wrapper
+                (socket-serve connection-serve socket opts)))))))
 
 (if-ns (:use [swank.core.server :only [start-swank-socket-server!]]
              [swank.util.net.sockets :only [make-server-socket]])

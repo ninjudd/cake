@@ -4,10 +4,15 @@
 (defn- reset-in []
   (while (.ready *in*) (.read *in*)))
 
+(defmacro with-wrapper [& forms]
+  `(((or (eval (:repl-wrapper *project*)) identity)
+     (fn []
+       (eval (:repl-init *project*))
+       ~@forms))))
+
 (defn repl [marker]
-  (((or (eval (:repl-wrapper *project*)) identity)
-    (fn []
-      (clojure.main/repl
-       :init   #(in-ns 'user)
-       :caught #(do (reset-in) (clojure.main/repl-caught %))
-       :prompt #(println (str marker (ns-name *ns*))))))))
+  (with-wrapper
+    (clojure.main/repl
+     :init   #(in-ns 'user)
+     :caught #(do (reset-in) (clojure.main/repl-caught %))
+     :prompt #(println (str marker (ns-name *ns*))))))
