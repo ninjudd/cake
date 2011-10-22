@@ -4,7 +4,9 @@
         [cake.file :only [file global-file path-string]]
         [bake.core :only [debug?]]
         [classlojure.core :exclude [with-classloader]]
+        [classlojure.io :only [resource-forms]]
         [uncle.core :only [fileset-seq]]
+        [useful.fn :only [given]]
         [clojure.string :only [split join]]
         [clojure.pprint :only [pprint]])
   (:import [java.io File]))
@@ -45,6 +47,8 @@
       (wrap-ext-classloader (mapcat to-urls (concat ext-deps ext-dev-deps)))))
   (if-let [cl (classlojure (apply classpath paths))]
     (doto cl
+      (given (:debug *project*)
+             eval-in `(do ~@(rest (resource-forms "useful/debug.clj"))))
       (eval-in '(do (require 'cake)
                     (require 'bake.io)
                     (require 'bake.reload)

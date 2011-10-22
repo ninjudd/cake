@@ -15,6 +15,6 @@
 (defn repl [marker]
   (with-wrapper
     (clojure.main/repl
-     :init   #(in-ns 'user)
+     :init   #(ns user)
      :caught #(do (reset-in) (clojure.main/repl-caught %))
      :prompt #(println (str marker (ns-name *ns*))))))
