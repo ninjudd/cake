@@ -5,7 +5,7 @@
                  [uncle "0.2.3"]
                  [depot "0.1.7"]
                  [classlojure "0.6.3"]
-                 [useful "0.7.4-alpha2"]
+                 [useful "0.7.4-alpha3"]
                  [org.clojure/tools.namespace "0.1.1" :exclusions [org.clojure/java.classpath]]
                  [org.clojars.ninjudd/java.classpath "0.1.2-SNAPSHOT"]
                  [com.jcraft/jsch "0.1.42"]
