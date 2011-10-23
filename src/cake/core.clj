@@ -4,6 +4,7 @@
         [cake.project :only [create-project read-project add-global-plugins]]
         [useful.map :only [update into-map merge-in]]
         [useful.utils :only [verify syntax-quote]]
+        [useful.macro :only [defalias]]
         [clojure.contrib.condition :only [raise]]
         [clojure.string :only [join]]
         [bake.core :only [force?]])
@@ -84,14 +85,9 @@
   `(binding [*opts* (or ~opts *opts*)]
      (run-task '~name)))
 
-(defmacro bake-ns [& args]
-  `(classloader/bake-ns ~@args))
-
-(defmacro bake [& args]
-  `(classloader/bake ~@args))
-
-(defmacro bake-invoke [& args]
-  `(classloader/bake-invoke ~@args))
+(defalias bake        classloader/bake)
+(defalias bake-ns     classloader/bake-ns)
+(defalias bake-invoke classloader/bake-invoke)
 
 (defn abort-task [& message]
   (raise {:type :abort-task :message (join " " message)}))
