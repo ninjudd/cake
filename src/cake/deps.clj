@@ -33,7 +33,7 @@
 (defn expand-subproject [path]
   (when path
     (if-let [default (*config* "projects.directory")]
-      (file default path) 
+      (file default path)
       (file path))))
 
 (defn install-subprojects! []
@@ -83,7 +83,8 @@
               :dev-dependencies     "dev"
               :ext-dependencies     "ext"
               :ext-dev-dependencies "ext/dev"
-              :test-dependencies    "test"}]
+              :test-dependencies    "test"
+              :plugin-dependencies  "plugin"}]
 
   (defn copy-deps [dest]
     (let [build (file "build" "deps")
