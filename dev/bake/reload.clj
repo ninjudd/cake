@@ -32,7 +32,8 @@
   (map #(File. % "tasks.clj") [*root* *global-root*]))
 
 (def project-files
-  (map #(File. *root* %) ["project.clj" "context.clj"]))
+  (concat (map #(File. *root* %) ["project.clj" "context.clj" ".cake/context.clj"])
+          [(File. *global-root* "context.clj")]))
 
 (def last-modified (atom (System/currentTimeMillis)))
 (def last-reloaded (atom (System/currentTimeMillis)))
