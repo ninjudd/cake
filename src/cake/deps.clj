@@ -13,10 +13,8 @@
   (:import [org.apache.tools.ant.taskdefs Copy Delete]))
 
 (def default-repos
-  [["clojure"           "http://build.clojure.org/releases"]
-   ["clojure-snapshots" "http://build.clojure.org/snapshots"]
-   ["clojars"           "http://clojars.org/repo"]
-   ["maven"             "http://repo1.maven.org/maven2"]])
+  [["maven"   "http://repo1.maven.org/maven2"]
+   ["clojars" "http://clojars.org/repo"]])
 
 (def dep-types {:dependencies         (any :main (! (any :dev :ext :test :plugin)))
                 :dev-dependencies     (all :dev (! :ext))

@@ -5,7 +5,7 @@
         [useful.map :only [update into-map merge-in]]
         [useful.utils :only [verify syntax-quote]]
         [useful.macro :only [defalias]]
-        [clojure.contrib.condition :only [raise]]
+        [slingshot.core :only [throw+]]
         [clojure.string :only [join]]
         [bake.core :only [force?]])
   (:require [cake.classloader :as classloader]))
@@ -92,4 +92,4 @@
 (defalias bake-invoke classloader/bake-invoke)
 
 (defn abort-task [& message]
-  (raise {:type :abort-task :message (join " " message)}))
+  (throw+ {:abort-task true, :message (join " " message)}))
