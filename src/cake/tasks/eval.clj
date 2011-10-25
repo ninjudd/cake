@@ -58,9 +58,12 @@
 
 (deftask repl #{compile-java}
   "Start an interactive shell with history and tab completion."
-  {cake? :cake}
+  {cake? :cake [ns] :repl}
   (keepalive!)
-  (if cake?
-    (repl *readline-marker*)
-    (bake (:use bake.repl) [marker *readline-marker*]
-          (repl marker))))
+  (let [ns (if ns
+             (symbol ns)
+             (symbol (str "repl-" (swap! repl-count inc))))]
+    (if cake?
+      (repl *readline-marker* ns)
+      (bake (:use bake.repl) [marker *readline-marker*, ns ns]
+        (repl marker ns)))))

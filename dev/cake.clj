@@ -26,6 +26,8 @@
 (def ^{:dynamic true} *errs*    nil)
 (def ^{:dynamic true} *console* nil) ; console out where cake was originally started
 
+(def repl-count (atom 0))
+
 (defn read-config [file]
   (into {} (when (.exists file)
              (with-open [f (FileInputStream. file)]

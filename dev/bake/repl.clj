@@ -1,5 +1,5 @@
 (ns bake.repl
-  (:use [cake :only [*project*]]))
+  (:use [cake :only [*project* repl-count]]))
 
 (defn- reset-in []
   (while (.ready *in*) (.read *in*)))
@@ -12,9 +12,10 @@
            (init#)))
        ~@forms))))
 
-(defn repl [marker]
+(defn repl [marker ns]
   (with-wrapper
     (clojure.main/repl
-     :init   #(ns user)
+     :init   #(do (in-ns ns)
+                  (refer 'clojure.core))
      :caught #(do (reset-in) (clojure.main/repl-caught %))
      :prompt #(println (str marker (ns-name *ns*))))))
