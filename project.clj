@@ -1,7 +1,6 @@
 (defproject cake "0.7.0-beta1"
   :description "Save your fork, there's cake!"
   :dependencies [[clojure "1.2.0"]
-                 [clojure-contrib "1.2.0"]
                  [uncle "0.2.3"]
                  [depot "0.1.7"]
                  [classlojure "0.6.3"]
