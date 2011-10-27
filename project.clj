@@ -12,5 +12,6 @@
                  [com.jcraft/jsch "0.1.42"]
                  [flatland/difform "1.1.2"]
                  [org.clojars.rosejn/clansi "1.2.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
-                 [clj-stacktrace "0.2.3"]]
+                 [clj-stacktrace "0.2.3"]
+                 [sherlock "0.1.0-alpha3"]]
   :copy-deps true)
