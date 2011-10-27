@@ -12,10 +12,6 @@
             [depot.deps :as depot])
   (:import [org.apache.tools.ant.taskdefs Copy Delete]))
 
-(def default-repos
-  [["maven"   "http://repo1.maven.org/maven2"]
-   ["clojars" "http://clojars.org/repo"]])
-
 (def dep-types {:dependencies         (any :main (! (any :dev :ext :test :plugin)))
                 :dev-dependencies     (all :dev (! :ext))
                 :ext-dependencies     (all :ext (! :dev))
@@ -53,8 +49,7 @@
         (= :test-dependencies type) '[org.clojure/clojure]))
 
 (defn fetch-deps [type]
-  (binding [depot/*repositories* default-repos
-            depot/*exclusions*   (auto-exclusions type)]
+  (binding [depot/*exclusions*   (auto-exclusions type)]
     (depot/fetch-deps *project* (dep-types type))))
 
 (defn deps-cache []
