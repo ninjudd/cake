@@ -8,11 +8,13 @@
 
 (def *readline-marker* nil)
 
-(defn prompt-read [prompt & opts]
-  (let [opts (apply hash-map opts)
-        echo (if (false? (:echo opts)) "@" "")]
+(defn prompt-read [prompt & {:keys [echo]}]
+  (let [echo (if (false? echo) "@" "")]
     (println (str echo *readline-marker* prompt))
     (read-line)))
+
+(defn yes-or-no [prompt & opts]
+  (#{"Y" "y"} (apply prompt-read (str prompt " [y/N]") opts)))
 
 (defn sudo [& arglist]
   (let [password (prompt-read "Password" :echo false)
