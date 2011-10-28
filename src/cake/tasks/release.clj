@@ -4,7 +4,7 @@
         [cake.tasks.jar :only [jarfile uberjarfile warfile]]
         [clojure.java.io :only [reader copy]]
         [useful.utils :only [verify]]
-        [cake.utils :only [prompt-read]])
+        [cake.utils :only [prompt-read yes-or-no]])
   (:import [com.jcraft.jsch JSch ChannelExec Logger UserInfo JSchException UIKeyboardInteractive]
            [java.io FileInputStream]))
 
@@ -154,7 +154,7 @@
         host     (or (:host     release) "clojars.org")
         username (or (:username release) "clojars")
         dest     (or (:dest     release) ".")]
-    (when (#{"y" "Y"} (prompt-read (format "Are you sure you want to release to %s? [y/N]" host)))
+    (when (yes-or-no (format "Are you sure you want to release to %s?" host))
       (ssh-session {:host host :username username}
         (upload (map lookup-file files) dest)))))
 
