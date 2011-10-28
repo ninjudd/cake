@@ -65,9 +65,7 @@
   {[term] :latest-version, repos :repos}
   (let [repos (select-repos repos)
         [group-id artifact-id] (.split term "/")
-        query (if artifact-id
-                (str "g:" group-id " AND a:" artifact-id)
-                (str "g:" group-id " AND a:" group-id))]
+        query (str "g:" group-id " AND a:" (or artifact-id group-id))]
     (doseq [[id url] repos] (download-index id url))
     (let [result (first (sort-by :version (comp unchecked-negate compare)
                                  (filter (comp #{term} identifier)
