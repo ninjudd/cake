@@ -1,8 +1,10 @@
 (ns cake.tasks.search
   (:use cake
         cake.core
+        [cake.utils :only [yes-or-no]]
         [bake.core :only [log]]
-        [clojure.string :only [join]])
+        [clojure.string :only [join]]
+        [clojure.java.io :only [file copy reader]])
   (:require [sherlock.core :as sherlock]))
 
 (defn select-repos [repos]
@@ -11,10 +13,29 @@
       (select-keys repositories repos)
       repositories)))
 
+(defn hash-url [url]
+  (str (sherlock/remote-index-url url) ".md5"))
+
+(defn hash-location [url]
+  (file (str (sherlock/index-location url) ".md5")))
+
+(defn new-hash [url]
+  (copy (reader (hash-url url)) (hash-location url)))
+
 (defn download-index [id url]
   (when (sherlock/download-needed? url)
     (log (str "Downloading index for " id ". This might take a bit."))
-    (sherlock/update-index url)))
+    (sherlock/update-index url)
+    (new-hash url)))
+
+(defn update-repo [id url]
+  (when (and (not= (slurp (hash-location url))
+                   (slurp (hash-url url)))
+             (yes-or-no
+              (format "The index for %s is out of date. Do you want to update it now?" id)))
+    (log (str "Updating index for " id ". This might take a bit."))
+    (sherlock/update-index url)
+    (new-hash url)))
 
 (defn identifier [{:keys [group-id artifact-id]}]
   (if group-id
@@ -43,18 +64,10 @@
     (binding [sherlock/*page-size* 10]
       (doseq [[id url] (select-repos repos)]
         (download-index id url)
+        (update-repo id url)
         (print-results
          id page
          (sherlock/get-page page (sherlock/search url (join " " search) page)))))))
-
-(deftask update-repos
-  "Update maven lucene indexes."
-  "If passed arguments, they are treated as the name of maven repos to update.
-   Otherwise, update all repos."
-  {:keys [update-repos]}
-  (doseq [[id url] (select-repos update-repos)]
-    (log (str "Updating index for " id ". This might take a bit."))
-    (sherlock/update-index url)))
 
 (deftask latest-version
   "Find the latest version of an artifact."
@@ -66,7 +79,9 @@
   (let [repos (select-repos repos)
         [group-id artifact-id] (.split term "/")
         query (str "g:" group-id " AND a:" (or artifact-id group-id))]
-    (doseq [[id url] repos] (download-index id url))
+    (doseq [[id url] repos]
+      (download-index id url)
+      (update-repo id url))
     (let [result (first (sort-by :version (comp unchecked-negate compare)
                                  (filter (comp #{term} identifier)
                                          (mapcat #(sherlock/search % query 10 Integer/MAX_VALUE)
