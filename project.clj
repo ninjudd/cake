@@ -10,7 +10,7 @@
                  [org.clojars.ninjudd/java.classpath "0.1.2-SNAPSHOT"]
                  [org.clojars.ninjudd/data.xml "0.0.1-SNAPSHOT"]
                  [com.jcraft/jsch "0.1.42"]
-                 [flatland/difform "1.1.2"]
+                 [difform "1.1.2"]
                  [org.clojars.rosejn/clansi "1.2.0-SNAPSHOT" :exclusions [org.clojure/clojure]]
                  [clj-stacktrace "0.2.3"]
                  [sherlock "0.1.0-alpha3"]]
