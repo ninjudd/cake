@@ -55,3 +55,8 @@
              (System/exit 1))
            (Thread/sleep (- timeout idle))
            (recur)))))))
+
+(defn to-vec
+  "If s is not a collection, wrap it in a vector. Otherwise, make it
+   a vector."
+  [s] (if (coll? s) (vec s) [s]))

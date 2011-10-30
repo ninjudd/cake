@@ -1,6 +1,7 @@
 (ns cake.project
   (:use cake
         [cake.file :only [file global-file]]
+        [cake.utils :only [to-vec]]
         [clojure.string :only [trim-newline]]
         [clojure.java.shell :only [sh]]
         [useful.utils :only [adjoin syntax-quote pop-if]]
@@ -42,9 +43,7 @@
 (defn- assoc-path
   ([opts key default]
      (let [path (or (get opts key) default)]
-       (assoc opts key (if (string? path)
-                         [path]
-                         (vec path)))))
+       (assoc opts key (to-vec path))))
   ([opts key base-key suffix]
      (assoc-path opts key (vec (map #(str (file % suffix))
                                     (get opts base-key))))))
@@ -84,7 +83,8 @@
         (assoc-path :dev-resources-path "dev")
         (assoc-path :compile-path       "classes")
         (assoc-path :test-compile-path  :test-path "classes")
-        (given (:java-source-path opts) update :source-path conj (:java-source-path opts)))))
+        (given :java-source-path
+               update :source-path #(into % (to-vec %2)) (:java-source-path opts)))))
 
 (defn read-project [file]
   (binding [*in* (PushbackReader. (reader file))]
