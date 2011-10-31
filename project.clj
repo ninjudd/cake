@@ -2,7 +2,7 @@
   :description "Save your fork, there's cake!"
   :dependencies [[clojure "1.2.0"]
                  [uncle "0.2.3"]
-                 [depot "0.1.7"]
+                 [depot "0.1.8"]
                  [classlojure "0.6.3"]
                  [useful "0.7.4-alpha4"]
                  [slingshot "0.7.2"]
