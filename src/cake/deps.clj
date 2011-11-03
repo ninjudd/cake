@@ -49,7 +49,7 @@
         (= :test-dependencies type) '[org.clojure/clojure]))
 
 (defn fetch-deps [type]
-  (binding [depot/*exclusions*   (auto-exclusions type)]
+  (binding [depot/*exclusions* (auto-exclusions type)]
     (depot/fetch-deps *project* (dep-types type))))
 
 (defn deps-cache []

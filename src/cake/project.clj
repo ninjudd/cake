@@ -51,6 +51,12 @@
 (defn qualify [type deps]
   (map-vals deps #(assoc % type true)))
 
+(def default-repos
+  [["maven"     "http://repo1.maven.org/maven2"]
+   ["releases"  "http://oss.sonatype.org/content/repositories/"]
+   ["snapshots" "http://oss.sonatype.org/content/repositories/snapshots"]
+   ["clojars"   "http://clojars.org/repo"]])
+
 (defn create-project [project-name & opts]
   (let [[opts version]   (pop-if opts string?)
         opts             (eval (syntax-quote (into-map opts)))
@@ -73,9 +79,7 @@
                                          (qualify :dev    (dep-map (:dev-dependencies  opts)))
                                          (qualify :test   (dep-map (:test-dependencies opts)))
                                          (qualify :plugin (dep-map (:cake-plugins      opts))))
-               :repositories (merge (:repositories opts)
-                                    {"maven"   "http://repo1.maven.org/maven2"
-                                     "clojars" "http://clojars.org/repo"}))
+               :repositories (concat (:repositories opts) default-repos))
         (assoc-path :source-path        "src")
         (assoc-path :test-path          "test")
         (assoc-path :resources-path     "resources")

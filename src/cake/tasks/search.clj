@@ -69,7 +69,7 @@
          id page
          (sherlock/get-page page (sherlock/search url (join " " search) page)))))))
 
-(deftask latest-version
+(deftask latest
   "Find the latest version of an artifact."
   "Pass the name of a dependency and cake will search the lucene indexes for it
    and return the latest version. You can pass --repos which is expected to be a
