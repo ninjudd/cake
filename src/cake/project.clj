@@ -53,7 +53,7 @@
 
 (def default-repos
   [["maven"     "http://repo1.maven.org/maven2"]
-   ["releases"  "http://oss.sonatype.org/content/repositories/"]
+   ["releases"  "http://oss.sonatype.org/content/repositories/releases"]
    ["snapshots" "http://oss.sonatype.org/content/repositories/snapshots"]
    ["clojars"   "http://clojars.org/repo"]])
 
