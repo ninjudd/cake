@@ -3,8 +3,9 @@
         cake.core
         [bake.core :only [log]]
         [clojure.string :only [join]]
-        [clojure.java.io :only [file copy reader]])
-  (:require [sherlock.core :as sherlock]))
+        [clojure.java.io :only [as-url file copy reader]])
+  (:require [sherlock.core :as sherlock])
+  (:import java.net.HttpURLConnection))
 
 (defn select-repos [repos]
   (let [repositories (:repositories *project*)]
@@ -13,7 +14,7 @@
       repositories)))
 
 (defn hash-url [url]
-  (str (sherlock/remote-index-url url) ".md5"))
+  (as-url (str (sherlock/remote-index-url url) ".md5")))
 
 (defn hash-location [url]
   (file (str (sherlock/index-location url) ".md5")))
@@ -21,22 +22,33 @@
 (defn new-hash [url]
   (copy (reader (hash-url url)) (hash-location url)))
 
-(defn download-index [id url]
+(defn published? [url]
+  (try
+    (= HttpURLConnection/HTTP_OK
+       (.getResponseCode
+        (doto (.openConnection (hash-url url))
+          (.setRequestMethod "HEAD"))))
+    (catch Exception _ false)))
+
+(defn download-index [url]
+  (sherlock/update-index url)
+  (new-hash url))
+
+(defn init-index [id url]
   (when (sherlock/download-needed? url)
     (log (str "Downloading index for " id ". This might take a bit."))
-    (sherlock/update-index url)
-    (new-hash url)))
+    (download-index url)))
 
-
-(defn needs-updating? [id url]
-  (when (and (not= (slurp (hash-location url))
-                   (slurp (hash-url url))))
-    (println (format "The index for %s is out of date. Pass --update to update it." id))))
+(defn update-message [id url]
+  (let [hash-location (hash-location url)]
+    (when (and (.exists hash-location)
+               (not= (slurp hash-location)
+                     (slurp (hash-url url))))
+      (println (format "The index for %s is out of date. Pass --update to update it." id)))))
 
 (defn update-repo [id url]
   (log (str "Updating index for " id ". This might take a bit."))
-  (sherlock/update-index url)
-  (new-hash url))
+  (download-index url))
 
 (defn identifier [{:keys [group-id artifact-id]}]
   (if group-id
@@ -51,6 +63,11 @@
       (println (str "[" (identifier artifact) " \"" version "\"]") description))
     (prn)))
 
+(defn batch-update [id url update]
+  (init-index id url)
+  (when update (update-repo id url))
+  (update-message id url))
+
 (deftask search
   "Search maven repos for artifacts."
   "Search takes a query that is treated as a lucene search query,
@@ -64,10 +81,8 @@
   {[page] :page repos :repos search :search update :update}
   (let [page (if page (Integer. page) 1)]
     (binding [sherlock/*page-size* 10]
-      (doseq [[id url] (select-repos repos)]
-        (download-index id url)
-        (when update (update-repo id url))
-        (needs-updating? id url)
+      (doseq [[id url] (select-repos repos) :when (published? url)]
+        (batch-update id url update)
         (print-results
          id page
          (sherlock/get-page page (sherlock/search url (join " " search) page)))))))
@@ -78,18 +93,16 @@
    and return the latest version. You can pass --repos which is expected to be a
    comma delimited list of repository names. If it is not passed, all repositories
    will be searched."
-  {[term] :latest-version, repos :repos update :update}
-  (let [repos (select-repos repos)
+  {[term] :latest, repos :repos update :update}
+  (let [repos (filter (comp published? second) (select-repos repos))
         [group-id artifact-id] (.split term "/")
-        query (str "g:" group-id " AND a:" (or artifact-id group-id))]
+        query (str "g:" group-id "* AND a:" (or artifact-id group-id))]
     (doseq [[id url] repos]
-      (download-index id url)
-      (when update (update-repo id url))
-      (needs-updating? id url))
+      (batch-update id url update))
     (let [result (first (sort-by :version (comp unchecked-negate compare)
                                  (filter (comp #{term} identifier)
                                          (mapcat #(sherlock/search % query 10 Integer/MAX_VALUE)
-                                                 (vals repos)))))]
+                                                 (map last repos)))))]
       (println
        (if result
          (str "[" (identifier result) " " (:version result) "]")
