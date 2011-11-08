@@ -47,7 +47,7 @@
       (wrap-ext-classloader (mapcat to-urls (concat ext-deps ext-dev-deps)))))
   (if-let [cl (classlojure (apply classpath paths))]
     (doto cl
-      (given (:debug *project*)
+      (given (:useful.debug *project*)
              eval-in `(do ~@(rest (resource-forms "useful/debug.clj"))))
       (eval-in '(do (require 'cake)
                     (require 'bake.io)
