@@ -571,7 +571,7 @@ $pwd      = Dir.getwd
 $project  = project_dir($pwd)
 $file     = File.expand_path(__FILE__)
 $cakedir  = File.dirname(File.dirname(File.expand_path(readlink($file), File.dirname($file))))
-$releases = "http://releases.clojure-cake.org"
+$releases = "http://ninjudd.com/cake-releases"
 $m2       = "#{$home}/.m2/repository"
 $config   = Configuration.new("#{$home}/.cake/config", "cake.config", ".cake/config")
 $vars     = {:env => ENV.to_hash, :pwd => $pwd, :args => ARGV, :opts => $opts, :script => $0}.to_clj
