@@ -1,4 +1,4 @@
-(defproject cake "0.7.0-beta1"
+(defproject cake "0.7.0"
   :description "Save your fork, there's cake!"
   :dependencies [[clojure "1.2.0"]
                  [uncle "0.2.3"]
