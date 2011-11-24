@@ -83,6 +83,7 @@ class IO
   def print_flush(str)
     print(str)
     flush
+  rescue Errno::EPIPE => e
   end
 
   def duplex(input, output, input_wait = 0, interval = 0.01)
