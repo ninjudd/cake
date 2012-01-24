@@ -7,7 +7,7 @@
         [bake.reload :only [last-reloaded last-modified reload]]
         [bake.notify :only [notify]]
         [bake.clj-stacktrace])
-  (:import [java.io StringWriter IOException]))
+  (:import [java.io StringWriter IOException PrintWriter]))
 
 (defn test-vars [nses {:keys [tags functions namespaces]}]
   (let [run? (fn [ns]
@@ -29,11 +29,13 @@
                                     (ns-publics ns)))))
             {} nses)))
 
-(def ^:dynamic *ns-results*)
-(def ^:dynamic *current-test*)
+(def ^{:dynamic true} *ns-results*)
+(def ^{:dynamic true} *current-test*)
+(def ^{:dynamic true} *string-writer*)
 
 (defn reset-streams! []
-  (set! *out* (StringWriter.))
+  (set! *string-writer* (StringWriter.))
+  (set! *out* (PrintWriter. *string-writer* true))
   (set! *err* *out*))
 
 (defn unprintable? [obj]
@@ -56,20 +58,20 @@
 (defmulti my-report :type)
 
 (defmethod my-report :pass [m]
-  (update-results *out* (dissoc m :actual)))
+  (update-results *string-writer* (dissoc m :actual)))
 
 (defmethod my-report :fail [m]
-  (update-results *out* m))
+  (update-results *string-writer* m))
 
 (defmethod my-report :error [m]
-  (update-results *out* (update-in m [:actual] parse-exception)))
+  (update-results *string-writer* (update-in m [:actual] parse-exception)))
 
 (defmethod my-report :begin-test-var [m]
   (set! *current-test* (:name (meta (:var m))))
   (reset-streams!))
 
 (defmethod my-report :end-test-var [m]
-  (update-results *out*)
+  (update-results *string-writer*)
   (set! *current-test* nil))
 
 (defn run-ns-tests [ns tests]
@@ -81,6 +83,7 @@
               *test-out* (StringWriter.)
               *out* *out* ;; this is so it gets restored
               *err* *err*
+              *string-writer* nil
               *report-counters* (ref *initial-report-counters*)
               *ns-results* (atom {})
               *current-test* nil]
