@@ -2,7 +2,7 @@
   (:use cake cake.core
         [cake.file :only [file]]
         [cake.classloader :only [reload-test-classes with-test-classloader]]
-        [bake.core :only [in-project-classloader? with-timing]]
+        [bake.core :only [with-timing]]
         [bake.find-namespaces :only [find-namespaces-in-dir]]
         [useful.utils :only [adjoin]]
         [useful.map :only [map-vals]]
@@ -163,9 +163,7 @@
   [opts]
   (println)
   (with-test-classloader
-    (bake-ns (:use bake.test clojure.test
-                   [clojure.string :only [join]]
-                   [bake.core :only [with-context in-project-classloader?]])
+    (bake-ns (:use bake.test)
              (let [[count real-time] (with-timing
                                        (reduce report-and-aggregate {}
                                                (for [[ns tests] (test-vars opts) :when (seq tests)]
