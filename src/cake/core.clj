@@ -4,7 +4,7 @@
         [cake.project :only [create-project read-project add-global-plugins]]
         [useful.map :only [update into-map merge-in]]
         [useful.utils :only [verify syntax-quote]]
-        [useful.macro :only [defalias]]
+        [useful.ns :only [defalias]]
         [slingshot.core :only [throw+]]
         [clojure.string :only [join]]
         [bake.core :only [force?]])
