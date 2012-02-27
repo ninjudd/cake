@@ -23,7 +23,7 @@
     (into {}
           (for [[dep version & opts] deps]
             [(add-group dep) (-> (adjoin (into-map default-opts) (into-map opts))
-                                 (given version assoc :version version)
+                                 (given version (assoc :version version))
                                  (update :exclusions (partial map add-group)))]))))
 
 (defmulti get-version identity)
@@ -88,7 +88,7 @@
         (assoc-path :compile-path       "classes")
         (assoc-path :test-compile-path  :test-path "classes")
         (given :java-source-path
-               update :source-path #(into % (to-vec %2)) (:java-source-path opts)))))
+               (update :source-path #(into % (to-vec %2)) (:java-source-path opts))))))
 
 (defn read-project [file]
   (binding [*in* (PushbackReader. (reader file))]

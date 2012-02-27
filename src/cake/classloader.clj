@@ -48,7 +48,7 @@
   (if-let [cl (classlojure (apply classpath paths))]
     (doto cl
       (given (:useful.debug *project*)
-             eval-in `(do ~@(rest (resource-forms "useful/debug.clj"))))
+             (eval-in `(do ~@(rest (resource-forms "useful/debug.clj")))))
       (eval-in '(do (require 'cake)
                     (require 'bake.io)
                     (require 'bake.reload)
