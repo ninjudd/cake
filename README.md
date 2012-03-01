@@ -10,6 +10,8 @@ Also, if you're interested, you can join the Leiningen mailing (http://groups.go
 
 
 _____________________________
+_____________________________
+
 
 `cake` is a Clojure development environment for your command line. It is a build tool, a repl, a
 package manager, a script launcher, and a deployment tool mixed together and baked into a single,
@@ -31,7 +33,7 @@ the `-S` flag to your command.
 
 Make sure `~/bin/` is in your `$PATH`, then execute the following command:
 
-    curl http://releases.clojure-cake.org/cake -o ~/bin/cake && chmod +x ~/bin/cake
+    curl http://ninjudd.com/cake-releases/cake -o ~/bin/cake && chmod +x ~/bin/cake
 
 ### Git repository (development)
 
