@@ -1,6 +1,6 @@
 _____________________________
 
-## NOTE:
+# NOTE:
 
 cake and lein have joined forces, and starting with Lein 2.0, we plan to move all Flatland projects to lein. 
 
