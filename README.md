@@ -1,3 +1,5 @@
+_____________________________
+
 ## NOTE:
 
 cake and lein have joined forces, and starting with Lein 2.0, we plan to move all Flatland projects to lein. 
@@ -9,7 +11,6 @@ Lein is located here: https://github.com/technomancy/leiningen
 Also, if you're interested, you can join the Leiningen mailing (http://groups.google.com/group/leiningen) and join us in #leiningen on irc.freenode.com too. There is also a wiki page for brainstorming version 2.0 changes (https://github.com/technomancy/leiningen/wiki/VersionTwo). 
 
 
-_____________________________
 _____________________________
 
 
