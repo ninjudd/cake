@@ -1,3 +1,16 @@
+## NOTE:
+
+cake and lein have joined forces, and starting with Lein 2.0, we plan to move all Flatland projects to lein. 
+
+Read this for more info: https://groups.google.com/forum/#!topic/clojure/WnnQIZipG5E
+
+Lein is located here: https://github.com/technomancy/leiningen
+
+Also, if you're interested, you can join the Leiningen mailing (http://groups.google.com/group/leiningen) and join us in #leiningen on irc.freenode.com too. There is also a wiki page for brainstorming version 2.0 changes (https://github.com/technomancy/leiningen/wiki/VersionTwo). 
+
+
+_____________________________
+
 `cake` is a Clojure development environment for your command line. It is a build tool, a repl, a
 package manager, a script launcher, and a deployment tool mixed together and baked into a single,
 delicious command, `cake`.
