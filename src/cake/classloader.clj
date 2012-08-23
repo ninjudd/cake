@@ -52,6 +52,7 @@
       (eval-in '(do (require 'cake)
                     (require 'bake.io)
                     (require 'bake.reload)
+                    (require 'clojure.walk)
                     (require 'clojure.main))))
     (prn paths)))
 
@@ -145,24 +146,29 @@
   (let [[ns-forms forms] (split-ns-forms forms)]
     `(in-bake-ns '~ns-forms (fn [] ~@forms))))
 
-(defn bake-eval
-  "Evaluate the given form in the project classloader. The form is expected to return a function
+ (defn bake-eval
+   "Evaluate the given form in the project classloader. The form is expected to return a function
   which is then invoked on the provided arguments."
-  [form & args]
-  (let [named-args (for [arg args]
-                     (if (printable? arg)
-                       [(list 'quote arg)]
-                       [(gensym "arg") arg]))
-        core-args (filter #(= 2 (count %)) named-args)
-        form `(do (in-ns '~*bake-ns*)
-                  (fn [ins# outs# ~@(map first core-args)]
-                    (clojure.main/with-bindings
-                      (bake.io/with-streams ins# outs#
-                        (binding [~@(shared-bindings)]
-                          (apply ~form ~(vec (map first named-args))))))))]
-    (apply eval-in *classloader*
-           `(clojure.main/with-bindings (eval '~form))
-           *ins* *outs* (map second core-args))))
+   [form & args]
+   (let [named-args (for [arg args]
+                      (if (printable? arg)
+                        [(list 'quote arg)]
+                        [(gensym "arg") arg]))
+         core-args (filter #(= 2 (count %)) named-args)
+         form `(do (in-ns '~*bake-ns*)
+                   (fn [ins# outs# ~@(map first core-args)]
+                     (clojure.main/with-bindings
+                       (bake.io/with-streams ins# outs#
+                         (binding [~@(shared-bindings)]
+                           (let [ret# (apply ~form ~(vec (map first named-args)))]
+                             (clojure.walk/postwalk (fn [x#]
+                                                      (if (set? x#)
+                                                        (into #{} x#)
+                                                        x#))
+                                                    ret#)))))))]
+     (apply eval-in *classloader*
+            `(clojure.main/with-bindings (eval '~form))
+            *ins* *outs* (map second core-args))))
 
 (defmacro bake-invoke
   "Invoke the given function in the project classloader, passing the provided arguments to it.
